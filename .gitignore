@@ -7,3 +7,10 @@ __pycache__/
 *.log
 intelligence_state.json
 fix_api.py
+data/
+uploads/
+watch/
+*.db
+fix-*.js
+patch-*.js
+src/core/_test_phase1.ts
