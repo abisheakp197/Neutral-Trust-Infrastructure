@@ -14,3 +14,5 @@ watch/
 fix-*.js
 patch-*.js
 src/core/_test_phase1.ts
+README-INTERNAL.md
+*-INTERNAL.md
