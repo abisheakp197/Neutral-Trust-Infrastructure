@@ -16,3 +16,12 @@ patch-*.js
 src/core/_test_phase1.ts
 README-INTERNAL.md
 *-INTERNAL.md
+
+# Generated code-dump / context snapshots
+all_code.txt
+codebase_snapshot.txt
+combined_code.txt
+gatekeeper_complete.txt
+my_ube_source.txt
+phase11_combined.txt
+ube_complete_context.txt
