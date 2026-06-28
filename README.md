@@ -99,13 +99,8 @@ We are onboarding a small number of design partners who get:
 
 UBE is designed to deploy anywhere in minutes.
 
-```bash
-# Self-hosted (coming soon)
-curl ube.sh | bash
-```
 
-Current live endpoint (private beta):
-**https://ube-production-2fd4.up.railway.app**
+Its fully decentralised.no dependency.
 
 ---
 
