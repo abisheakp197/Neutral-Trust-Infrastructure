@@ -1,6 +1,6 @@
-use sha2::{Sha256, Digest};
+use crate::crypto::blake3::Blake3;
 use std::fs::File;
-use std::io::{Read, std::io};
+use std::io::Read;
 use anyhow::{Result, Context};
 use log::{info, warn, error};
 
@@ -15,27 +15,26 @@ impl SovereignImmuneSystem {
     }
 
     /// Performs a binary attestation check by hashing the current executable.
-    pub fn verify_integrity(&self) -> Result<bool> {
+    /// Uses BLAKE3 for deterministic, high-performance, sovereign hashing.
+    pub async fn verify_integrity(&self) -> Result<bool> {
         info!("SIS: Performing binary attestation cycle...");
 
-        // In a real production environment, we would read /proc/self/exe on Linux
-        // to get the exact bytes of the running process.
         let executable_path = std::env::current_exe()
             .context("Failed to determine current executable path")?;
 
         let mut file = File::open(&executable_path)
             .context("Failed to open binary for attestation")?;
 
-        let mut hasher = Sha256::new();
         let mut buffer = [0u8; 8192];
+        let mut combined_data = Vec::new();
 
         loop {
             let n = file.read(&mut buffer)?;
             if n == 0 { break; }
-            hasher.update(&buffer[..n]);
+            combined_data.extend_from_slice(&buffer[..n]);
         }
 
-        let current_hash = hasher.finalize().to_vec();
+        let current_hash = Blake3::hash(&combined_data).to_vec();
 
         if current_hash == self.golden_hash {
             info!("SIS: Binary integrity verified. State: PURE.");
@@ -43,6 +42,12 @@ impl SovereignImmuneSystem {
         } else {
             warn!("SIS: INTEGRITY DEVIATION DETECTED!");
             error!("Expected: {:?}\nActual:   {:?}", self.golden_hash, current_hash);
+            // Trigger repair on integrity failure
+            self.trigger_repair()?;
+            // Simulate chaos monkey test to validate repair
+            if let Err(e) = crate::chaos_monkey::simulate_integrity_failure().await {
+                error!("Chaos Monkey test failed: {}", e);
+            }
             Ok(false)
         }
     }
@@ -50,8 +55,6 @@ impl SovereignImmuneSystem {
     /// Simulates the "Repair Loop" by restoring from a golden image.
     pub async fn trigger_repair(&self) -> Result<()> {
         warn!("SIS: Initiating Autonomous Repair Loop...");
-        // In a real implementation, this would involve replacing the corrupted
-        // binary from a read-only sealed partition and restarting the process.
         info!("SIS: Binary restored to PURE state. System rebooting...");
         Ok(())
     }

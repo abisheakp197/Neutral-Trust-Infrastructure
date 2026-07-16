@@ -1,15 +1,30 @@
 mod identity;
 mod socket;
 mod ledger;
-mod orchestrator;
+mod ssm;
 mod sdl;
-mod mandate_engine;
 mod persistence;
 mod defense;
+mod pipeline;
+mod automation;
+mod connector;
+mod types;
+mod crypto;
+mod intelligence;
+mod encryption;
+mod stream;
+mod mesh;
+mod radio;
+mod shield;
+mod autonomous_engineering;
 
-use crate::orchestrator::SovereignOrchestrator;
+#[cfg(test)]
+mod tests;
+
+use crate::ssm::SovereignStateMachine;
 use log::{info, LevelFilter};
 use env_logger::Builder;
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() {
@@ -19,16 +34,44 @@ async fn main() {
         .parse_default_env()
         .init();
 
-    info!("Initializing Sovereign Native Core...");
+    info!("Initializing Sovereign Native Core (SSM Mode)...");
 
-    // In production, the golden hash is embedded in the binary or retrieved from a sealed hardware enclave.
-    // For this implementation, we use a placeholder hash.
-    let golden_hash = vec![0u8; 32];
+    let tenant_id = "sovereign-root-01";
+    let ssm = SovereignStateMachine::new(tenant_id);
 
-    let orchestrator = SovereignOrchestrator::new(9000, golden_hash);
+    info!("Sovereign State Machine active. Eliminating attention tax...");
 
-    if let Err(e) = orchestrator.run().await {
-        eprintln!("Critical failure in Sovereign Orchestrator: {:?}", e);
-        std::process::exit(1);
+    // The Autonomous Heartbeat Loop
+    loop {
+        ssm.tick().await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+
+use crate::ssm::SovereignStateMachine;
+use log::{info, LevelFilter};
+use env_logger::Builder;
+use std::time::Duration;
+
+#[tokio::main]
+async fn main() {
+    // Initialize logger
+    Builder::new()
+        .filter_level(LevelFilter::Info)
+        .parse_default_env()
+        .init();
+
+    info!("Initializing Sovereign Native Core (SSM Mode)...");
+
+    let tenant_id = "sovereign-root-01";
+    let ssm = SovereignStateMachine::new(tenant_id);
+
+    info!("Sovereign State Machine active. Eliminating attention tax...");
+
+    // The Autonomous Heartbeat Loop
+    loop {
+        ssm.tick().await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
 }
