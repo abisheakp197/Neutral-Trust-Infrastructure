@@ -9,6 +9,7 @@ use crate::types::Value;
 use crate::intelligence::core::IntelligenceHub;
 use crate::automation::{AutomationEngine, AutomationRequest, AutomationStatus};
 use crate::connector::ConnectorRegistry;
+use crate::gateway::SovereignGateway;
 
 /// Represents a high-level Sovereign Mandate.
 /// A mandate is a standing order that the SSM must maintain or achieve.
@@ -50,6 +51,8 @@ pub struct SovereignStateMachine {
     pub intelligence: Arc<Mutex<IntelligenceHub>>,
     pub automation: Arc<AutomationEngine>,
     pub connectors: Arc<Mutex<ConnectorRegistry>>,
+    // Gateway integration for external connectivity
+    pub gateway: Option<Arc<SovereignGateway>>,
 }
 
 impl SovereignStateMachine {
@@ -66,7 +69,14 @@ impl SovereignStateMachine {
             intelligence: Arc::new(Mutex::new(IntelligenceHub::new())),
             automation: Arc::new(AutomationEngine::new(tenant_id)),
             connectors: Arc::new(Mutex::new(ConnectorRegistry::new())),
+            gateway: None,
         }
+    }
+
+    /// Create SSM with Gateway integration
+    pub fn with_gateway(mut self, gateway: Arc<SovereignGateway>) -> Self {
+        self.gateway = Some(gateway);
+        self
     }
 
     /// Registers a new sovereign mandate into the system.
