@@ -2,8 +2,6 @@
 //! Deterministic online metrics and variance calculation.
 //! Implements Welford's algorithm for stable running mean and variance.
 
-use std::time::Duration;
-
 #[derive(Debug, Clone)]
 pub struct WelfordStats {
     n: usize,
@@ -65,7 +63,7 @@ pub struct CusumDetector {
 }
 
 impl CusumDetector {
-    pub fn new(target_mean: f64, sigma: f64, k_factor: f64, h_factor: f64) -> Self {
+    pub fn new(_target_mean: f64, sigma: f64, k_factor: f64, h_factor: f64) -> Self {
         Self {
             s_high: 0.0,
             s_low: 0.0,

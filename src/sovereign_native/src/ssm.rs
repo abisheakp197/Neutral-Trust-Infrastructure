@@ -4,23 +4,44 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use crate::types::Value;
 use crate::intelligence::core::IntelligenceHub;
-use crate::automation::{AutomationEngine, AutomationRequest, AutomationStatus};
+use crate::automation::{AutomationEngine, AutomationRequest};
 use crate::connector::ConnectorRegistry;
 use crate::gateway::SovereignGateway;
 
 /// Represents a high-level Sovereign Mandate.
 /// A mandate is a standing order that the SSM must maintain or achieve.
-#[derive(Debug, Clone)]
 pub struct SovereignMandate {
     pub id: String,
     pub name: String,
     pub priority: i32,
-    pub trigger_condition: Box<dyn Fn(&IntelligenceHub) -> bool + Send + Sync>,
+    pub trigger_condition: Arc<dyn Fn(&IntelligenceHub) -> bool + Send + Sync>,
     pub action_request: AutomationRequest,
     pub is_active: bool,
+}
+
+impl std::fmt::Debug for SovereignMandate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SovereignMandate")
+            .field("id", &self.id)
+            .field("name", &self.name)
+            .field("priority", &self.priority)
+            .field("is_active", &self.is_active)
+            .finish()
+    }
+}
+
+impl Clone for SovereignMandate {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            priority: self.priority,
+            trigger_condition: self.trigger_condition.clone(),
+            action_request: self.action_request.clone(),
+            is_active: self.is_active,
+        }
+    }
 }
 
 /// The state of the Sovereign OS.

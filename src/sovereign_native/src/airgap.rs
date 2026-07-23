@@ -3,6 +3,7 @@
 //! Implements optical, acoustic, and electromagnetic signaling for absolute isolation.
 
 use std::collections::VecDeque;
+use std::sync::Mutex;
 use crate::types::Value;
 use crate::crypto::blake3::Blake3;
 use crate::crypto::symmetric::ChaChaPoly;
@@ -78,11 +79,15 @@ impl AirGapBridge {
 
         // 2. Attempt to reconstruct and decrypt packets
         // This is a simplified implementation. In production, it handles framing and parity.
-        let mut buffer = self.rx_buffer.lock().unwrap();
-        if buffer.len() < 60 { return Err("Insufficient data in buffer".to_string()); }
+        let encrypted_data: Vec<u8>;
+        {
+            let mut buffer = self.rx_buffer.lock().unwrap();
+            if buffer.len() < 60 { return Err("Insufficient data in buffer".to_string()); }
 
-        // Simplified packet extraction
-        let encrypted_data: Vec<u8> = buffer.drain(..buffer.len()).collect();
+            // Simplified packet extraction
+            let len = buffer.len();
+            encrypted_data = buffer.drain(..len).collect();
+        }
 
         let cipher = ChaChaPoly::new(self.encryption_key);
         // Split nonce (12), tag (16), and ciphertext
@@ -98,14 +103,15 @@ impl AirGapBridge {
     fn serialize_value(&self, value: &Value) -> Vec<u8> {
         match value {
             Value::String(s) => s.as_bytes().to_vec(),
-            Value::Int(i) => i.to_le_bytes().to_vec(),
+            Value::Number(n) => n.as_f64().map_or(vec![], |f| f.to_le_bytes().to_vec()),
             Value::Bool(b) => vec![if *b { 1 } else { 0 }],
-            Value::Binary(b) => b.clone(),
-            _ => b"complex-value-serialization".to_vec(),
+            Value::Array(arr) => arr.iter().flat_map(|v| self.serialize_value(v)).collect(),
+            Value::Object(obj) => obj.iter().flat_map(|(k, v)| [k.as_bytes().to_vec(), self.serialize_value(v)].concat()).collect(),
+            Value::Null => vec![],
         }
     }
 
     fn deserialize_value(&self, bytes: &[u8]) -> Result<Value, String> {
-        Ok(Value::Binary(bytes.to_vec()))
+        Ok(Value::String(String::from_utf8_lossy(bytes).into_owned()))
     }
 }

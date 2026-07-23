@@ -6,8 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use rand::Rng;
 use crate::ssm::SovereignStateMachine;
-use crate::intelligence::core::IntelligenceHub;
-use crate::defense::SovereignImmuneSystem;
+use crate::immune::ImmuneSystem as SovereignImmuneSystem;
 
 /// Types of adversarial faults the Chaos Monkey can inject.
 #[derive(Debug, Clone)]

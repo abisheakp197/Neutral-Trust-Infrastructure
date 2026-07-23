@@ -3,9 +3,7 @@
 //! Zero-dependency, memory-safe, and provably correct.
 
 use std::collections::HashMap;
-use crate::intelligence::{stats::WelfordStats, anomaly::IsolationForest};
 use crate::intelligence::memory::SemanticMemory;
-use crate::types::Value;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HealingState {

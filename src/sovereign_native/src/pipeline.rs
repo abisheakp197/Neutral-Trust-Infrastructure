@@ -133,7 +133,7 @@ impl Pipeline {
             let mut next_data = Vec::new();
             let mut stage_errors = 0;
             let mut stage_dropped = 0;
-            let mut input_count = current_data.len();
+            let input_count = current_data.len();
 
             for (idx, item) in current_data.into_iter().enumerate() {
                 let ctx = PipelineContext {

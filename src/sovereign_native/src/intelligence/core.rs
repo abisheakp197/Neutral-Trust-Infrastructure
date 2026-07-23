@@ -12,7 +12,6 @@ use crate::intelligence::{
     healing::SelfHealingEngine,
     policy::PolicyEngine,
 };
-use crate::types::Value;
 
 /// The central hub for all Sovereign Intelligence.
 pub struct IntelligenceHub {
@@ -37,7 +36,7 @@ impl IntelligenceHub {
     }
 
     /// Processes a telemetry event from any module.
-    pub fn observe(&mut self, module_id: &str, metric_name: &str, value: f64) {
+    pub fn observe(&mut self, _module_id: &str, metric_name: &str, value: f64) {
         let stats = self.stats.entry(metric_name.to_string()).or_insert_with(WelfordStats::new);
         stats.update(value);
 
@@ -48,8 +47,8 @@ impl IntelligenceHub {
     }
 
     /// Retreives the best configuration for a module based on learned experience.
-    pub fn get_best_config(&mut self, module_id: &str) -> Option<HashMap<String, String>> {
-        self.bandit.select().and_then(|id| {
+    pub fn get_best_config(&mut self, _module_id: &str) -> Option<HashMap<String, String>> {
+        self.bandit.select().and_then(|_id| {
             // Return the config associated with the best arm
             Some(HashMap::new()) // Placeholder
         })
@@ -59,6 +58,11 @@ impl IntelligenceHub {
     pub fn remember(&self, entry: crate::intelligence::memory::MemoryEntry) {
         let mut mem = self.memory.lock().unwrap();
         mem.store(entry);
+    }
+
+    /// Returns current metrics snapshot
+    pub fn metrics(&self) -> WelfordStats {
+        self.stats.get("cpu").cloned().unwrap_or_else(WelfordStats::new)
     }
 }
 
@@ -81,7 +85,7 @@ impl IntelligenceSystem {
 
     pub fn wrap_module<T: ModuleIntelligence>(&self, module: &mut T) {
         let telemetry = module.get_telemetry();
-        for (name, val) in telemetry {
+        for (_name, _val) in telemetry {
             // This would normally be an async loop
             // we can't call self.hub.observe because we only have &self
         }

@@ -42,23 +42,23 @@ pub struct ZkClient;
 impl ZkClient {
     /// Prove you own a key without revealing it
     pub fn prove_key_ownership(pubkey: &[u8], privkey: &[u8]) -> ZkProof {
-        let proof = Blake3::hash(&[pubkey, privkey].concat());
+        let proof = Blake3::hash(&[pubkey, privkey].concat()).to_vec();
         ZkProof { proof, circuit: "key_ownership" }
     }
 
     /// Prove transaction is valid without revealing sender/receiver/amount
     pub fn prove_transaction(sender_pubkey: &[u8], receiver_pubkey: &[u8], amount_commitment: &[u8], sig: &[u8]) -> ZkProof {
-        let proof = Blake3::hash(&[sender_pubkey, receiver_pubkey, amount_commitment, sig].concat());
+        let proof = Blake3::hash(&[sender_pubkey, receiver_pubkey, amount_commitment, sig].concat()).to_vec();
         ZkProof { proof, circuit: "valid_tx" }
     }
 
     /// Prove balance is sufficient without revealing balance
     pub fn prove_balance(commitment: &[u8], min_amount: u64) -> ZkProof {
         let min_bytes = min_amount.to_be_bytes();
-        let proof = Blake3::hash(&[commitment, &min_bytes].concat());
+        let proof = Blake3::hash(&[commitment, &min_bytes].concat()).to_vec();
         ZkProof { proof, circuit: "sufficient_balance" }
     }
 }
 
-/// Use Pedersen commitments for hiding values (already exists in crypto/commitments.rs)
-pub use Pedersen as Commitment;
+// Use Pedersen commitments for hiding values (already exists in crypto/commitments.rs)
+// pub use crate::crypto::commitments::Pedersen as Commitment;

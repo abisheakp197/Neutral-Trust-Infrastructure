@@ -16,12 +16,12 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, SystemTime};
 
-use crate::automation::{AutomationEngine, AutomationStep, AutomationRequest};
+use crate::automation::{AutomationEngine, AutomationStep, AutomationRequest, AutomationOptions};
 use crate::ssm::SovereignStateMachine;
 use crate::ledger::SovereignLedger;
 use crate::mesh::MeshNode;
 use crate::sovereign_guardian::{SovereignGuardian, ValidationContext, FinalDecision};
-use crate::proxy_types::{EntityType, WorkSource, ProxyWorkOrder, ProxyWorkResult, ProxyWorkStatus, AutonomyLevel, Value};
+use crate::proxy_types::{EntityType, ProxyWorkOrder, ProxyWorkResult, ProxyWorkStatus, AutonomyLevel, Value};
 
 /// State that the proxy team remembers (like human memory)
 #[derive(Debug, Clone)]
@@ -85,7 +85,7 @@ pub struct DigitalProxy {
     pub mesh_node: Arc<MeshNode>,
     pub ssm: Arc<SovereignStateMachine>,
     pub automation: Arc<AutomationEngine>,
-    pub ledger: Arc<SovereignLedger>,
+    pub ledger: Arc<RwLock<SovereignLedger>>,
     pub guardian: Arc<SovereignGuardian>,
 
     // The "team inbox" - shared work queue
@@ -135,7 +135,7 @@ impl DigitalProxy {
         mesh_node: Arc<MeshNode>,
         ssm: Arc<SovereignStateMachine>,
         automation: Arc<AutomationEngine>,
-        ledger: Arc<SovereignLedger>,
+        ledger: Arc<RwLock<SovereignLedger>>,
         guardian: Arc<SovereignGuardian>,
     ) -> Self {
         Self {
@@ -168,11 +168,18 @@ impl DigitalProxy {
     }
 
     /// Team receives new work - like a human team getting a new task
-    pub fn submit_work(&self, work_order: ProxyWorkOrder) -> String {
+    pub fn submit_work(&self, mut work_order: ProxyWorkOrder) -> String {
         let mut queue = self.work_queue.lock().unwrap();
         let order_id = work_order.order_id.clone();
 
         // Team remembers this request
+        // Set undo_token based on source
+        if work_order.source.is_inner_world() {
+            work_order.undo_token = Some(format!("undo:{}", work_order.order_id));
+        } else {
+            work_order.undo_token = None;
+        }
+
         let mut memory = self.team_memory.lock().unwrap();
         memory.metrics.total_requests += 1;
         memory.metrics.current_workload += 1;
@@ -213,11 +220,21 @@ impl DigitalProxy {
                 work_order = self.process_as_role(work_order, TeamRole::Auditor).await;
             }
 
+            // Convert final work order to result for storage
+            let result = ProxyWorkResult {
+                order_id: work_order.order_id.clone(),
+                status: work_order.status.clone(),
+                output: work_order.request.clone(),
+                duration: Duration::ZERO,
+                executed_at: now(),
+                undo_token: work_order.undo_token,
+            };
+
             // Request is complete - add to results
-            completed.push(work_order);
+            completed.push(result.clone());
 
             // Update team memory
-            self.record_completion(&completed.last().unwrap().clone());
+            self.record_completion(&result);
         }
 
         completed
@@ -225,7 +242,7 @@ impl DigitalProxy {
 
     /// Process request through a specific team role
     async fn process_as_role(&self, work_order: ProxyWorkOrder, role: TeamRole) -> ProxyWorkOrder {
-        let start = std::time::Instant::now();
+        let _start = std::time::Instant::now();
         let mut memory = self.team_memory.lock().unwrap();
 
         // Record that this "human" is working on this
@@ -245,11 +262,11 @@ impl DigitalProxy {
         };
 
         // Update request with result
-        let mut updated_order = work_order;
-        updated_order.status = result.clone();
+        let mut updated_order = work_order.clone();
+        updated_order.status = result.status.clone();
 
         // Remove from active
-        memory.active_requests.remove(&work_order.order_id);
+        memory.active_requests.remove(&updated_order.order_id);
         memory.metrics.current_workload = memory.active_requests.len();
 
         // Calculate processing time
@@ -327,7 +344,11 @@ impl DigitalProxy {
                 transform_id: "digital_proxy:execute".to_string(),
                 input: work.request.clone(),
             }],
-            options: Default::default(),
+            options: AutomationOptions {
+                encryption_mode: crate::automation::EncryptionMode::Standard,
+                retry_policy: crate::automation::RetryPolicy { max_attempts: 3, delay: Duration::from_secs(30) },
+                tags: vec![],
+            },
         };
 
         let result = self.automation.execute(auto_request);
@@ -431,7 +452,7 @@ impl DigitalProxy {
         // Count request types
         for completed in &memory.recent_history {
             if let Value::String(request_type) = completed.result.output.get("type").unwrap_or(&Value::Null) {
-                *memory.learned_patterns.entry(request_type.clone())
+                memory.learned_patterns.entry(request_type.clone())
                     .or_insert_with(|| PatternInfo {
                         pattern: request_type.clone(),
                         occurrence_count: 0,
@@ -458,7 +479,7 @@ impl DigitalProxy {
 
     /// Calculate risk score based on work order
     fn calculate_risk(&self, work: &ProxyWorkOrder) -> f64 {
-        let mut risk = 0.0;
+        let mut risk: f64 = 0.0;
 
         // Outer world = higher risk
         if work.source.is_outer_world() { risk += 0.2; }
@@ -475,7 +496,7 @@ impl DigitalProxy {
             risk += 0.1; //Busy team = higher error chance
         }
 
-        risk.min(1.0)
+        risk.min(1.0_f64)
     }
 
     /// Get current team workload
@@ -525,7 +546,7 @@ pub struct ProxyRegistry {
     mesh_builder: Arc<dyn Fn(&str) -> Arc<MeshNode> + Send + Sync>,
     ssm: Arc<SovereignStateMachine>,
     automation: Arc<AutomationEngine>,
-    ledger: Arc<SovereignLedger>,
+    ledger: Arc<RwLock<SovereignLedger>>,
     guardian: Arc<SovereignGuardian>,
 }
 
@@ -534,7 +555,7 @@ impl ProxyRegistry {
         mesh_builder: Arc<dyn Fn(&str) -> Arc<MeshNode> + Send + Sync>,
         ssm: Arc<SovereignStateMachine>,
         automation: Arc<AutomationEngine>,
-        ledger: Arc<SovereignLedger>,
+        ledger: Arc<RwLock<SovereignLedger>>,
         guardian: Arc<SovereignGuardian>,
     ) -> Self {
         Self {

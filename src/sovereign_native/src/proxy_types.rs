@@ -1,7 +1,7 @@
 //! Shared types for Digital Proxy system
 
 use std::time::Duration;
-use serde_json::Value;
+pub use serde_json::Value;
 
 /// What kind of entity this proxy serves
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -60,6 +60,9 @@ pub struct ProxyWorkOrder {
     pub submitted_at: u64,
     /// Outer world operations CANNOT be undone
     pub irreversible: bool,
+    pub status: ProxyWorkStatus,
+    /// Only for Inner World operations
+    pub undo_token: Option<String>,
 }
 
 /// Result of proxy work

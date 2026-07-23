@@ -10,7 +10,8 @@
 use std::sync::{Arc, RwLock};
 use std::time::SystemTime;
 use crate::ledger::SovereignLedger;
-use crate::proxy_types::{ProxyWorkOrder, Value};
+use crate::proxy_types::ProxyWorkOrder;
+use crate::types::Value;
 
 /// Validation context
 #[derive(Debug, Clone)]
@@ -90,13 +91,13 @@ pub trait ConsensusValidator: Send + Sync {
 /// Sovereign Guardian
 pub struct SovereignGuardian {
     guardian_id: String,
-    ledger: Arc<SovereignLedger>,
+    ledger: Arc<RwLock<SovereignLedger>>,
     pre_validators: Arc<RwLock<Vec<Arc<dyn PreValidator + Send + Sync>>>>,
     consensus_validators: Arc<RwLock<Vec<Arc<dyn ConsensusValidator + Send + Sync>>>>,
 }
 
 impl SovereignGuardian {
-    pub fn new(ledger: Arc<SovereignLedger>) -> Self {
+    pub fn new(ledger: Arc<RwLock<SovereignLedger>>) -> Self {
         Self {
             guardian_id: format!("guardian:{}", now()),
             ledger,
@@ -145,7 +146,6 @@ impl SovereignGuardian {
         let approve = votes.iter().filter(|v| v.vote == Vote::Approve).count();
         let reject = votes.iter().filter(|v| v.vote == Vote::Reject).count();
 
-        // Irreversible outer world needs 2/3 approval
         if work.irreversible && work.source.is_outer_world() && approve < 2 {
             return (FinalDecision::Rejected, max_risk);
         }
@@ -154,16 +154,17 @@ impl SovereignGuardian {
         (FinalDecision::Approved, max_risk)
     }
 
-    fn log_validation(&self, work: &ProxyWorkOrder, pre: &[ValidationResult], votes: &[VoteRecord], decision: FinalDecision) {
+    fn log_validation(&self, work: &ProxyWorkOrder, pre: &[ValidationResult], _votes: &[VoteRecord], decision: FinalDecision) {
+        let mut ledger = self.ledger.write().unwrap();
         let mut record = Value::Object(serde_json::Map::new());
         record["type"] = Value::String("guardian_validation".to_string());
         record["order_id"] = Value::String(work.order_id.clone());
         record["entity_id"] = Value::String(work.source.entity_id());
         record["decision"] = Value::String(format!("{:?}", decision));
-        record["risk_score"] = Value::Number(serde_json::Number::from_f64(pre.iter().map(|r| r.risk_score).fold(0.0_f64, f64::max)).unwrap_or_default());
+        record["risk_score"] = Value::Number(serde_json::Number::from_f64(pre.iter().map(|r| r.risk_score).fold(f64::NEG_INFINITY, |a, b| a.max(b))).unwrap_or(serde_json::Number::from_f64(0.0).unwrap()));
         record["timestamp"] = Value::Number(now().into());
         record["guardian"] = Value::String(self.guardian_id.clone());
-        self.ledger.append(record);
+        ledger.append(record);
     }
 }
 
@@ -206,7 +207,7 @@ impl PreValidator for TypeValidator {
 // Consensus Validators
 struct SecurityConsensus;
 impl ConsensusValidator for SecurityConsensus {
-    fn vote(&self, work: &ProxyWorkOrder, pre: &[ValidationResult]) -> Vote {
+    fn vote(&self, _work: &ProxyWorkOrder, pre: &[ValidationResult]) -> Vote {
         if pre.iter().any(|r| !r.is_valid) { Vote::Reject } else { Vote::Approve }
     }
     fn id(&self) -> &str { "security" }

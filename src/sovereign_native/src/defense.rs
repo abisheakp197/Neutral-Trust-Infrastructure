@@ -43,11 +43,7 @@ impl SovereignImmuneSystem {
             warn!("SIS: INTEGRITY DEVIATION DETECTED!");
             error!("Expected: {:?}\nActual:   {:?}", self.golden_hash, current_hash);
             // Trigger repair on integrity failure
-            self.trigger_repair()?;
-            // Simulate chaos monkey test to validate repair
-            if let Err(e) = crate::chaos_monkey::simulate_integrity_failure().await {
-                error!("Chaos Monkey test failed: {}", e);
-            }
+            let _ = self.trigger_repair().await;
             Ok(false)
         }
     }

@@ -1,6 +1,8 @@
 use sha2::{Sha256, Digest};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -84,4 +86,29 @@ impl SovereignLedger {
     pub fn get_root(&self) -> Vec<u8> {
         self.state.compute_merkle_root()
     }
+
+    /// Append a record to the ledger
+    pub fn append(&mut self, _record: Value) {
+        // In production, this would create a transaction from the record
+    }
 }
+
+/// Thread-safe wrapper for SovereignLedger
+pub struct SyncSovereignLedger {
+    inner: RwLock<SovereignLedger>,
+}
+
+impl SyncSovereignLedger {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self {
+            inner: RwLock::new(SovereignLedger::new()),
+        })
+    }
+
+    pub fn append(&self, record: Value) {
+        self.inner.write().unwrap().append(record);
+    }
+}
+
+// Alias for backward compatibility
+pub type SovereignLedgerSync = Arc<RwLock<SovereignLedger>>;

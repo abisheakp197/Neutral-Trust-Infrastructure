@@ -2,7 +2,6 @@
 //! Episodic memory with cosine similarity retrieval for autonomous agents.
 //! Zero-dependency, deterministic, and memory-safe.
 
-use std::collections::VecDeque;
 use crate::types::Value;
 
 /// A single memory entry representing an event or observation.
@@ -36,7 +35,7 @@ impl SemanticMemory {
     }
 
     /// Stores a new memory entry.
-    pub fn store(&mut self, mut entry: MemoryEntry) -> String {
+    pub fn store(&mut self, entry: MemoryEntry) -> String {
         let id = entry.id.clone();
         self.entries.push(entry);
 
@@ -51,7 +50,7 @@ impl SemanticMemory {
 
     /// Retrieves top-K similar memories using cosine similarity.
     pub fn retrieve(&self, query_embedding: &[f64], top_k: usize, module_filter: Option<&str>) -> Vec<MemoryEntry> {
-        let now = 0; // In production, use real timestamp
+        let _now = 0; // In production, use real timestamp
         let mut candidates: Vec<(f64, &MemoryEntry)> = self.entries.iter()
             .filter(|e| module_filter.map_or(true, |f| e.module_id == f))
             .map(|e| {
@@ -87,11 +86,13 @@ impl SemanticMemory {
         match content {
             Value::String(s) => {
                 for (i, c) in s.chars().enumerate() {
-                    vec[(i % 64)] += (c as f64) / 255.0;
+                    vec[i % 64] += (c as u32 as f64) / 255.0;
                 }
             }
-            Value::Int(i) => {
-                vec[0] += (*i as f64) / 1e9;
+            Value::Number(n) => {
+                if let Some(v) = n.as_i64() {
+                    vec[0] += (v as f64) / 1e9;
+                }
             }
             _ => {
                 vec[0] = 1.0;

@@ -144,7 +144,7 @@ impl QLearningAgent {
 
         // Max Q for next state
         let max_next_q = self.q_table.get(&nsk)
-            .map(|vals| self.actions.iter().map(|a| vals.get(a).unwrap_or(&0.0)).fold(f64::NEG_INFINITY, f64::max))
+            .map(|vals| self.actions.iter().map(|a| vals.get(a).unwrap_or(&0.0)).fold(f64::NEG_INFINITY, |acc, &x| acc.max(x)))
             .unwrap_or(0.0);
 
         let current_q = *self.q_table.get(&sk)

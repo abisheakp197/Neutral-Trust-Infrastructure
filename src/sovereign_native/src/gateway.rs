@@ -55,7 +55,7 @@ impl ThreatDetection {
 
     fn is_blacklisted(&self, request: &Value) -> bool {
         let blacklist = self.blacklist.lock().unwrap();
-        if let Value::Map(ref map) = request {
+        if let Value::Object(ref map) = request {
             if let Some(Value::String(ip)) = map.get("ip") {
                 blacklist.contains_key(ip)
             } else {
@@ -77,7 +77,7 @@ impl ThreatDetection {
             Value::Number(_) => 1,
             Value::String(_) => 1,
             Value::Array(arr) => 1 + arr.iter().map(|v| self.count_depth(v)).max().unwrap_or(0),
-            Value::Map(map) => 1 + map.values().map(|v| self.count_depth(v)).max().unwrap_or(0),
+            Value::Object(map) => 1 + map.values().map(|v| self.count_depth(v)).max().unwrap_or(0),
         }
     }
 
@@ -139,10 +139,10 @@ pub struct PqcCertificate {
 
 impl PqcCertificate {
     /// Verify the certificate signature using Sovereign Ledger hash
-    pub fn verify(&self, root_public_key: &[u8]) -> Result<bool, String> {
+    pub fn verify(&self, _root_public_key: &[u8]) -> Result<bool, String> {
         let message = format!("{}:{}:{}", self.node_id, self.issued_at, self.expires_at);
         let expected_signature = Blake3::hash(message.as_bytes());
-        Ok(expected_signature == self.signature)
+        Ok(expected_signature.as_slice() == self.signature.as_slice())
     }
 
     pub fn is_expired(&self, current_time: u64) -> bool {
@@ -173,7 +173,7 @@ impl PqcCertAuthority {
         PqcCertificate {
             node_id: node_id.clone(),
             public_key: self.root_keypair.public_key.clone(),
-            signature,
+            signature: signature.to_vec(),
             issued_at: now,
             expires_at: now + ttl_seconds,
             permissions,
@@ -242,10 +242,10 @@ impl MeshGateway {
             cache.get(sender_id).cloned()
         };
 
-        if let Some(cert) = cert {
+        if let Some(_cert) = cert {
             let payload = serde_json::to_vec(&directive).map_err(|e| e.to_string())?;
             let expected_sig = Blake3::hash(&payload);
-            if expected_sig != signature {
+            if &expected_sig[..] != &signature[..] {
                 return Err("Invalid directive signature".to_string());
             }
         }
@@ -265,7 +265,7 @@ impl MeshGateway {
         };
 
         // 4. Route through mesh
-        self.mesh_node.handle_frame(frame)?;
+        self.mesh_node.handle_frame(frame.clone())?;
         self.mesh_node.propagate(frame).await;
 
         Ok(())
@@ -278,14 +278,15 @@ impl MeshGateway {
             cache.keys().cloned().collect()
         };
 
-        let directive = Value::List(nodes.into_iter().map(Value::String).collect());
+        let directive = Value::Array(nodes.into_iter().map(Value::String).collect());
         let payload = serde_json::to_vec(&directive).unwrap_or_default();
+        let signature = self.mesh_node.identity.sign(&payload);
 
         let frame = MeshFrame {
             sender: self.mesh_node.identity.did.clone(),
             sequence: self.current_timestamp(),
             payload,
-            signature: self.mesh_node.identity.sign(&payload),
+            signature,
             timestamp: self.current_timestamp(),
         };
 
@@ -363,10 +364,10 @@ impl SovereignGateway {
                     cache.get(sender_id).cloned()
                 };
 
-                if let Some(cert) = cert {
+                if let Some(_cert) = cert {
                     let payload = serde_json::to_vec(&request).map_err(|e| e.to_string())?;
                     let expected_sig = Blake3::hash(&payload);
-                    if expected_sig != signature {
+                    if &expected_sig[..] != &signature[..] {
                         return Err("PQC signature verification failed".to_string());
                     }
                 } else {
@@ -376,7 +377,7 @@ impl SovereignGateway {
         }
 
         // 4. Route to appropriate connector
-        if let Value::Map(ref map) = request {
+        if let Value::Object(ref map) = request {
             if let Some(Value::String(connector_name)) = map.get("connector") {
                 if let Some(Value::String(action)) = map.get("action") {
                     let registry = self.connector_registry.lock().unwrap();
@@ -582,4 +583,84 @@ mod tests {
         let future_time = gateway.current_timestamp() + 10000;
         assert!(cert.is_expired(future_time));
     }
+}
+
+// ============================================================================
+// SOVEREIGN SHIELD (from shield/mod.rs)
+// ============================================================================
+
+
+/// A Sovereign Shield Guard.
+pub struct ShieldGuard {
+    pub id: String,
+    pub monitored_resources: Vec<String>,
+    pub sensitivity: f64,
+    pub state: ShieldGuardState,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShieldGuardState {
+    Passive,
+    Alert,
+    ActiveDefense,
+    Deception,
+}
+
+/// The Sovereign Shield Engine.
+pub struct SovereignShield {
+    pub guards: HashMap<String, ShieldGuard>,
+    pub deception_layers: Vec<DeceptionLayer>,
+}
+
+impl Default for SovereignShield {
+    fn default() -> Self {
+        Self {
+            guards: HashMap::new(),
+            deception_layers: Vec::new(),
+        }
+    }
+}
+
+impl SovereignShield {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn activate_guard(&mut self, id: String, resources: Vec<String>, sensitivity: f64) {
+        self.guards.insert(id.clone(), ShieldGuard {
+            id,
+            monitored_resources: resources,
+            sensitivity,
+            state: ShieldGuardState::Passive,
+        });
+    }
+
+    pub fn process_threat(&mut self, _signal: &str, intensity: f64) -> ShieldAction {
+        if intensity > 0.8 {
+            self.trigger_deception();
+            ShieldAction::Deceive
+        } else if intensity > 0.5 {
+            ShieldAction::Alert
+        } else {
+            ShieldAction::Ignore
+        }
+    }
+
+    fn trigger_deception(&mut self) {
+        log::warn!("Sovereign Shield: Triggering Adversarial Deception Layer...");
+    }
+}
+
+/// A Deception Layer that presents a fake version of the system to attackers.
+#[derive(Debug, Clone)]
+pub struct DeceptionLayer {
+    pub layer_id: String,
+    pub fake_state: HashMap<String, Value>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShieldAction {
+    Ignore,
+    Alert,
+    Deceive,
 }

@@ -5,13 +5,29 @@ use anyhow::{Result, Context};
 use serde::{Serialize, Deserialize};
 use crate::ledger::SovereignState;
 
+#[derive(Debug, Clone)]
+pub enum StorageBackend {
+    RocksDB,
+    Sqlite,
+    Sled,
+    Memory,
+}
+
 pub struct SovereignPersistence {
     storage_path: PathBuf,
+    backend: StorageBackend,
 }
 
 impl SovereignPersistence {
-    pub fn new(path: PathBuf) -> Self {
-        Self { storage_path: path }
+    pub fn new(backend: StorageBackend) -> Self {
+        Self {
+            storage_path: PathBuf::from("/data/ube"),
+            backend,
+        }
+    }
+
+    pub fn with_path(path: PathBuf, backend: StorageBackend) -> Self {
+        Self { storage_path: path, backend }
     }
 
     /// Atomically saves the sovereign state to disk using a temporary file to prevent corruption.

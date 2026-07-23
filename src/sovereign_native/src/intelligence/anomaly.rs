@@ -2,8 +2,6 @@
 //! Deterministic anomaly detection using Isolation Forests and Time-Series Forecasting.
 //! Zero-dependency, constant-time, and memory-safe.
 
-use std::collections::VecDeque;
-
 /// Holt-Winters Triple Exponential Smoothing Forecaster.
 #[derive(Debug, Clone)]
 pub struct HoltWintersForecaster {
@@ -140,7 +138,7 @@ impl IsolationForest {
 
         let n_features = data[0].len();
         // In production, use a deterministic seed for the RNG
-        let feature = (depth % n_features);
+        let feature = depth % n_features;
 
         let mut vals: Vec<f64> = data.iter().map(|d| d[feature]).collect();
         vals.sort_by(|a, b| a.partial_cmp(b).unwrap());

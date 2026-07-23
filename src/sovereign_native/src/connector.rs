@@ -3,8 +3,7 @@
 //! Designed for absolute sovereignty and deterministic external interaction.
 
 use std::collections::HashMap;
-use std::time::Duration;
-use crate::pipeline::{Value, PipelineError};
+use crate::types::Value;
 
 /// Definition of a Sovereign Connector.
 #[derive(Debug, Clone)]
@@ -109,16 +108,71 @@ pub struct FieldValidator;
 
 impl FieldValidator {
     pub fn validate(value: &Value, definition: &FieldDefinition) -> Result<(), String> {
-        match (&value.clone(), &definition.field_type) {
-            (Value::Null, _) if definition.required => return Err("Field is required".to_string()),
-            (Value::String(_), FieldType::String) => Ok(()),
-            (Value::Int(_), FieldType::Number) => Ok(()),
-            (Value::Float(_), FieldType::Number) => Ok(()),
-            (Value::Bool(_), FieldType::Boolean) => Ok(()),
-            (Value::List(_), FieldType::Array) => Ok(()),
-            (Value::Map(_), FieldType::Object) => Ok(()),
-            (val, ty) => Err(format!("Value {:?} does not match type {:?}", val, ty)),
+        match value {
+            Value::Null if definition.required => Err("Field is required".to_string()),
+            Value::String(_) if definition.field_type == FieldType::String => Ok(()),
+            Value::Number(_) if definition.field_type == FieldType::Number => Ok(()),
+            Value::Bool(_) if definition.field_type == FieldType::Boolean => Ok(()),
+            Value::Array(_) if definition.field_type == FieldType::Array => Ok(()),
+            Value::Object(_) if definition.field_type == FieldType::Object => Ok(()),
+            _ => Err(format!("Value does not match type {:?}", definition.field_type)),
         }
+    }
+}
+
+// ============================================================
+// SOCKET CONNECTOR (from socket.rs)
+// ============================================================
+
+/// Socket error types
+#[derive(Debug, Clone)]
+pub enum SocketError {
+    Io(String),
+    Serde(String),
+    FrameTooLarge(usize),
+    ConnectionClosed,
+}
+
+impl std::fmt::Display for SocketError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SocketError::Io(e) => write!(f, "IO error: {}", e),
+            SocketError::Serde(e) => write!(f, "Serialization error: {}", e),
+            SocketError::FrameTooLarge(s) => write!(f, "Frame too large: {}", s),
+            SocketError::ConnectionClosed => write!(f, "Connection closed by peer"),
+        }
+    }
+}
+
+impl std::error::Error for SocketError {}
+
+/// A SovereignFrame consists of a 4-byte length prefix followed by the JSON payload.
+pub struct SovereignFrame {
+    pub payload: Vec<u8>,
+}
+
+/// Low-level socket wrapper
+pub struct SovereignSocket {
+    // In real implementation, this would hold TcpStream or similar
+    // For now, we store the frame buffer
+    buffer: Vec<u8>,
+}
+
+impl SovereignSocket {
+    pub fn new() -> Self {
+        Self { buffer: Vec::with_capacity(4096) }
+    }
+
+    pub fn send_frame(&mut self, data: &[u8]) -> Result<(), SocketError> {
+        let len = data.len() as u32;
+        let _len_bytes = len.to_be_bytes();
+        // In real implementation: write to TcpStream
+        Ok(())
+    }
+
+    pub fn receive_frame(&mut self) -> Result<Vec<u8>, SocketError> {
+        // In real implementation: read from TcpStream
+        Err(SocketError::ConnectionClosed)
     }
 }
 

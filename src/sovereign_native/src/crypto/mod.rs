@@ -1,14 +1,29 @@
 //! UBE Sovereign Cryptography Suite
 //! Zero-dependency, constant-time, quantum-resistant cryptographic primitives.
+//! Consolidated: blake3, pqc, commitments, kdf, symmetric encryption
 
 pub mod blake3;
-pub mod symmetric;
 pub mod pqc;
-pub mod kdf;
+pub mod symmetric;
 pub mod commitments;
+pub mod kdf;
 
-pub use blake3::Blake3;
+use blake3::Blake3;
+
+// Re-export from symmetric module
 pub use symmetric::{AesGcm, ChaChaPoly};
-pub use pqc::{Kyber, HybridKEM};
-pub use kdf::{Hkdf, Shamir};
+
+// Re-export from kdf module
+pub use kdf::Hkdf;
+
+// Re-export from commitments module
 pub use commitments::Pedersen;
+pub use commitments::BlindedToken;
+
+// CommitmentEngine type alias
+pub type CommitmentEngine = Pedersen;
+
+// ============================================================================
+// CONVENIENCE RE-EXPORTS
+// ============================================================================
+

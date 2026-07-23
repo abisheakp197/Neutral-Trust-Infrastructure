@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 use crate::ssm::SovereignStateMachine;
-use crate::tests::gauntlet::chaos_monkey::{ChaosMonkey, AdversarialFault};
+use chaos_monkey::{ChaosMonkey, AdversarialFault};
 use log::{info, warn, error};
 
 pub struct SovereignGauntlet {

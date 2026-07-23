@@ -9,5 +9,3 @@ pub mod memory;
 pub mod healing;
 pub mod policy;
 pub mod core;
-
-pub use core::{ModuleIntelligence, IntelligenceHub, IntelligenceSystem};

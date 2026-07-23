@@ -1,10 +1,30 @@
+# Build artifacts
+target/
+
+# IDE/Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files
+.env
+
+# Python
 node_modules/
 dist/
 __pycache__/
 *.pyc
 *.pyo
-.env
-*.log
+
+# Generated code-dump / context snapshots
 intelligence_state.json
 fix_api.py
 data/
@@ -16,8 +36,6 @@ patch-*.js
 src/core/_test_phase1.ts
 README-INTERNAL.md
 *-INTERNAL.md
-
-# Generated code-dump / context snapshots
 all_code.txt
 codebase_snapshot.txt
 combined_code.txt

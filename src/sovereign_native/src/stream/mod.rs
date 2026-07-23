@@ -277,3 +277,6 @@ impl StreamRouter {
         "dead-letter".to_string()
     }
 }
+
+// Alias for consistency with main.rs
+pub type SovereignStream = UBEStream;

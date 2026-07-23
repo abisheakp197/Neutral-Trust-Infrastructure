@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use crate::types::Value;
 
 /// Representation of a sovereign intelligence policy.
-#[derive(Debug, Clone)]
 pub struct IntelligencePolicy {
     pub id: String,
     pub name: String,
@@ -19,6 +18,22 @@ pub struct IntelligencePolicy {
     pub fire_count: usize,
     pub source: PolicySource,
 }
+
+impl std::fmt::Debug for IntelligencePolicy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IntelligencePolicy")
+            .field("id", &self.id)
+            .field("name", &self.name)
+            .field("description", &self.description)
+            .field("priority", &self.priority)
+            .field("cooldown_ms", &self.cooldown_ms)
+            .field("last_fired", &self.last_fired)
+            .field("fire_count", &self.fire_count)
+            .field("source", &self.source)
+            .finish()
+    }
+}
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PolicySource {
@@ -99,7 +114,7 @@ impl PolicyEngine {
         fired
     }
 
-    pub fn reward(&mut self, policy_id: &str, reward: f64) {
+    pub fn reward(&mut self, _policy_id: &str, _reward: f64) {
         // Reward logic would integrate with UCB1Bandit or Q-Learning agent
         // to adjust policy priority or modify the condition/action.
     }

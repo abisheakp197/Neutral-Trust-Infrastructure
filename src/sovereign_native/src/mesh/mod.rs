@@ -4,8 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use crate::types::Value;
+use std::time::Instant;
 use crate::crypto::blake3::Blake3;
 use crate::identity::NodeIdentity;
 
@@ -60,7 +59,7 @@ impl MeshNode {
         }
 
         // 2. Verify PQC Signature
-        if !NodeIdentity::verify(&frame.payload, &frame.signature, &frame.sender) {
+        if !NodeIdentity::verify(&frame.payload, &frame.signature, frame.sender.as_bytes()) {
             return Err("Invalid PQC signature for mesh frame".to_string());
         }
 
@@ -79,7 +78,7 @@ impl MeshNode {
     }
 
     /// Propagates a frame to all known peers.
-    pub async fn propagate(&self, frame: MeshFrame) {
+    pub async fn propagate(&self, _frame: MeshFrame) {
         let peers = self.peers.lock().unwrap().clone();
         for peer in peers {
             // In production, this calls the SovereignSocket to send the frame

@@ -143,14 +143,12 @@ impl Multibase {
                 remainder = current % 58;
             }
 
-            // Remove leading zeros from the division
             let first_nonzero = next_temp.iter().position(|&b| b != 0).unwrap_or(next_temp.len());
             temp = next_temp[first_nonzero..].to_vec();
 
             result.push(Self::ALPHABET.chars().nth(remainder as usize).unwrap());
         }
 
-        // Handle leading zeros of the original input
         for &byte in bytes {
             if byte != 0 { break; }
             result.push('1');
@@ -195,10 +193,10 @@ impl MerkleTree {
 
         let root = tree.last().and_then(|l| l.first()).cloned().unwrap_or_default();
 
-        Self { root, leaves, tree }
+        Self { root, leaves: tree[0].clone(), tree }
     }
 
-    pub fn prove(index: usize) -> MerkleProof {
+    pub fn prove(_index: usize) -> MerkleProof {
         MerkleProof {
             root: String::new(),
             leaf: String::new(),
@@ -236,7 +234,7 @@ impl CredentialEngine {
     pub fn issue(
         &mut self,
         issuer_did: String,
-        subject_did: String,
+        _subject_did: String,
         types: Vec<String>,
         claims: HashMap<String, Value>,
     ) -> VerifiableCredential {
@@ -244,7 +242,7 @@ impl CredentialEngine {
             id: format!("vc-{}", self.uid()),
             types,
             issuer: issuer_did,
-            issuance_date: 0, // Simplified timestamp
+            issuance_date: 0,
             expiration_date: None,
             credential_subject: claims,
             proof: LinkedDataProof {
@@ -265,8 +263,7 @@ impl CredentialEngine {
     }
 
     fn uid(&self) -> String {
-        // Deterministic UUID simulation
-        format!("{:x}", Blake3::hash(b"uuid").as_slice())
+        hex::encode(Blake3::hash(b"uuid"))
     }
 }
 

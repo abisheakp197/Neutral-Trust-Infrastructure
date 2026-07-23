@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["src/sovereign_native"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false

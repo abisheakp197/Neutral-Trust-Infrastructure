@@ -32,19 +32,49 @@ pub enum ConstraintOperator {
     Contains,
 }
 
+/// Trait for SDL compilation
+pub trait SdlCompilerTrait {
+    fn compile(&self, directive: &SovereignDirective) -> AutomationRequest;
+    fn validate(&self, code: &str) -> Result<(), String>;
+}
+
 /// The SDL Compiler translates high-level directives into executable AutomationRequests.
 pub struct SdlCompiler {
     // Mapping of high-level intents to pipeline templates.
     templates: HashMap<String, Vec<AutomationStep>>,
 
     // Compiler for validating repair proposals.
-    compiler: Box<dyn SdlCompiler>,
+    compiler: Box<dyn SdlCompilerTrait>,
+}
+
+/// Default SDL compiler implementation
+pub struct DefaultSdlCompiler;
+
+impl SdlCompilerTrait for DefaultSdlCompiler {
+    fn compile(&self, directive: &SovereignDirective) -> AutomationRequest {
+        AutomationRequest {
+            id: directive.id.clone(),
+            name: directive.intent.clone(),
+            description: None,
+            steps: self.match_template(&directive.intent),
+            options: crate::automation::AutomationOptions::default(),
+        }
+    }
+    fn validate(&self, _code: &str) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl DefaultSdlCompiler {
+    fn match_template(&self, intent: &str) -> Vec<crate::automation::AutomationStep> {
+        vec![]
+    }
 }
 
 impl SdlCompiler {
     /// Creates a new SDL compiler with validation logic.
     pub fn new() -> Self {
-        let compiler = Box::new(DefaultSdlCompiler);
+        let compiler: Box<dyn SdlCompilerTrait> = Box::new(DefaultSdlCompiler);
         let mut templates = HashMap::new();
         // Example Template: "Maintain Resource Level"
         templates.insert("maintain_resource".to_string(), vec![
@@ -62,30 +92,6 @@ impl SdlCompiler {
             },
         ]);
         Self { templates, compiler }
-    }
-}
-
-impl SdlCompiler {
-    pub fn new() -> Self {
-        let mut templates = HashMap::new();
-
-        // Example Template: "Maintain Resource Level"
-        templates.insert("maintain_resource".to_string(), vec![
-            AutomationStep::Connector {
-                name: "ResourceCheck".to_string(),
-                connector_id: "system_metrics".to_string(),
-                action: "get_level".to_string(),
-                input: Value::Null,
-            },
-            AutomationStep::Condition {
-                name: "CheckThreshold".to_string(),
-                expression: "value < threshold".to_string(),
-                on_true: "trigger_recharge".to_string(),
-                on_false: "continue".to_string(),
-            },
-        ]);
-
-        Self { templates }
     }
 
     /// Compiles a high-level directive into a deterministic AutomationRequest.
