@@ -3,8 +3,7 @@
 //! Zero-dependency, deterministic, and high-performance.
 
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use crate::types::Value;
+use std::time::Instant;
 
 /// Cognitive Radio State.
 #[derive(Debug, Clone)]
@@ -71,7 +70,7 @@ impl CognitiveRadio {
         // In production, this interacts with the SDR (Software Defined Radio) hardware.
         // We simulate a deterministic scan.
         for i in 0..10 {
-            let freq = 868.0 + (i as f64 * 0.1);
+            let _freq = 868.0 + (i as f64 * 0.1);
             let noise = 0.5; // Simulated noise
             self.spectrum_map.channels.insert(i, ChannelStatus {
                 noise_floor: noise,

@@ -33,11 +33,14 @@ pub struct PipelineStage {
     pub id: String,
     pub name: String,
     pub stage_type: StageType,
-    pub handler: Box<dyn Fn(Value, &PipelineContext) -> Result<Option<Value>, PipelineError> + Send + Sync>,
+    pub handler: HandlerFn,
     pub concurrency: usize,
     pub timeout: Duration,
     pub drop_on_error: bool,
 }
+
+/// Type alias for handler function to reduce complexity
+pub type HandlerFn = Box<dyn Fn(Value, &PipelineContext) -> Result<Option<Value>, PipelineError> + Send + Sync>;
 
 #[derive(Debug, Clone)]
 pub struct PipelineError {

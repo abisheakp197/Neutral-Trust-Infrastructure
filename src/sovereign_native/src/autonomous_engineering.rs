@@ -2,9 +2,8 @@
 // Self-evolving, omni-problem-solving system.
 use std::fs;
 use std::sync::Arc;
-use anyhow::{Result, Context};
-use log::{info, error, warn};
-use crate::sdl::SdlCompiler;
+use anyhow::Result;
+use log::{info, error};
 
 /// A proposed code evolution for a specific module.
 #[derive(Debug, Clone)]
@@ -49,42 +48,35 @@ impl SovereignAutonomousEngineering {
 
     /// Performance Detection
     pub fn detect_performance(&self) -> Vec<CodeEvolution> {
-        let mut issues = Vec::new();
-        // Check for performance issues
-        issues.push(CodeEvolution {
+        vec![CodeEvolution {
             module_id: "pipeline".to_string(),
             original_logic: "Sequential Processing".to_string(),
             proposed_logic: "SIMD-Parallel Processing".to_string(),
             rationale: "High CPU usage; optimize with SIMD".to_string(),
             expected_gain: 0.3,
-        });
-        issues
+        }]
     }
 
     /// Logic Detection (Syntax/Bugs)
     pub fn detect_logic(&self) -> Vec<CodeEvolution> {
-        let mut issues = Vec::new();
-        issues.push(CodeEvolution {
+        vec![CodeEvolution {
             module_id: "logic.rs".to_string(),
             original_logic: "Sequential Error Handling".to_string(),
             proposed_logic: "Parallelized Error Handling".to_string(),
             rationale: "Detected inefficient error handling; optimize with Rust SIMD".to_string(),
             expected_gain: 0.25,
-        });
-        issues
+        }]
     }
 
     /// Mesh Detection (Corrupted Frames)
     pub fn detect_mesh(&self) -> Vec<CodeEvolution> {
-        let mut issues = Vec::new();
-        issues.push(CodeEvolution {
+        vec![CodeEvolution {
             module_id: "mesh/mod.rs".to_string(),
             original_logic: "Basic Gossip Protocol".to_string(),
             proposed_logic: "Resilient Frame Routing".to_string(),
             rationale: "Detected corrupted mesh frames; reroute via dynamic tables".to_string(),
             expected_gain: 0.15,
-        });
-        issues
+        }]
     }
 
     /// Autonomous Repair Workflow

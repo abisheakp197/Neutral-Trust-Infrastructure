@@ -52,7 +52,7 @@ impl SemanticMemory {
     pub fn retrieve(&self, query_embedding: &[f64], top_k: usize, module_filter: Option<&str>) -> Vec<MemoryEntry> {
         let _now = 0; // In production, use real timestamp
         let mut candidates: Vec<(f64, &MemoryEntry)> = self.entries.iter()
-            .filter(|e| module_filter.map_or(true, |f| e.module_id == f))
+            .filter(|e| module_filter.is_none_or(|f| e.module_id == f))
             .map(|e| {
                 // Apply temporal decay to importance
                 let age = 0.0; // Simplified decay for core

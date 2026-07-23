@@ -3,8 +3,8 @@
 //! Bitcoin-grade: deterministic, memory-safe, zero-dependency.
 
 use std::collections::{HashMap, VecDeque};
-use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, Condvar};
+use std::time::Instant;
 use crate::types::Value;
 
 /// Sovereign Stream Item.
@@ -62,7 +62,7 @@ impl CreditController {
         self.waiters.lock().unwrap().push_back(cond.clone());
         drop(credits);
 
-        let mut lock = self.credits.lock().unwrap();
+        let _lock = self.credits.lock().unwrap();
         // Wait until a credit is granted
         // In a production async system, this would use a Waker.
         // For the native core, we use a synchronous condvar for determinism.
@@ -197,7 +197,7 @@ pub struct StreamMetrics {
     consumed: Mutex<usize>,
     dropped: Mutex<usize>,
     errors: Mutex<usize>,
-    startTime: Mutex<Instant>,
+    start_time: Mutex<Instant>,
 }
 
 impl StreamMetrics {
@@ -207,7 +207,7 @@ impl StreamMetrics {
             consumed: Mutex::new(0),
             dropped: Mutex::new(0),
             errors: Mutex::new(0),
-            startTime: Mutex::new(Instant::now()),
+            start_time: Mutex::new(Instant::now()),
         }
     }
 
@@ -228,7 +228,7 @@ impl StreamMetrics {
     }
 
     pub fn throughput(&self) -> f64 {
-        let elapsed = self.startTime.lock().unwrap().elapsed().as_secs_f64();
+        let elapsed = self.start_time.lock().unwrap().elapsed().as_secs_f64();
         if elapsed > 0.0 {
             *self.consumed.lock().unwrap() as f64 / elapsed
         } else {
@@ -260,7 +260,7 @@ impl StreamRouter {
     pub fn add_route(&self, rule: RouterRule, stream: Arc<UBEStream>) {
         let mut rules = self.rules.lock().unwrap();
         rules.push(rule);
-        rules.sort_by(|a, b| b.priority.cmp(&a.priority));
+        rules.sort_by_key(|r| std::cmp::Reverse(r.priority));
 
         let mut routes = self.routes.lock().unwrap();
         routes.insert(rules.last().unwrap().name.clone(), stream);

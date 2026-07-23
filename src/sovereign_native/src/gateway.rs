@@ -245,7 +245,7 @@ impl MeshGateway {
         if let Some(_cert) = cert {
             let payload = serde_json::to_vec(&directive).map_err(|e| e.to_string())?;
             let expected_sig = Blake3::hash(&payload);
-            if &expected_sig[..] != &signature[..] {
+            if expected_sig[..] != signature[..] {
                 return Err("Invalid directive signature".to_string());
             }
         }
@@ -367,7 +367,7 @@ impl SovereignGateway {
                 if let Some(_cert) = cert {
                     let payload = serde_json::to_vec(&request).map_err(|e| e.to_string())?;
                     let expected_sig = Blake3::hash(&payload);
-                    if &expected_sig[..] != &signature[..] {
+                    if expected_sig[..] != signature[..] {
                         return Err("PQC signature verification failed".to_string());
                     }
                 } else {
@@ -607,18 +607,10 @@ pub enum ShieldGuardState {
 }
 
 /// The Sovereign Shield Engine.
+#[derive(Default)]
 pub struct SovereignShield {
     pub guards: HashMap<String, ShieldGuard>,
     pub deception_layers: Vec<DeceptionLayer>,
-}
-
-impl Default for SovereignShield {
-    fn default() -> Self {
-        Self {
-            guards: HashMap::new(),
-            deception_layers: Vec::new(),
-        }
-    }
 }
 
 impl SovereignShield {

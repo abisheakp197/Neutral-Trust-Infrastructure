@@ -60,7 +60,7 @@ pub fn attack_divide_by_zero() -> i32 {
 /// ATTACK: Index out of bounds - causes panic
 /// Immune System: PanicGuard catches it, logs error, continues
 pub fn attack_index_out_of_bounds() -> i32 {
-    let vec = vec![1, 2, 3];
+    let vec = [1, 2, 3];
     vec[100]  // PANIC: index out of bounds
 }
 
@@ -256,7 +256,7 @@ mod tests {
     #[test]
     fn test_divide_by_zero_panic() {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-            || attack_divide_by_zero()
+            attack_divide_by_zero
         ));
         assert!(result.is_err(), "Divide by zero should panic");
     }
@@ -264,7 +264,7 @@ mod tests {
     #[test]
     fn test_index_out_of_bounds_panic() {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-            || attack_index_out_of_bounds()
+            attack_index_out_of_bounds
         ));
         assert!(result.is_err(), "Index out of bounds should panic");
     }
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn test_none_unwrap_panic() {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-            || attack_none_unwrap()
+            attack_none_unwrap
         ));
         assert!(result.is_err(), "None unwrap should panic");
     }
@@ -280,7 +280,7 @@ mod tests {
     #[test]
     fn test_type_confusion_panic() {
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(
-            || attack_type_confusion()
+            attack_type_confusion
         ));
         assert!(result.is_err(), "Type confusion should panic");
     }

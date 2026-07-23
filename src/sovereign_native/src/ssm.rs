@@ -109,24 +109,32 @@ impl SovereignStateMachine {
     /// The main autonomous loop (The Heartbeat).
     /// Evaluates intelligence, checks mandates, and action-sequences tasks.
     pub async fn tick(&self) {
-        let mut state = self.state.lock().unwrap();
-        state.current_tick += 1;
+        // Lock state, update tick, drop immediately
+        {
+            let mut state = self.state.lock().unwrap();
+            state.current_tick += 1;
+        }
 
-        let intelligence = self.intelligence.lock().unwrap();
-        let mandates = self.mandates.lock().unwrap();
+        // Collect triggered mandate IDs without holding locks across await
+        let triggered_mandates: Vec<String> = {
+            let intelligence = self.intelligence.lock().unwrap();
+            let mandates = self.mandates.lock().unwrap();
 
-        // 1. Evaluation Phase: Which mandates are triggered by the current environment?
-        for (id, mandate) in mandates.iter() {
-            if mandate.is_active && (mandate.trigger_condition)(&intelligence) {
-                let mut queue = self.queue.lock().unwrap();
-                if !queue.contains(id) {
-                    queue.push_back(id.clone());
+            mandates.iter()
+                .filter(|(_, mandate)| mandate.is_active && (mandate.trigger_condition)(&intelligence))
+                .map(|(id, _)| id.clone())
+                .collect()
+        };
+
+        // Add triggered mandates to queue
+        {
+            let mut queue = self.queue.lock().unwrap();
+            for id in triggered_mandates {
+                if !queue.contains(&id) {
+                    queue.push_back(id);
                 }
             }
         }
-        drop(mandates);
-        drop(intelligence);
-        drop(state);
 
         // 2. Execution Phase: Action the highest priority mandate in the queue.
         self.process_queue().await;

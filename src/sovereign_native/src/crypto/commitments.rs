@@ -7,7 +7,7 @@ pub struct Pedersen;
 impl Pedersen {
     /// Create a commitment to a value.
     /// C = g^v * h^r (mod p)
-    pub fn commit(value: &[u8], blinding_factor: &[u8]) -> Vec<u8> {
+    pub fn commit(value: &[u8], _blinding_factor: &[u8]) -> Vec<u8> {
         // Implementation of group operations over BN128 or BLS12-381
         // For the sovereign core, we provide the deterministic interface.
         let mut commitment = vec![0u8; 32];
@@ -36,7 +36,7 @@ impl BlindedToken {
     }
 
     /// Unblind a token after signing.
-    pub fn unblind(blinded_token: &[u8], blinding_factor: &[u8]) -> Vec<u8> {
+    pub fn unblind(blinded_token: &[u8], _blinding_factor: &[u8]) -> Vec<u8> {
         // Unblinding logic: m = b * r^-e (mod n)
         let mut unblinded = blinded_token.to_vec();
         unblinded[0] ^= 0xFF; // Placeholder

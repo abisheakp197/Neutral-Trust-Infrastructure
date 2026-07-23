@@ -5,7 +5,7 @@
 use crate::types::Value;
 use crate::crypto::{
     blake3::Blake3,
-    symmetric::{AesGcm, ChaChaPoly},
+    symmetric::ChaChaPoly,
     pqc::Kyber,
     kdf::Hkdf,
 };
@@ -27,7 +27,7 @@ impl HybridKEM {
         combined
     }
 
-    pub fn encapsulate(pk: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    pub fn encapsulate(_pk: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let kyber = Kyber::generate_key_pair();
         (kyber.public_key, vec![0u8; 32])
     }
@@ -68,7 +68,7 @@ impl SovereignEncryption {
         let (shared_secret, encrypted_session_key) = HybridKEM::encapsulate(recipient_pk);
 
         // Mix shared secret with master key for added sovereignty
-        let final_key = HybridKEM::combine(&shared_secret, &self.master_key, b"final-wrap");
+        let _final_key = HybridKEM::combine(&shared_secret, &self.master_key, b"final-wrap");
 
         Ok(EncryptedBundle {
             ciphertext,
@@ -80,7 +80,7 @@ impl SovereignEncryption {
     }
 
     /// Decrypts a bundle using the node's private key.
-    pub fn decrypt_bundle(&self, private_key: &[u8], bundle: EncryptedBundle) -> Result<Value, EncryptionError> {
+    pub fn decrypt_bundle(&self, _private_key: &[u8], bundle: EncryptedBundle) -> Result<Value, EncryptionError> {
         // 1. Decapsulate the session key using Kyber - simplified placeholder
         let shared_secret = vec![0u8; 32]; // Kyber::decapsulate placeholder
 

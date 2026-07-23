@@ -152,17 +152,15 @@ impl AutomationEngine {
 
             // --- SOVEREIGN GUARD FILTER ---
             // Check if the step is destructive and if it's allowed.
-            if self.is_destructive(step) {
-                if !self.validate_destructive_action(step, &current_state) {
-                    step_results.push(StepResult {
-                        step_name,
-                        status: AutomationStatus::BlockedBySovereignGuard,
-                        output: Value::String("Blocked: Destructive action failed sovereign safety check".to_string()),
-                        duration: step_start.elapsed(),
-                    });
-                    status = AutomationStatus::BlockedBySovereignGuard;
-                    break;
-                }
+            if self.is_destructive(step) && !self.validate_destructive_action(step, &current_state) {
+                step_results.push(StepResult {
+                    step_name,
+                    status: AutomationStatus::BlockedBySovereignGuard,
+                    output: Value::String("Blocked: Destructive action failed sovereign safety check".to_string()),
+                    duration: step_start.elapsed(),
+                });
+                status = AutomationStatus::BlockedBySovereignGuard;
+                break;
             }
 
             match self.process_step(step, &mut current_state) {

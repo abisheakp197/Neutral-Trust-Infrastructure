@@ -88,7 +88,7 @@ impl CompilationErrorDetector {
     /// Run cargo check (faster than build) and capture all errors
     pub fn detect_errors(&self) -> Vec<CompilationError> {
         let output = Command::new("cargo")
-            .args(&["check", "--all"])
+            .args(["check", "--all"])
             .current_dir(&self.project_root)
             .output()
             .expect("Failed to run cargo check");

@@ -154,7 +154,7 @@ impl QLearningAgent {
         // Q-Learning update rule: Q(s,a) = Q(s,a) + alpha * (reward + gamma * maxQ(s',a') - Q(s,a))
         let new_q = current_q + self.alpha * (reward + self.gamma * max_next_q - current_q);
 
-        self.q_table.entry(sk).or_insert_with(HashMap::new).insert(action.to_string(), new_q);
+        self.q_table.entry(sk).or_default().insert(action.to_string(), new_q);
 
         self.epsilon = (self.epsilon * self.epsilon_decay).max(self.min_epsilon);
         self.steps += 1;

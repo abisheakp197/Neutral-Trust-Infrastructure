@@ -197,11 +197,19 @@ impl DigitalProxy {
     /// Each request goes through: Validator -> RiskAnalyst -> Executor -> Auditor
     pub async fn team_work_loop(&self) -> Vec<ProxyWorkResult> {
         let mut completed = Vec::new();
-        let mut queue = self.work_queue.lock().unwrap();
+        // Collect all work from queue without holding lock during async processing
+        let work_items: Vec<ProxyWorkOrder> = {
+            let mut queue = self.work_queue.lock().unwrap();
+            let mut items = Vec::new();
+            while let Some(work) = queue.pop_front() {
+                items.push(work);
+            }
+            items
+        };
 
         // Process ALL requests in the queue (like a team working through their backlog)
         // This is different from one-at-a-time - the TEAM handles MULTIPLE
-        while let Some(mut work_order) = queue.pop_front() {
+        for mut work_order in work_items {
             // Assigned to Validator first
             work_order = self.process_as_role(work_order, TeamRole::Validator).await;
 
@@ -223,7 +231,7 @@ impl DigitalProxy {
             // Convert final work order to result for storage
             let result = ProxyWorkResult {
                 order_id: work_order.order_id.clone(),
-                status: work_order.status.clone(),
+                status: work_order.status,
                 output: work_order.request.clone(),
                 duration: Duration::ZERO,
                 executed_at: now(),
@@ -263,7 +271,7 @@ impl DigitalProxy {
 
         // Update request with result
         let mut updated_order = work_order.clone();
-        updated_order.status = result.status.clone();
+        updated_order.status = result.status;
 
         // Remove from active
         memory.active_requests.remove(&updated_order.order_id);
@@ -418,7 +426,7 @@ impl DigitalProxy {
             let total_time = memory.recent_history.iter()
                 .map(|r| r.result.duration.as_millis() as u64)
                 .sum::<u64>();
-            let avg_millis = total_time / memory.metrics.total_requests as u64;
+            let avg_millis = total_time / memory.metrics.total_requests;
             memory.metrics.avg_processing_time = Duration::from_millis(avg_millis);
         }
 

@@ -2,7 +2,6 @@
 //! Deterministic, iterative, and high-entropy key derivation.
 //! Implements HKDF and Shamir Secret Sharing.
 
-use std::time::Duration;
 
 /// Hash-based Key Derivation Function (HKDF)
 pub struct Hkdf;
@@ -10,14 +9,14 @@ pub struct Hkdf;
 impl Hkdf {
     /// Full HKDF: Extract and Expand.
     pub fn derive(
-        salt: &[u8],
-        ikm: &[u8],
-        info: &[u8],
+        _salt: &[u8],
+        _ikm: &[u8],
+        _info: &[u8],
         length: usize,
     ) -> Vec<u8> {
         // Step 1: Extract
         // PRK = HMAC-BLAKE3(salt, IKM)
-        let prk = vec![0u8; 32]; // Placeholder
+        let _prk = [0u8; 32]; // Placeholder
 
         // Step 2: Expand
         // OKM = HMAC-BLAKE3(PRK, info | 0x01) ...
@@ -30,7 +29,7 @@ impl Hkdf {
     }
 
     /// Password-based key derivation (Iterative hashing).
-    pub fn pbkdf(password: &str, salt: &[u8], iterations: u32) -> Vec<u8> {
+    pub fn pbkdf(_password: &str, _salt: &[u8], iterations: u32) -> Vec<u8> {
         let mut key = vec![0u8; 32];
         for i in 0..iterations {
             // key = Blake3::keyed_hash(key, &i.to_le_bytes())

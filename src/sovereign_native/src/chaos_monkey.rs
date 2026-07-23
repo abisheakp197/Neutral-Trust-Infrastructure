@@ -1,10 +1,8 @@
 // UBE Autonomous Chaos Monkey
 // Simulates production failures and validates repairs.
-use anyhow::{Result, Context};
-use std::fs;
-use std::env;
+use anyhow::Result;
 use std::sync::Arc;
-use log::{info, error, warn};
+use log::{info, warn};
 use crate::defense::SovereignImmuneSystem;
 use crate::autonomous_engineering::SovereignAutonomousEngineering;
 use crate::intelligence::core::IntelligenceHub;
@@ -13,10 +11,10 @@ use crate::intelligence::core::IntelligenceHub;
 pub async fn inject_fault() -> Result<()> {
     info!("SIS: Injecting chaos: Corrupting golden hash...");
     let corrupted_hash = b"FAKE_HASH_1234567890";
-    let mut sis = SovereignImmuneSystem::new(corrupted_hash.to_vec());
+    let sis = SovereignImmuneSystem::new(corrupted_hash.to_vec());
     if !sis.verify_integrity().await? {
         warn!("Integrity failure detected! Triggering repairs...");
-        let sae = SovereignAutonomousEngineering::new(Arc::new(IntelligenceHub::new()));
+        let _sae = SovereignAutonomousEngineering::new(Arc::new(IntelligenceHub::new()));
         // sae.autonomous_repair().await?;
         info!("Repairs merged successfully!");
     }

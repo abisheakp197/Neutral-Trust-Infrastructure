@@ -42,7 +42,7 @@ impl SovereignState {
             hasher.update(&self.values[key]);
         }
 
-        hasher.update(&self.sequence.to_be_bytes());
+        hasher.update(self.sequence.to_be_bytes());
         hasher.finalize().to_vec()
     }
 }

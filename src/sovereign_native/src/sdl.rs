@@ -66,7 +66,7 @@ impl SdlCompilerTrait for DefaultSdlCompiler {
 }
 
 impl DefaultSdlCompiler {
-    fn match_template(&self, intent: &str) -> Vec<crate::automation::AutomationStep> {
+    fn match_template(&self, _intent: &str) -> Vec<crate::automation::AutomationStep> {
         vec![]
     }
 }

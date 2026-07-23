@@ -96,7 +96,7 @@ pub struct NestedData {
     pub c: Vec<f64>,
 }
 
-fn generate_random_data(rng: &mut impl Rng) -> TestData {
+pub fn generate_random_data(rng: &mut impl Rng) -> TestData {
     TestData {
         int_val: rng.gen(),
         uint_val: rng.gen(),
@@ -118,7 +118,7 @@ fn generate_random_data(rng: &mut impl Rng) -> TestData {
     }
 }
 
-fn generate_random_string(rng: &mut impl Rng, max_len: usize) -> String {
+pub fn generate_random_string(rng: &mut impl Rng, max_len: usize) -> String {
     let len = rng.gen_range(0..max_len);
     (0..len)
         .map(|_| {
@@ -132,11 +132,11 @@ fn generate_random_string(rng: &mut impl Rng, max_len: usize) -> String {
         .collect()
 }
 
-fn generate_random_bytes(rng: &mut impl Rng, len: usize) -> Vec<u8> {
+pub fn generate_random_bytes(rng: &mut impl Rng, len: usize) -> Vec<u8> {
     (0..len).map(|_| rng.gen()).collect()
 }
 
-fn test_property_addition(data: &TestData, _rng: &mut impl Rng) -> bool {
+pub fn test_property_addition(data: &TestData, _rng: &mut impl Rng) -> bool {
     let a = data.int_val;
     let b = data.uint_val as i64;
     let result = a.checked_add(b).and_then(|v| v.checked_sub(b));
@@ -146,19 +146,16 @@ fn test_property_addition(data: &TestData, _rng: &mut impl Rng) -> bool {
     }
 }
 
-fn test_property_serialization(data: &TestData, _rng: &mut impl Rng) -> bool {
+pub fn test_property_serialization(data: &TestData, _rng: &mut impl Rng) -> bool {
     match serde_json::to_string(data) {
         Ok(json) => {
-            match serde_json::from_str::<TestData>(&json) {
-                Ok(_) => true,
-                Err(_) => false,
-            }
+            serde_json::from_str::<TestData>(&json).is_ok()
         }
         Err(_) => false,
     }
 }
 
-fn test_property_reversibility(data: &TestData, _rng: &mut impl Rng) -> bool {
+pub fn test_property_reversibility(data: &TestData, _rng: &mut impl Rng) -> bool {
     let mut s = data.string_val.clone();
     if !s.is_empty() {
         let c = s.pop().unwrap();
@@ -189,7 +186,6 @@ pub fn mutation_test() {
     }
 
     fn early_return() {
-        return;
     }
 
     let mutations: Vec<(&str, fn())> = vec![
@@ -199,7 +195,7 @@ pub fn mutation_test() {
     ];
 
     for (name, mutation) in mutations.iter() {
-        let result = catch_unwind(std::panic::AssertUnwindSafe(|| mutation()));
+        let result = catch_unwind(std::panic::AssertUnwindSafe(mutation));
         match result {
             Ok(_) => info!("[MUTATION] {}: SURVIVED", name),
             Err(_) => warn!("[MUTATION] {}: FAILED (panic caught)", name),

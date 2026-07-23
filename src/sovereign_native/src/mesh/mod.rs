@@ -92,7 +92,7 @@ impl MeshNode {
             sender: self.identity.did.clone(),
             sequence: 0, // Should be monotonically increasing
             payload: directive,
-            signature: self.identity.sign(&vec![]), // Simplified signature
+            signature: self.identity.sign(&[]), // Simplified signature
             timestamp: 0,
         };
 

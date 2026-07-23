@@ -137,7 +137,7 @@ impl PanicGuard {
             let mut last_error: Option<RuntimeError> = None;
 
             for attempt in 1..=*max_attempts {
-                let result = PanicGuard::guard(|| f());
+                let result = PanicGuard::guard(&f);
                 match result {
                     Ok(v) => return Ok(v),
                     Err(e) => {
@@ -175,7 +175,7 @@ impl ResultGuard {
         E: std::fmt::Display + Send + 'static,
         T: Send + Clone + 'static,
     {
-        let result = PanicGuard::guard(|| f());
+        let result = PanicGuard::guard(&f);
         match result {
             Ok(Ok(v)) => Ok(v),
             Ok(Err(e)) => {
@@ -235,7 +235,7 @@ impl ResultGuard {
         let mut last_error: Option<RuntimeError> = None;
 
         for attempt in 1..=max_attempts {
-            let result = PanicGuard::guard(|| f());
+            let result = PanicGuard::guard(&f);
             match result {
                 Ok(Ok(v)) => return Ok(v),
                 Ok(Err(e)) => {
@@ -427,7 +427,7 @@ impl CircuitBreaker {
 
         drop(state);
 
-        let result = PanicGuard::guard(|| f());
+        let result = PanicGuard::guard(f);
 
         match &result {
             Ok(_) => {

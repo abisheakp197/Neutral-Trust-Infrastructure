@@ -9,7 +9,6 @@
 //!
 //! Only: ✅ Proof Valid  or  ❌ Proof Invalid
 
-use crate::crypto::commitments::Pedersen;
 use crate::crypto::blake3::Blake3;
 
 /// ZK Proof - hides ALL data, reveals ONLY validity

@@ -8,8 +8,6 @@ pub mod symmetric;
 pub mod commitments;
 pub mod kdf;
 
-use blake3::Blake3;
-
 // Re-export from symmetric module
 pub use symmetric::{AesGcm, ChaChaPoly};
 
@@ -18,7 +16,6 @@ pub use kdf::Hkdf;
 
 // Re-export from commitments module
 pub use commitments::Pedersen;
-pub use commitments::BlindedToken;
 
 // CommitmentEngine type alias
 pub type CommitmentEngine = Pedersen;

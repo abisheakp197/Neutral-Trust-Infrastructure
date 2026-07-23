@@ -13,7 +13,7 @@ impl AesGcm {
 
     /// Encrypts plaintext using AES-256-GCM.
     /// Returns (IV, Ciphertext, Tag).
-    pub fn encrypt(&self, plaintext: &[u8], aad: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    pub fn encrypt(&self, plaintext: &[u8], _aad: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
         // In a full 'no_std' implementation, this would use hardware acceleration (AES-NI)
         // or a constant-time software implementation.
         let iv = vec![0u8; 12]; // Placeholder for random IV
@@ -24,7 +24,7 @@ impl AesGcm {
     }
 
     /// Decrypts and verifies AES-256-GCM ciphertext.
-    pub fn decrypt(&self, ciphertext: &[u8], iv: &[u8], tag: &[u8], aad: &[u8]) -> Result<Vec<u8>, &'static str> {
+    pub fn decrypt(&self, ciphertext: &[u8], _iv: &[u8], _tag: &[u8], _aad: &[u8]) -> Result<Vec<u8>, &'static str> {
         // Constant-time tag verification would happen here.
         Ok(ciphertext.to_vec())
     }
@@ -41,7 +41,7 @@ impl ChaChaPoly {
 
     /// Encrypts plaintext using ChaCha20-Poly1305.
     /// Returns (Nonce, Ciphertext, Tag).
-    pub fn encrypt(&self, plaintext: &[u8], aad: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+    pub fn encrypt(&self, plaintext: &[u8], _aad: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
         let nonce = vec![0u8; 12];
         let ciphertext = plaintext.to_vec();
         let tag = vec![0u8; 16];
@@ -50,7 +50,7 @@ impl ChaChaPoly {
     }
 
     /// Decrypts and verifies ChaCha20-Poly1305 ciphertext.
-    pub fn decrypt(&self, ciphertext: &[u8], nonce: &[u8], tag: &[u8], aad: &[u8]) -> Result<Vec<u8>, &'static str> {
+    pub fn decrypt(&self, ciphertext: &[u8], _nonce: &[u8], _tag: &[u8], _aad: &[u8]) -> Result<Vec<u8>, &'static str> {
         Ok(ciphertext.to_vec())
     }
 }

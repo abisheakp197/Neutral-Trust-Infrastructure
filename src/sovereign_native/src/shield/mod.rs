@@ -3,9 +3,7 @@
 //! Implements an Adversarial-Deceptive defense mechanism.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use crate::types::Value;
-use crate::crypto::blake3::Blake3;
 
 /// A Sovereign Shield Guard.
 /// Monitored for anomalies and capable of triggering deception.
@@ -52,7 +50,7 @@ impl SovereignShield {
     }
 
     /// Processes a potential threat signal.
-    pub fn process_threat(&mut self, signal: &str, intensity: f64) -> ShieldAction {
+    pub fn process_threat(&mut self, _signal: &str, intensity: f64) -> ShieldAction {
         // In a real implementation, this uses the IntelligenceHub to validate the threat.
         if intensity > 0.8 {
             self.trigger_deception();
@@ -95,7 +93,7 @@ impl WarmWorkerPool {
         self.workers.iter().find(|w| w.is_ready).cloned()
     }
 
-    pub fn release_worker(&mut self, worker: SovereignWorker) {
+    pub fn release_worker(&mut self, _worker: SovereignWorker) {
         // Reset worker state and return to pool
         // ...
     }

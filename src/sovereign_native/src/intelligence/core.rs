@@ -48,10 +48,7 @@ impl IntelligenceHub {
 
     /// Retreives the best configuration for a module based on learned experience.
     pub fn get_best_config(&mut self, _module_id: &str) -> Option<HashMap<String, String>> {
-        self.bandit.select().and_then(|_id| {
-            // Return the config associated with the best arm
-            Some(HashMap::new()) // Placeholder
-        })
+        self.bandit.select().map(|_id| HashMap::new())
     }
 
     /// Stores an event in semantic memory for future retrieval.

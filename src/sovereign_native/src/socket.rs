@@ -1,8 +1,7 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use bytes::{BytesMut, Buf};
-use serde::{Deserialize, Serialize};
-use std::error::Error;
+use serde::{Serialize, Deserialize};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
