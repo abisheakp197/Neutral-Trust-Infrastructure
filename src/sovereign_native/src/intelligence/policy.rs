@@ -89,7 +89,7 @@ impl PolicyEngine {
 
         // Sort policies by priority (descending)
         let mut sorted_policies: Vec<_> = self.policies.values_mut().collect();
-        sorted_policies.sort_by(|a, b| b.priority.cmp(&a.priority));
+        sorted_policies.sort_by_key(|p| std::cmp::Reverse(p.priority));
 
         for policy in sorted_policies {
             // Cooldown check

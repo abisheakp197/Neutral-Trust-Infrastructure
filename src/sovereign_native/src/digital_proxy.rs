@@ -23,6 +23,9 @@ use crate::mesh::MeshNode;
 use crate::sovereign_guardian::{SovereignGuardian, ValidationContext, FinalDecision};
 use crate::proxy_types::{EntityType, ProxyWorkOrder, ProxyWorkResult, ProxyWorkStatus, AutonomyLevel, Value};
 
+/// Type alias for mesh node builder function to reduce complexity
+type MeshBuilderFn = dyn Fn(&str) -> Arc<MeshNode> + Send + Sync;
+
 /// State that the proxy team remembers (like human memory)
 #[derive(Debug, Clone)]
 pub struct TeamMemory {
@@ -251,16 +254,19 @@ impl DigitalProxy {
     /// Process request through a specific team role
     async fn process_as_role(&self, work_order: ProxyWorkOrder, role: TeamRole) -> ProxyWorkOrder {
         let _start = std::time::Instant::now();
-        let mut memory = self.team_memory.lock().unwrap();
 
         // Record that this "human" is working on this
-        memory.active_requests.insert(work_order.order_id.clone(), RequestState {
-            order: work_order.clone(),
-            assigned_to: role.as_str().to_string(),
-            started_at: now(),
-            validation_passed: false,
-            risk_score: 0.0,
-        });
+        {
+            let mut memory = self.team_memory.lock().unwrap();
+            memory.active_requests.insert(work_order.order_id.clone(), RequestState {
+                order: work_order.clone(),
+                assigned_to: role.as_str().to_string(),
+                started_at: now(),
+                validation_passed: false,
+                risk_score: 0.0,
+            });
+            memory.metrics.current_workload = memory.active_requests.len();
+        }
 
         let result = match role {
             TeamRole::Validator => self.validator_check(&work_order).await,
@@ -273,13 +279,17 @@ impl DigitalProxy {
         let mut updated_order = work_order.clone();
         updated_order.status = result.status;
 
-        // Remove from active
-        memory.active_requests.remove(&updated_order.order_id);
-        memory.metrics.current_workload = memory.active_requests.len();
+        // Calculate risk score and update state
+        let risk_score = self.calculate_risk(&updated_order);
 
-        // Calculate processing time
-        if let Some(state) = memory.active_requests.get_mut(&work_order.order_id) {
-            state.risk_score = self.calculate_risk(&updated_order);
+        // Remove from active and update metrics
+        {
+            let mut memory = self.team_memory.lock().unwrap();
+            memory.active_requests.remove(&updated_order.order_id);
+            memory.metrics.current_workload = memory.active_requests.len();
+            if let Some(state) = memory.active_requests.get_mut(&work_order.order_id) {
+                state.risk_score = risk_score;
+            }
         }
 
         updated_order
@@ -426,7 +436,8 @@ impl DigitalProxy {
             let total_time = memory.recent_history.iter()
                 .map(|r| r.result.duration.as_millis() as u64)
                 .sum::<u64>();
-            let avg_millis = total_time / memory.metrics.total_requests;
+            let avg_millis = total_time.checked_div(memory.metrics.total_requests)
+                .unwrap_or(0);
             memory.metrics.avg_processing_time = Duration::from_millis(avg_millis);
         }
 
@@ -551,7 +562,7 @@ impl TeamRole {
 /// Registry of all teams (one per entity)
 pub struct ProxyRegistry {
     proxies: Arc<RwLock<HashMap<String, Arc<DigitalProxy>>>>,
-    mesh_builder: Arc<dyn Fn(&str) -> Arc<MeshNode> + Send + Sync>,
+    mesh_builder: Arc<MeshBuilderFn>,
     ssm: Arc<SovereignStateMachine>,
     automation: Arc<AutomationEngine>,
     ledger: Arc<RwLock<SovereignLedger>>,
@@ -560,7 +571,7 @@ pub struct ProxyRegistry {
 
 impl ProxyRegistry {
     pub fn new(
-        mesh_builder: Arc<dyn Fn(&str) -> Arc<MeshNode> + Send + Sync>,
+        mesh_builder: Arc<MeshBuilderFn>,
         ssm: Arc<SovereignStateMachine>,
         automation: Arc<AutomationEngine>,
         ledger: Arc<RwLock<SovereignLedger>>,
@@ -597,12 +608,15 @@ impl ProxyRegistry {
 
     /// All teams work loop - every team processes their own queue
     pub async fn all_teams_work(&self) -> HashMap<String, Vec<ProxyWorkResult>> {
-        let proxies = self.proxies.read().unwrap();
+        // Clone the entity IDs first to avoid holding the lock across await
+        let entity_ids: Vec<String> = self.proxies.read().unwrap().keys().cloned().collect();
         let mut all_results = HashMap::new();
 
-        for (entity_id, team) in proxies.iter() {
-            let results = team.team_work_loop().await;
-            all_results.insert(entity_id.clone(), results);
+        for entity_id in entity_ids {
+            if let Some(team) = self.get_team(&entity_id) {
+                let results = team.team_work_loop().await;
+                all_results.insert(entity_id, results);
+            }
         }
 
         all_results

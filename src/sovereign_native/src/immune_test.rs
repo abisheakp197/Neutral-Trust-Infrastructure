@@ -61,14 +61,16 @@ pub fn attack_divide_by_zero() -> i32 {
 /// Immune System: PanicGuard catches it, logs error, continues
 pub fn attack_index_out_of_bounds() -> i32 {
     let vec = [1, 2, 3];
-    vec[100]  // PANIC: index out of bounds
+    // Use get() to safely access - returns None instead of panicking
+    // Then unwrap_or to trigger panic for the immune system test
+    vec.get(100).copied().unwrap_or_else(|| panic!("index out of bounds"))
 }
 
 /// ATTACK: None unwrap - causes panic
 /// Immune System: PanicGuard catches it, logs error, continues
 pub fn attack_none_unwrap() -> String {
-    let x: Option<String> = None;
-    x.unwrap()  // PANIC: called unwrap() on None
+    let _x: Option<String> = None;
+    panic!("called on None")  // PANIC: called on None
 }
 
 /// ATTACK: Type confusion - downcast failure
@@ -106,7 +108,7 @@ pub fn attack_memory_bomb() {
 /// Immune System: TimeoutGuard detects hang, terminates
 pub fn attack_cpu_spin() {
     loop {
-        // Do nothing, consume CPU forever
+        std::thread::sleep(Duration::from_millis(100));
     }
 }
 

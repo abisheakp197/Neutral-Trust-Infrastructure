@@ -140,10 +140,7 @@ pub fn test_property_addition(data: &TestData, _rng: &mut impl Rng) -> bool {
     let a = data.int_val;
     let b = data.uint_val as i64;
     let result = a.checked_add(b).and_then(|v| v.checked_sub(b));
-    match result {
-        Some(x) if x == a => true,
-        _ => false,
-    }
+    matches!(result, Some(x) if x == a)
 }
 
 pub fn test_property_serialization(data: &TestData, _rng: &mut impl Rng) -> bool {

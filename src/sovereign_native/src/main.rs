@@ -282,7 +282,8 @@ async fn main() {
 
     // SSM
     let _ssm = crate::ssm::SovereignStateMachine::new("ube-root");
-    let _ssm_state = _ssm.state.lock().unwrap();
+    // Touch the module - use the type without holding locks
+    let _ssm_state: Option<crate::ssm::SovereignState> = None;
 
     // PROPERTY TESTER
     let _prop_add = crate::property_test::test_property_addition(

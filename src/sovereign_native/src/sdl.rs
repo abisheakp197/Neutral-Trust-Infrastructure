@@ -33,7 +33,7 @@ pub enum ConstraintOperator {
 }
 
 /// Trait for SDL compilation
-pub trait SdlCompilerTrait {
+pub trait SdlCompilerTrait: Send + Sync {
     fn compile(&self, directive: &SovereignDirective) -> AutomationRequest;
     fn validate(&self, code: &str) -> Result<(), String>;
 }
