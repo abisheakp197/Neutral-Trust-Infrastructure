@@ -30,6 +30,7 @@ pub struct HealingActionResult {
     pub metrics: HashMap<String, f64>,
 }
 
+#[derive(Clone)]
 pub struct HealingEpisode {
     pub id: String,
     pub module_id: String,
@@ -42,6 +43,7 @@ pub struct HealingEpisode {
     pub escalated: bool,
 }
 
+#[derive(Clone)]
 pub struct ActionAttempt {
     pub name: String,
     pub success: bool,
