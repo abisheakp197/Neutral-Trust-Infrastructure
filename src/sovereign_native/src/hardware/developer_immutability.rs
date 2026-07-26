@@ -21,20 +21,45 @@ use std::collections::HashSet;
 /// IMMUTABLE CORE MODULES - CANNOT be modified after finalization
 pub const IMMUTABLE_MODULES: &[&str] = &[
     // Hardware Security
+    "hardware",
+    "hardware::mod",
     "hardware::core",
     "hardware::anti_tamper",
     "hardware::secure_healing",
+    "hardware::omni_healing",
     "hardware::absolute_security",
     "hardware::data_blackbox",
     "hardware::developer_immutability",
+    "hardware::intrusion_detection",
+    "hardware::tamper_proof",
+    "hardware::zero_knowledge",
     // Ledger
     "immutable_ledger",
     "ledger",
     // Crypto
     "crypto::pqc",
     "crypto::blake3",
+    "crypto::symmetric",
+    "crypto::commitments",
     // Intelligence
     "intelligence::healing",
+    "intelligence::core",
+    "intelligence::memory",
+    "intelligence::learning",
+    "intelligence::policy",
+    "intelligence::anomaly",
+    // Sovereign Guardian - Zero-error enforcement
+    "sovereign_guardian",
+    // Jurisdiction Engine - Legal compliance
+    "jurisdiction",
+    "jurisdiction::mod",
+    // Main orchestrator - IMMUTABLE to prevent entry point compromise
+    "main",
+    // Defense
+    "defense",
+    // Mesh
+    "mesh",
+    "mesh::mod",
 ];
 
 /// Security Level for modules
@@ -374,8 +399,11 @@ mod tests {
 
     #[test]
     fn test_new_module_can_be_added() {
+        use std::sync::Arc;
         let hsm = SovereignHSM::new();
-        let mut engine = DeveloperImmutabilityEngine::new(hsm);
+        // Use Arc::try_unwrap to get mutable access for testing
+        let engine_arc = DeveloperImmutabilityEngine::new(hsm);
+        let mut engine = Arc::try_unwrap(engine_arc).unwrap_or_else(|_| panic!("Expected single reference"));
 
         let dev = DeveloperIdentity {
             public_key: vec![1, 2, 3],

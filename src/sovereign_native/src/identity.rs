@@ -356,3 +356,328 @@ impl fmt::Display for NodeIdentity {
         write!(f, "SovereignNodeIdentity({})", self.did)
     }
 }
+
+// ============================================================
+// Per-User Personalization System
+// ============================================================
+
+/// Responsibility levels for different user types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
+pub enum ResponsibilityLevel {
+    /// Personal use - low risk, full automation allowed
+    Personal = 1,
+    /// Professional use - medium risk, some oversight
+    Professional = 2,
+    /// Financial operations - high risk, requires approvals
+    Financial = 3,
+    /// Government operations - critical, multiple approvals
+    Government = 4,
+    /// Military operations - extreme, maximum oversight
+    Military = 5,
+}
+
+impl ResponsibilityLevel {
+    /// Minimum number of approvals required for actions at this level
+    pub fn required_approvals(&self) -> u32 {
+        match self {
+            ResponsibilityLevel::Personal => 0,
+            ResponsibilityLevel::Professional => 1,
+            ResponsibilityLevel::Financial => 2,
+            ResponsibilityLevel::Government => 3,
+            ResponsibilityLevel::Military => 4,
+        }
+    }
+
+    /// Can this level perform autonomous actions?
+    pub fn can_autonomous(&self) -> bool {
+        *self <= ResponsibilityLevel::Professional
+    }
+
+    /// Risk tolerance for automation
+    pub fn risk_tolerance(&self) -> f64 {
+        match self {
+            ResponsibilityLevel::Personal => 1.0,
+            ResponsibilityLevel::Professional => 0.7,
+            ResponsibilityLevel::Financial => 0.3,
+            ResponsibilityLevel::Government => 0.1,
+            ResponsibilityLevel::Military => 0.01,
+        }
+    }
+}
+
+/// Automation profile for each user
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AutomationProfile {
+    /// User does everything manually, UBE only protects
+    Manual,
+    /// UBE suggests actions, user must approve
+    Assist,
+    /// UBE acts automatically, logs for user review
+    Auto,
+    /// UBE decides and executes with zero-error guarantee
+    Sovereign,
+}
+
+/// Custom automation rule for specific scenarios
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutomationRule {
+    /// Pattern to match (e.g., "bank_transaction_>", "email_send")
+    pub pattern: String,
+    /// Minimum responsibility level required
+    pub min_responsibility: ResponsibilityLevel,
+    /// What to do when matched
+    pub action: AutomationAction,
+}
+
+/// Action to take for matched automation rule
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AutomationAction {
+    /// Allow and execute
+    Allow,
+    /// Require approval
+    RequireApproval(u32),
+    /// Block always
+    Block,
+    /// Notify user
+    Notify,
+    /// Log only
+    Log,
+}
+
+/// User-specific preferences
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserPreferences {
+    /// Preferred automation profile
+    pub automation_profile: AutomationProfile,
+    /// Custom rules that override default behavior
+    pub custom_rules: Vec<AutomationRule>,
+    /// Whether to receive notifications
+    pub notifications_enabled: bool,
+    /// Preference for notification frequency (0.0 = silent, 1.0 = all)
+    pub notification_frequency: f64,
+}
+
+impl Default for UserPreferences {
+    fn default() -> Self {
+        Self {
+            automation_profile: AutomationProfile::Assist,
+            custom_rules: Vec::new(),
+            notifications_enabled: true,
+            notification_frequency: 0.5,
+        }
+    }
+}
+
+/// Per-user learning and behavior tracking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserLearning {
+    /// Actions taken by this user
+    pub action_history: Vec<UserActionLog>,
+    /// Patterns detected in user behavior
+    pub detected_patterns: Vec<UserPattern>,
+    /// Preferences learned from user behavior
+    pub learned_preferences: HashMap<String, f64>,
+}
+
+/// Log of a user action
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserActionLog {
+    pub action_type: String,
+    pub timestamp: u64,
+    pub context: HashMap<String, String>,
+    pub result: String,
+    pub success: bool,
+}
+
+/// Detected pattern in user behavior
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserPattern {
+    pub pattern_type: String,
+    pub frequency: f64,
+    pub last_seen: u64,
+    pub strength: f64,
+}
+
+/// Sovereign User Identity with personalization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SovereignUser {
+    /// Unique user identifier
+    pub user_id: String,
+    /// User's DID (Decentralized Identifier)
+    pub did: String,
+    /// User's responsibility level
+    pub responsibility_level: ResponsibilityLevel,
+    /// User's preferences
+    pub preferences: UserPreferences,
+    /// Learning data for this user
+    pub learning: UserLearning,
+    /// Custom automation rules
+    pub automation_rules: Vec<AutomationRule>,
+    /// Created timestamp
+    pub created_at: u64,
+    /// Last updated timestamp
+    pub updated_at: u64,
+}
+
+impl SovereignUser {
+    pub fn new(user_id: String, responsibility: ResponsibilityLevel) -> Self {
+        let did = format!("did:ube:user:{}", user_id);
+        Self {
+            user_id,
+            did,
+            responsibility_level: responsibility,
+            preferences: UserPreferences::default(),
+            learning: UserLearning {
+                action_history: Vec::new(),
+                detected_patterns: Vec::new(),
+                learned_preferences: HashMap::new(),
+            },
+            automation_rules: Vec::new(),
+            created_at: 0,
+            updated_at: 0,
+        }
+    }
+
+    /// Check if user can perform an action autonomously
+    pub fn can_autonomous(&self, action: &str) -> bool {
+        // Check custom rules first
+        for rule in &self.automation_rules {
+            if action.contains(&rule.pattern) {
+                match rule.action {
+                    AutomationAction::Allow => return true,
+                    AutomationAction::RequireApproval(_) => return false,
+                    AutomationAction::Block => return false,
+                    AutomationAction::Notify => return true,
+                    AutomationAction::Log => return true,
+                }
+            }
+        }
+
+        // Default to responsibility level check
+        self.responsibility_level.can_autonomous()
+    }
+
+    /// Get required approvals for an action
+    pub fn required_approvals(&self, action: &str) -> u32 {
+        for rule in &self.automation_rules {
+            if action.contains(&rule.pattern) {
+                if let AutomationAction::RequireApproval(n) = rule.action {
+                    return n.max(self.responsibility_level.required_approvals());
+                }
+            }
+        }
+        self.responsibility_level.required_approvals()
+    }
+
+    /// Should notify user about this action?
+    pub fn should_notify(&self, action: &str) -> bool {
+        if !self.preferences.notifications_enabled {
+            return false;
+        }
+
+        // Check if any rule forces notification
+        for rule in &self.automation_rules {
+            if action.contains(&rule.pattern) {
+                if let AutomationAction::Notify = rule.action {
+                    return true;
+                }
+            }
+        }
+
+        // Random sampling based on frequency preference
+        rand::random::<f64>() < self.preferences.notification_frequency
+    }
+
+    /// Record an action for learning
+    pub fn record_action(&mut self, action: UserActionLog) {
+        self.learning.action_history.push(action);
+        self.updated_at = 0; // Will be set properly
+        // TODO: Detect patterns from history
+    }
+}
+
+/// User Personalization Engine
+pub struct UserPersonalizationEngine {
+    /// All sovereign users
+    pub users: HashMap<String, SovereignUser>,
+    /// Default responsibility level for new users
+    pub default_responsibility: ResponsibilityLevel,
+}
+
+impl UserPersonalizationEngine {
+    pub fn new() -> Self {
+        Self {
+            users: HashMap::new(),
+            default_responsibility: ResponsibilityLevel::Personal,
+        }
+    }
+
+    /// Create or get a user
+    pub fn get_or_create_user(&mut self, user_id: String) -> &mut SovereignUser {
+        self.users.entry(user_id.clone())
+            .or_insert_with(|| SovereignUser::new(user_id, self.default_responsibility))
+    }
+
+    /// Set user's responsibility level
+    pub fn set_responsibility(&mut self, user_id: &str, level: ResponsibilityLevel) -> Option<()> {
+        if let Some(user) = self.users.get_mut(user_id) {
+            user.responsibility_level = level;
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    /// Set user's automation profile
+    pub fn set_automation_profile(&mut self, user_id: &str, profile: AutomationProfile) -> Option<()> {
+        if let Some(user) = self.users.get_mut(user_id) {
+            user.preferences.automation_profile = profile;
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    /// Add custom automation rule for user
+    pub fn add_automation_rule(&mut self, user_id: &str, rule: AutomationRule) -> Option<()> {
+        if let Some(user) = self.users.get_mut(user_id) {
+            user.automation_rules.push(rule);
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    /// Check if user can perform action autonomously
+    pub fn can_autonomous(&self, user_id: &str, action: &str) -> bool {
+        self.users.get(user_id)
+            .map(|u| u.can_autonomous(action))
+            .unwrap_or(false)
+    }
+
+    /// Get required approvals for user's action
+    pub fn required_approvals(&self, user_id: &str, action: &str) -> u32 {
+        self.users.get(user_id)
+            .map(|u| u.required_approvals(action))
+            .unwrap_or(1)
+    }
+
+    /// Should notify user about action?
+    pub fn should_notify(&self, user_id: &str, action: &str) -> bool {
+        self.users.get(user_id)
+            .map(|u| u.should_notify(action))
+            .unwrap_or(false)
+    }
+
+    /// Record action for user learning
+    pub fn record_action(&mut self, user_id: &str, action: UserActionLog) -> Option<()> {
+        self.users.get_mut(user_id)
+            .map(|u| u.record_action(action))
+    }
+}
+
+impl Default for UserPersonalizationEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}

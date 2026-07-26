@@ -41,23 +41,38 @@ use crate::types::Value;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MerkleTree {
     pub leaves: Vec<Vec<u8>>,
-    pub nodes: Vec<Vec<Vec<u8>>>,
+    pub leaf_hashes: Vec<Vec<u8>>,
+    pub nodes: Vec<Vec<Vec<u8>>>
 }
 
 impl MerkleTree {
     pub fn new() -> Self {
         Self {
             leaves: Vec::new(),
+            leaf_hashes: Vec::new(),
             nodes: Vec::new(),
         }
     }
 
     /// Add a leaf to the tree
     pub fn add_leaf(&mut self, leaf: Vec<u8>) {
-        self.leaves.push(leaf.clone());
+        self.leaves.push(leaf);
+        // Store only hashed leaves - the tree levels are recomputed
+        let leaf_hash = Blake3::hash(&self.leaves[self.leaves.len() - 1]);
+        self.leaf_hashes.push(leaf_hash.to_vec());
 
-        // Rebuild the tree
-        let mut current_level = self.leaves.clone();
+        // Rebuild the tree completely
+        self.rebuild_tree();
+    }
+
+    /// Rebuild the entire Merkle tree from leaf hashes
+    fn rebuild_tree(&mut self) {
+        if self.leaf_hashes.is_empty() {
+            self.nodes.clear();
+            return;
+        }
+
+        let mut current_level = self.leaf_hashes.clone();
         self.nodes.clear();
 
         while current_level.len() > 1 {
@@ -102,16 +117,24 @@ impl MerkleTree {
         };
 
         let mut current_index = leaf_index;
-        for level in &self.nodes {
+        let mut current_level_idx = 0;
+
+        // Start from leaf hash level (nodes[0]) and go up
+        while current_level_idx < self.nodes.len() {
+            let level = &self.nodes[current_level_idx];
+
             if current_index + 1 < level.len() {
-                // Right sibling exists
+                // Right sibling exists - push it, we're the left child
                 proof.path.push(level[current_index + 1].clone());
-                proof.indices.push(1); // Right = 1
+                proof.indices.push(1); // 1 = right sibling
             } else if current_index > 0 {
-                // Left sibling exists (for odd levels)
+                // No right sibling, push left sibling - we're the right child
                 proof.path.push(level[current_index - 1].clone());
-                proof.indices.push(0); // Left = 0
+                proof.indices.push(0); // 0 = left sibling
             }
+
+            // Move to parent level
+            current_level_idx += 1;
             current_index /= 2;
         }
 
@@ -120,18 +143,19 @@ impl MerkleTree {
 
     /// Verify a proof
     pub fn verify_proof(leaf: &[u8], proof: &MerkleProof, expected_root: &[u8]) -> bool {
+        // Hash the leaf first - tree is built from hashed leaves
         let mut current = Blake3::hash(leaf).to_vec();
 
-        for (i, (path_hash, &index)) in proof.path.iter().zip(proof.indices.iter()).enumerate() {
-            if index == 0 {
-                // Left child
-                let mut combined = path_hash.clone();
-                combined.extend_from_slice(&current);
+        for (path_hash, &index) in proof.path.iter().zip(proof.indices.iter()) {
+            if index == 1 {
+                // index=1 means path_hash is right sibling, current is left
+                let mut combined = current.clone();
+                combined.extend(path_hash);
                 current = Blake3::hash(&combined).to_vec();
             } else {
-                // Right child
-                let mut combined = current.clone();
-                combined.extend_from_slice(path_hash);
+                // index=0 means path_hash is left sibling, current is right
+                let mut combined = path_hash.clone();
+                combined.extend(current);
                 current = Blake3::hash(&combined).to_vec();
             }
         }
@@ -662,6 +686,7 @@ mod tests {
     fn test_cold_storage() {
         let mut storage = ColdStorage::new();
 
+        let checksum = Blake3::hash(b"test_block").to_vec();
         let block = ColdStorageBlock {
             start_sequence: 0,
             end_sequence: 100,

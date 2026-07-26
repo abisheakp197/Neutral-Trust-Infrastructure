@@ -26,6 +26,7 @@ The following modules are **METHODOLOGICALLY IMMUTABLE** and cannot be modified 
 | `crypto::pqc` | Post-Quantum Crypto | ❌ NO | `crypto/pqc/*.rs` |
 | `crypto::blake3` | Cryptographic Hashing | ❌ NO | `crypto/blake3.rs` |
 | `intelligence::healing` | Healing Intelligence | ❌ NO | `intelligence/healing.rs` |
+| `main` | System Orchestrator | ❌ NO | `developer_immutability.rs` |
 
 **Any attempt to modify these modules returns:**
 ```rust
