@@ -45,6 +45,7 @@ mod property_test;
 mod zk;
 mod hardware;
 mod immutable_ledger;
+mod omniscience;
 
 // Restored sovereign modules - ALL connected
 mod chaos;
