@@ -153,6 +153,8 @@ pub enum HardwareError {
     CommunicationError,
     #[error("Internal error: {0}")]
     Internal(String),
+    #[error("Ledger error: {0}")]
+    LedgerError(#[from] crate::ledger::LedgerError),
 }
 
 /// Sovereign Hardware Security Manager
