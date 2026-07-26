@@ -114,19 +114,17 @@ impl SovereignAutonomousEngineering {
 // Per-User Automation Decision System
 // ============================================================
 use std::collections::HashMap;
-use crate::identity::{SovereignUser, UserPersonalizationEngine, ResponsibilityLevel, AutomationProfile, AutomationRule, AutomationAction};
+use crate::identity::{SovereignUser, UserPersonalizationEngine, ResponsibilityLevel};
 
 /// Per-user automation decision engine
 pub struct PerUserAutomationEngine {
     pub users: UserPersonalizationEngine,
-    pub default_profile: AutomationProfile,
 }
 
 impl PerUserAutomationEngine {
     pub fn new() -> Self {
         Self {
             users: UserPersonalizationEngine::new(),
-            default_profile: AutomationProfile::Assist,
         }
     }
 
@@ -160,21 +158,6 @@ impl PerUserAutomationEngine {
     /// Set user's responsibility level
     pub fn set_responsibility(&mut self, user_id: &str, level: ResponsibilityLevel) {
         self.users.set_responsibility(user_id, level);
-    }
-
-    /// Set user's automation profile
-    pub fn set_automation_profile(&mut self, user_id: &str, profile: AutomationProfile) {
-        self.users.set_automation_profile(user_id, profile);
-    }
-
-    /// Add custom rule for user
-    pub fn add_rule(&mut self, user_id: &str, rule: AutomationRule) {
-        self.users.add_automation_rule(user_id, rule);
-    }
-
-    /// Set default automation profile
-    pub fn set_default_profile(&mut self, profile: AutomationProfile) {
-        self.default_profile = profile;
     }
 
     /// Create new user with responsibility level

@@ -175,7 +175,7 @@ fn deterministic_rand(limit: usize) -> usize {
 // Per-User Adaptive Learning System
 // ============================================================
 
-use crate::identity::{UserPreferences, AutomationProfile, ResponsibilityLevel};
+use crate::identity::ResponsibilityLevel;
 
 /// Per-user reinforcement learning agent
 #[derive(Debug, Clone)]
@@ -351,13 +351,12 @@ impl UserAutomationBandit {
         }
     }
 
-    /// Initialize bandit for a user with automation profile arms
-    pub fn init_user(&mut self, user_id: String, profiles: Vec<AutomationProfile>) {
+    /// Initialize bandit for a user with action-based arms (fully automatic)
+    pub fn init_user(&mut self, user_id: String, actions: Vec<String>) {
         let mut arms = HashMap::new();
-        for profile in profiles {
-            let profile_str = format!("{:?}", profile);
-            arms.insert(profile_str.clone(), BanditArm {
-                id: profile_str,
+        for action in actions {
+            arms.insert(action.clone(), BanditArm {
+                id: action,
                 config: HashMap::new(),
                 pulls: 0,
                 total_reward: 0.0,
@@ -371,8 +370,8 @@ impl UserAutomationBandit {
         });
     }
 
-    /// Select best automation profile for user
-    pub fn select_profile(&self, user_id: &str) -> Option<AutomationProfile> {
+    /// Select best action for user (fully automatic - no profiles)
+    pub fn select_action(&self, user_id: &str) -> Option<String> {
         let bandit = self.user_bandits.get(user_id)?;
 
         // Find arm with best UCB1 score
@@ -381,8 +380,7 @@ impl UserAutomationBandit {
         // Check for unexplored arms
         for (id, arm) in &bandit.arms {
             if arm.pulls == 0 {
-                // Map profile string back to enum
-                return Self::parse_profile(id);
+                return Some(id.clone());
             }
         }
 
@@ -399,29 +397,18 @@ impl UserAutomationBandit {
             }
         }
 
-        best_arm.and_then(|id| Self::parse_profile(&id))
+        best_arm
     }
 
-    /// Update bandit with user feedback
-    pub fn update(&mut self, user_id: &str, profile: AutomationProfile, reward: f64) {
-        let profile_str = format!("{:?}", profile);
+    /// Update bandit with user feedback on action
+    pub fn update(&mut self, user_id: &str, action: &str, reward: f64) {
         if let Some(bandit) = self.user_bandits.get_mut(user_id) {
-            if let Some(arm) = bandit.arms.get_mut(&profile_str) {
+            if let Some(arm) = bandit.arms.get_mut(action) {
                 arm.pulls += 1;
                 arm.total_reward += reward;
                 arm.mean_reward = arm.total_reward / arm.pulls as f64;
                 bandit.total_pulls += 1;
             }
-        }
-    }
-
-    fn parse_profile(profile_str: &str) -> Option<AutomationProfile> {
-        match profile_str {
-            "Manual" => Some(AutomationProfile::Manual),
-            "Assist" => Some(AutomationProfile::Assist),
-            "Auto" => Some(AutomationProfile::Auto),
-            "Sovereign" => Some(AutomationProfile::Sovereign),
-            _ => None,
         }
     }
 }

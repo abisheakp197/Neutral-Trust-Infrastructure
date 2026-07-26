@@ -405,52 +405,9 @@ impl ResponsibilityLevel {
     }
 }
 
-/// Automation profile for each user
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AutomationProfile {
-    /// User does everything manually, UBE only protects
-    Manual,
-    /// UBE suggests actions, user must approve
-    Assist,
-    /// UBE acts automatically, logs for user review
-    Auto,
-    /// UBE decides and executes with zero-error guarantee
-    Sovereign,
-}
-
-/// Custom automation rule for specific scenarios
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AutomationRule {
-    /// Pattern to match (e.g., "bank_transaction_>", "email_send")
-    pub pattern: String,
-    /// Minimum responsibility level required
-    pub min_responsibility: ResponsibilityLevel,
-    /// What to do when matched
-    pub action: AutomationAction,
-}
-
-/// Action to take for matched automation rule
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AutomationAction {
-    /// Allow and execute
-    Allow,
-    /// Require approval
-    RequireApproval(u32),
-    /// Block always
-    Block,
-    /// Notify user
-    Notify,
-    /// Log only
-    Log,
-}
-
 /// User-specific preferences
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserPreferences {
-    /// Preferred automation profile
-    pub automation_profile: AutomationProfile,
-    /// Custom rules that override default behavior
-    pub custom_rules: Vec<AutomationRule>,
     /// Whether to receive notifications
     pub notifications_enabled: bool,
     /// Preference for notification frequency (0.0 = silent, 1.0 = all)
@@ -460,8 +417,6 @@ pub struct UserPreferences {
 impl Default for UserPreferences {
     fn default() -> Self {
         Self {
-            automation_profile: AutomationProfile::Assist,
-            custom_rules: Vec::new(),
             notifications_enabled: true,
             notification_frequency: 0.5,
         }
@@ -511,8 +466,6 @@ pub struct SovereignUser {
     pub preferences: UserPreferences,
     /// Learning data for this user
     pub learning: UserLearning,
-    /// Custom automation rules
-    pub automation_rules: Vec<AutomationRule>,
     /// Created timestamp
     pub created_at: u64,
     /// Last updated timestamp
@@ -532,58 +485,29 @@ impl SovereignUser {
                 detected_patterns: Vec::new(),
                 learned_preferences: HashMap::new(),
             },
-            automation_rules: Vec::new(),
             created_at: 0,
             updated_at: 0,
         }
     }
 
-    /// Check if user can perform an action autonomously
-    pub fn can_autonomous(&self, action: &str) -> bool {
-        // Check custom rules first
-        for rule in &self.automation_rules {
-            if action.contains(&rule.pattern) {
-                match rule.action {
-                    AutomationAction::Allow => return true,
-                    AutomationAction::RequireApproval(_) => return false,
-                    AutomationAction::Block => return false,
-                    AutomationAction::Notify => return true,
-                    AutomationAction::Log => return true,
-                }
-            }
-        }
-
-        // Default to responsibility level check
-        self.responsibility_level.can_autonomous()
+    /// Check if user can perform an action autonomously (FULLY AUTOMATIC - always true for all users)
+    pub fn can_autonomous(&self, _action: &str) -> bool {
+        // UBE is FULLY AUTOMATIC - all users get full automation
+        // No manual profiles, no restrictions
+        true
     }
 
-    /// Get required approvals for an action
-    pub fn required_approvals(&self, action: &str) -> u32 {
-        for rule in &self.automation_rules {
-            if action.contains(&rule.pattern) {
-                if let AutomationAction::RequireApproval(n) = rule.action {
-                    return n.max(self.responsibility_level.required_approvals());
-                }
-            }
-        }
-        self.responsibility_level.required_approvals()
+    /// Get required approvals for an action (FULLY AUTOMATIC - zero approvals needed)
+    pub fn required_approvals(&self, _action: &str) -> u32 {
+        // UBE is FULLY AUTOMATIC - no approvals needed
+        0
     }
 
     /// Should notify user about this action?
-    pub fn should_notify(&self, action: &str) -> bool {
+    pub fn should_notify(&self, _action: &str) -> bool {
         if !self.preferences.notifications_enabled {
             return false;
         }
-
-        // Check if any rule forces notification
-        for rule in &self.automation_rules {
-            if action.contains(&rule.pattern) {
-                if let AutomationAction::Notify = rule.action {
-                    return true;
-                }
-            }
-        }
-
         // Random sampling based on frequency preference
         rand::random::<f64>() < self.preferences.notification_frequency
     }
@@ -622,26 +546,6 @@ impl UserPersonalizationEngine {
     pub fn set_responsibility(&mut self, user_id: &str, level: ResponsibilityLevel) -> Option<()> {
         if let Some(user) = self.users.get_mut(user_id) {
             user.responsibility_level = level;
-            Some(())
-        } else {
-            None
-        }
-    }
-
-    /// Set user's automation profile
-    pub fn set_automation_profile(&mut self, user_id: &str, profile: AutomationProfile) -> Option<()> {
-        if let Some(user) = self.users.get_mut(user_id) {
-            user.preferences.automation_profile = profile;
-            Some(())
-        } else {
-            None
-        }
-    }
-
-    /// Add custom automation rule for user
-    pub fn add_automation_rule(&mut self, user_id: &str, rule: AutomationRule) -> Option<()> {
-        if let Some(user) = self.users.get_mut(user_id) {
-            user.automation_rules.push(rule);
             Some(())
         } else {
             None

@@ -95,20 +95,20 @@ impl AutoExecutor {
     }
 
     /// Hook into file operations (example)
-    pub fn hook_file_operation(&self, operation: &str, path: &str) {
+    pub fn hook_file_operation(&self, operation: &str, path: &str) -> Option<String> {
         let start = std::time::SystemTime::now();
-        let result = std::panic::catch_unwind(|| {
+        let result: Result<Option<String>, Box<dyn std::any::Any + Send + 'static>> = std::panic::catch_unwind(|| {
             // Simulate the operation
             if operation == "read" {
                 std::fs::read_to_string(path).ok()
             } else if operation == "write" {
-                std::fs::write(path, "test").ok()
+                std::fs::write(path, "test").ok().map(|_| "".to_string())
             } else {
                 None
             }
         });
         let duration = start.elapsed().unwrap().as_millis() as u64;
-        let success = result.is_ok();
+        let success = result.as_ref().map_or(false, |r| r.is_some());
 
         // Record this event for learning
         observe_event(
@@ -127,7 +127,7 @@ impl AutoExecutor {
             // For now, we just log it
         }
 
-        result.ok()
+        result.ok().and_then(|r| r)
     }
 
     /// Get all learned laws
