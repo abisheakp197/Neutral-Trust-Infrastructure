@@ -108,7 +108,7 @@ impl AutoExecutor {
             }
         });
         let duration = start.elapsed().unwrap().as_millis() as u64;
-        let success = result.as_ref().map_or(false, |r| r.is_some());
+        let success = result.as_ref().is_ok_and(|r| r.is_some());
 
         // Record this event for learning
         observe_event(
@@ -146,7 +146,6 @@ impl AutoExecutor {
     }
 }
 
-/// Global Auto-Executor for the current user
 lazy_static::lazy_static! {
     pub static ref AUTO_EXECUTOR: Mutex<Option<AutoExecutor>> = Mutex::new(None);
 }

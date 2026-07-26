@@ -217,7 +217,7 @@ impl OmniscienceObserver {
             for law_id in law_ids {
                 if let Some(law) = laws.get(law_id) {
                     // Check if action matches trigger pattern
-                    if action.starts_with(&law.trigger.split(':').next().unwrap_or_default()) {
+                    if action.starts_with(law.trigger.split(':').next().unwrap_or_default()) {
                         // Check conditions
                         let mut matches = true;
                         for condition in &law.conditions {
