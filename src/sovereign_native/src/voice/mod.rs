@@ -19,6 +19,7 @@ pub mod parser;
 pub mod speech;
 pub mod tts;
 pub mod wake;
+pub mod auth;
 
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -396,6 +397,9 @@ pub use gesture::GestureRecognizer;
 
 /// Re-export parser types
 pub use parser::AutomationConfig;
+
+/// Voice Authentication (imported from auth.rs)
+pub use auth::{VoiceAuthDatabase, AuthResult, AuthLevel, VoiceAuthError, default_auth_db_path, is_authorized, is_sovereign_authorized, register_sovereign};
 
 /// Detect current platform
 fn detect_platform() -> Platform {
