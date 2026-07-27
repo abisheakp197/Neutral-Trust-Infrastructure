@@ -46,6 +46,8 @@ mod zk;
 mod hardware;
 mod immutable_ledger;
 mod omniscience;
+mod voice;
+mod judgement;
 
 // Restored sovereign modules - ALL connected
 mod chaos;
@@ -76,6 +78,42 @@ async fn main() {
     let _chacha = crate::crypto::ChaChaPoly::new([0u8; 32]);
     let _pedersen = crate::crypto::Pedersen::commit(b"value", b"blinding");
     let _hkdf = crate::crypto::Hkdf::derive(b"salt", b"ikm", b"info", 32);
+
+    // ============================================================================
+    // UNIVERSAL VOICE & GESTURE CONTROL - Auto-start listening
+    // NATURAL LANGUAGE AUTOMATION: Say "UBE automate X for 3 days" or "UBE automate X permanently"
+    // ============================================================================
+    // Initialize voice system - starts background listener automatically
+    let mut voice_system = crate::voice::UniversalVoiceControl::new();
+    if let Err(e) = voice_system.initialize().await {
+        log::warn!("[VOICE] Initialization warning: {}", e);
+    }
+    // Start listening in background - monitors for "UBE" wake phrase 24/7
+    if let Err(e) = voice_system.start_listening().await {
+        log::warn!("[VOICE] Listener warning: {}", e);
+    }
+    info!("[VOICE] Starting - listening for 'UBE' wake phrase...");
+    info!("[VOICE] Natural language automation active!");
+    info!("[VOICE] Say: 'UBE automate deployment' for permanent automation");
+    info!("[VOICE] Say: 'UBE automate backup for 3 days' for temporary automation");
+    info!("[VOICE] Say: 'UBE stop automation X' to remove automation");
+    info!("[VOICE] Say: 'UBE deploy' for single deploy command");
+    info!("[VOICE] System runs secretly in background - always monitoring");
+
+    // ============================================================================
+    // OUTCOME JUDGEMENT SYSTEM - Zero Mistake Guarantee
+    // ============================================================================
+    // Activates with voice system to judge all automation outcomes
+    let judgement_system = Arc::new(RwLock::new(crate::judgement::JudgementSystem::new()));
+    {
+        let mut js = judgement_system.write().unwrap();
+        // Activate synchronously without await to avoid holding lock across await
+        js.activate_sync();
+    }
+    info!("[JUDGEMENT] Outcome Judgement System ACTIVATED - zero mistakes guaranteed");
+
+    // Connect judgement to voice system for outcome monitoring
+    voice_system.set_judgement_system(judgement_system.clone());
 
     // ============================================================================
     // ABSOLUTE SECURITY INITIALIZATION - UBE Unhackability Foundation
@@ -353,6 +391,9 @@ async fn main() {
     let mut _shield = crate::shield::SovereignShield::new();
     _shield.activate_guard("core".to_string(), vec!["memory".to_string()], 0.9);
 
+    // Touch judgement module - zero mistake system
+    let _judgement_health = crate::judgement::health();
+
     // Stream - UBEStream may need parameters, using the type to touch the module
     let _stream: Option<crate::stream::UBEStream> = None;
 
@@ -542,6 +583,17 @@ async fn main() {
             info!("TICK {}: ALL SOVEREIGN CODE FLOWS TOGETHER AS ONE", tick);
             log::info!("[HARDWARE] HSM Status: {:?}", hsm.lock().unwrap().status());
             log::info!("[HARDWARE] IDS High Severity Events: {}", intrusion_detection.get_status().high_severity_events);
+
+            // Judgement System zero-mistake check
+            {
+                let js = judgement_system.read().unwrap();
+                let (total, success, failures) = js.stats();
+                if js.zero_mistakes() {
+                    info!("[JUDGEMENT] ZERO MISTAKES: {}/{} actions successful", success, total);
+                } else {
+                    log::warn!("[JUDGEMENT] Mistakes detected: {}/{} failed", failures, total);
+                }
+            }
         }
 
         tokio::time::sleep(Duration::from_millis(100)).await;

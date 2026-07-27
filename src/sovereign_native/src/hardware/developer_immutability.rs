@@ -60,6 +60,11 @@ pub const IMMUTABLE_MODULES: &[&str] = &[
     // Mesh
     "mesh",
     "mesh::mod",
+    // Voice - Universal natural interface
+    "voice",
+    "voice::mod",
+    // Judgement - Zero mistake system
+    "judgement",
 ];
 
 /// Security Level for modules
