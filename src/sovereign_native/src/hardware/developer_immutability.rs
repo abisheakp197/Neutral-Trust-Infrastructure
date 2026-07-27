@@ -60,12 +60,34 @@ pub const IMMUTABLE_MODULES: &[&str] = &[
     // Mesh
     "mesh",
     "mesh::mod",
-    // Voice - Universal natural interface
+    // Voice - Universal natural interface (FULLY SEALED)
     "voice",
     "voice::mod",
-    // Judgement - Zero mistake system
+    "voice::capture",
+    "voice::gesture",
+    "voice::parser",
+    "voice::speech",
+    "voice::tts",
+    "voice::wake",
+    // Judgement - Zero mistake system (FULLY SEALED)
     "judgement",
+    "judgement::mod",
+    // Main orchestrator - IMMUTABLE to prevent entry point compromise
+    "main",
 ];
+
+/// Verify a module is in the IMMUTABLE list - prevents false integration attacks
+/// Returns Ok(()) if module is immutable, Err if not found in immutable list
+pub fn verify_module_immutable(module_name: &str) -> Result<(), String> {
+    if IMMUTABLE_MODULES.contains(&module_name) {
+        Ok(())
+    } else {
+        Err(format!(
+            "MODULE IMMUTABILITY VIOLATION: '{}' is NOT in immutable list! False integration detected!",
+            module_name
+        ))
+    }
+}
 
 /// Security Level for modules
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

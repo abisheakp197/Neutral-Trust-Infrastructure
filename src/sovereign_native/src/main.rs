@@ -80,6 +80,22 @@ async fn main() {
     let _hkdf = crate::crypto::Hkdf::derive(b"salt", b"ikm", b"info", 32);
 
     // ============================================================================
+    // IMMUTABILITY VERIFICATION - Prevent false integration attacks
+    // ============================================================================
+    // Verify voice and judgement modules are SEALED and cannot be bypassed
+    crate::hardware::developer_immutability::verify_module_immutable("voice::mod")
+        .expect("CRITICAL: Voice module must be IMMUTABLE - false integration detected!");
+    crate::hardware::developer_immutability::verify_module_immutable("voice::speech")
+        .expect("CRITICAL: Voice speech module must be IMMUTABLE!");
+    crate::hardware::developer_immutability::verify_module_immutable("voice::tts")
+        .expect("CRITICAL: Voice TTS module must be IMMUTABLE!");
+    crate::hardware::developer_immutability::verify_module_immutable("voice::parser")
+        .expect("CRITICAL: Voice parser must be IMMUTABLE - false integration attack!");
+    crate::hardware::developer_immutability::verify_module_immutable("judgement::mod")
+        .expect("CRITICAL: Judgement module must be IMMUTABLE - zero mistake guarantee broken!");
+    info!("[IMMUTABILITY] Voice and Judgement modules VERIFIED SEALED - no false integration possible");
+
+    // ============================================================================
     // UNIVERSAL VOICE & GESTURE CONTROL - Auto-start listening
     // NATURAL LANGUAGE AUTOMATION: Say "UBE automate X for 3 days" or "UBE automate X permanently"
     // ============================================================================
