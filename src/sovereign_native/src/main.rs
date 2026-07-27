@@ -80,9 +80,13 @@ async fn main() {
     let _hkdf = crate::crypto::Hkdf::derive(b"salt", b"ikm", b"info", 32);
 
     // ============================================================================
-    // IMMUTABILITY VERIFICATION - Prevent false integration attacks
+    // AUTONOMOUS IMMUTABLE VERIFIER - COMPANY PROTECTION LAYER
     // ============================================================================
-    // Verify voice and judgement modules are SEALED and cannot be bypassed
+    // This runs BEFORE anything else - even if main.rs is compromised
+    // The verifier module ITSELF is immutable and will detect any tampering
+    crate::hardware::developer_immutability::autonomous_immutable_verifier();
+
+    // Additional explicit checks for critical company protection modules
     crate::hardware::developer_immutability::verify_module_immutable("voice::mod")
         .expect("CRITICAL: Voice module must be IMMUTABLE - false integration detected!");
     crate::hardware::developer_immutability::verify_module_immutable("voice::speech")
@@ -93,7 +97,11 @@ async fn main() {
         .expect("CRITICAL: Voice parser must be IMMUTABLE - false integration attack!");
     crate::hardware::developer_immutability::verify_module_immutable("judgement::mod")
         .expect("CRITICAL: Judgement module must be IMMUTABLE - zero mistake guarantee broken!");
-    info!("[IMMUTABILITY] Voice and Judgement modules VERIFIED SEALED - no false integration possible");
+    crate::hardware::developer_immutability::verify_module_immutable("defense")
+        .expect("CRITICAL: Defense module must be IMMUTABLE - company captured!");
+    crate::hardware::developer_immutability::verify_module_immutable("ledger")
+        .expect("CRITICAL: Ledger module must be IMMUTABLE - financial records compromised!");
+    info!("[IMMUTABILITY] All company protection modules VERIFIED SEALED - UBE is SAFE");
 
     // ============================================================================
     // UNIVERSAL VOICE & GESTURE CONTROL - Auto-start listening
