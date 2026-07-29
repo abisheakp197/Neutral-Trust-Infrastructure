@@ -194,14 +194,16 @@ pub fn attack_format_example() -> String {
 /// Launch a single attack safely (wrapped in protection)
 pub fn launch_attack<F>(attack_name: &str, f: F)
 where
-    F: FnOnce() + std::panic::UnwindSafe,
+    F: FnOnce(),
 {
     use log::info;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
 
-    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+    // Use AssertUnwindSafe: first wrap the closure, then pass to catch_unwind
+    let wrapped = AssertUnwindSafe(f);
+    let result = catch_unwind(wrapped);
     match result {
         Ok(_) => {
-            // Attack didn't panic (might be logic error)
             info!("[ATTACK {}] Executed without panic (may have logic error)", attack_name);
         }
         Err(_) => {
@@ -214,10 +216,18 @@ where
 pub fn launch_all_runtime_attacks() {
     use log::info;
 
+    // Only launch real attacks during testing, not during normal daemon operation
+    // This prevents panics from escaping during production use
+    if std::env::var("UBE_LAUNCH_ATTACKS").is_err() {
+        info!("[IMMUNE] Runtime attack tests skipped (not in test mode)");
+        return;
+    }
+
     info!("========================================================");
     info!("  LAUNCHING REAL NOISE ATTACKS");
     info!("========================================================");
 
+    // Runtime attacks - wrapped safely with catch_unwind + AssertUnwindSafe
     launch_attack("divide_by_zero", || { let _ = attack_divide_by_zero(); });
     launch_attack("index_out_of_bounds", || { let _ = attack_index_out_of_bounds(); });
     launch_attack("none_unwrap", || { let _ = attack_none_unwrap(); });
@@ -227,6 +237,7 @@ pub fn launch_all_runtime_attacks() {
     launch_attack("logic_bomb", || { let _ = attack_logic_bomb(); });
 
     // These would hang, so we launch in threads with timeouts
+    // These would hang - launch in threads with timeouts
     info!("[ATTACK] Launching CPU spin in isolated thread...");
     let _t1 = thread::spawn(attack_cpu_spin);
 

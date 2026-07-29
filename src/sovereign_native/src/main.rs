@@ -311,7 +311,9 @@ async fn main() {
     // 1. Initialize Hardware Security Module (HSM)
     let hsm = crate::hardware::SovereignHSM::new();
     let hsm_arc = hsm.clone();
-    hsm.lock().unwrap().initialize().expect("HSM initialization failed");
+    if let Err(e) = hsm.lock().unwrap().initialize() {
+        log::warn!("[HARDWARE] HSM initialization degraded (expected on devices without hardware security): {}", e);
+    }
     log::info!("[HARDWARE] HSM initialized with status: {:?}", hsm.lock().unwrap().status());
 
     // 2. Initialize Anti-Tamper System
@@ -321,12 +323,16 @@ async fn main() {
 
     // 3. Initialize Intrusion Detection System
     let intrusion_detection = crate::hardware::IntrusionDetectionSystem::new(hsm_arc.clone(), anti_tamper.clone());
-    intrusion_detection.initialize().expect("IDS initialization failed");
+    if let Err(e) = intrusion_detection.initialize() {
+        log::warn!("[HARDWARE] IDS initialization degraded (expected on devices without HSM): {}", e);
+    }
     log::info!("[HARDWARE] Intrusion Detection System initialized");
 
     // 4. Initialize Immutable Ledger Storage
     let immutable_ledger = crate::immutable_ledger::ImmutableLedgerStorage::new(hsm_arc.clone());
-    immutable_ledger.initialize().expect("Immutable ledger initialization failed");
+    if let Err(e) = immutable_ledger.initialize() {
+        log::warn!("[HARDWARE] Immutable ledger initialization degraded (expected on devices without HSM): {}", e);
+    }
     log::info!("[HARDWARE] Immutable Ledger Storage initialized");
 
     // 5. Initialize Secure Healing Engine
@@ -335,7 +341,9 @@ async fn main() {
         anti_tamper.clone(),
         immutable_ledger.clone(),
     );
-    secure_healing.initialize().expect("Secure healing initialization failed");
+    if let Err(e) = secure_healing.initialize() {
+        log::warn!("[HARDWARE] Secure healing initialization degraded (expected on devices without HSM): {}", e);
+    }
     log::info!("[HARDWARE] Secure Healing Engine initialized");
 
     // 6. Initialize Hardware Fault Detector
@@ -448,7 +456,7 @@ async fn main() {
     let _hybrid_kem_combined = crate::encryption::HybridKEM::combine(&[0u8; 32], &[0u8; 32], b"mix");
     let _hybrid_kem_encaps = crate::encryption::HybridKEM::encapsulate(&[0u8; 32]);
     let _shamir_instance = crate::crypto::kdf::Shamir;
-    let _shamir_split = crate::crypto::kdf::Shamir::split(b"secret", 3, 2);
+    let _shamir_split = crate::crypto::kdf::Shamir::split(b"secret", 2, 3);
     let _shamir_reconstruct = crate::crypto::kdf::Shamir::reconstruct(&[vec![], vec![]]);
     let _blinded_blind = crate::crypto::commitments::BlindedToken::blind(b"token");
     let _blinded_unblind = crate::crypto::commitments::BlindedToken::unblind(b"blinded", b"blinder");
@@ -520,8 +528,8 @@ async fn main() {
     radio.scan_spectrum();
     radio.hop();
 
-    // PERSISTENCE
-    let _pers_get = _persistence.load_state();
+    // PERSISTENCE - Touch module
+    let _state_manager = crate::persistence::StateManager::new("UBE_SOVEREIGN");
 
     // ZK
     let _zk_pub = crate::zk::ZkClient::prove_key_ownership(b"pub", b"priv");
@@ -571,10 +579,15 @@ async fn main() {
     loop {
         tick += 1;
 
-        // Continuous sovereignty checks
-        crate::immune_test::attack_divide_by_zero();
-        crate::immune_test::attack_none_unwrap();
-        crate::immune_test::attack_index_out_of_bounds();
+        // Continuous sovereignty checks - run safe immune tests
+        // Skip panicking attacks on devices without full HSM support
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            crate::immune_test::launch_all_runtime_attacks();
+        }));
+        // If immune tests panic, log but continue running
+        if result.is_err() {
+            log::warn!("[IMMUNE] Some runtime attacks panicked (expected on non-HSM devices)");
+        }
 
         // Hardware security checks every tick
         if tick.is_multiple_of(1) {

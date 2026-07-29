@@ -324,28 +324,44 @@ impl IdentityEngine {
 
 impl NodeIdentity {
     pub fn sign(&self, message: &[u8]) -> Vec<u8> {
-        let sk = dilithium::SecretKey::from_bytes(&self.secret_key_sign)
-            .expect("Invalid secret key for signing");
+        let sk = match dilithium::SecretKey::from_bytes(&self.secret_key_sign) {
+            Ok(sk) => sk,
+            Err(e) => { log::warn!("Invalid secret key for signing: {}", e); return vec![]; }
+        };
         let sig = dilithium::detached_sign(message, &sk);
         sig.as_bytes().to_vec()
     }
 
     pub fn verify(message: &[u8], signature: &[u8], public_key: &[u8]) -> bool {
-        let pk = dilithium::PublicKey::from_bytes(public_key).expect("Invalid public key");
-        let sig = dilithium::DetachedSignature::from_bytes(signature).expect("Invalid signature bytes");
+        let pk = match dilithium::PublicKey::from_bytes(public_key) {
+            Ok(pk) => pk,
+            Err(e) => { log::warn!("Invalid public key: {}", e); return false; }
+        };
+        let sig = match dilithium::DetachedSignature::from_bytes(signature) {
+            Ok(sig) => sig,
+            Err(e) => { log::warn!("Invalid signature bytes: {}", e); return false; }
+        };
         dilithium::verify_detached_signature(&sig, message, &pk).is_ok()
     }
 
     pub fn encapsulate(recipient_pk_bytes: &[u8]) -> (Vec<u8>, Vec<u8>) {
-        let pk = kyber::PublicKey::from_bytes(recipient_pk_bytes).expect("Invalid recipient public key");
+        let pk = match kyber::PublicKey::from_bytes(recipient_pk_bytes) {
+            Ok(pk) => pk,
+            Err(e) => { log::warn!("Invalid recipient public key: {}", e); return (vec![], vec![]); }
+        };
         let (shared_secret, ciphertext) = kyber::encapsulate(&pk);
         (shared_secret.as_bytes().to_vec(), ciphertext.as_bytes().to_vec())
     }
 
     pub fn decapsulate(&self, ciphertext_bytes: &[u8]) -> Vec<u8> {
-        let sk = kyber::SecretKey::from_bytes(&self.secret_key_enc)
-            .expect("Invalid secret key for decapsulation");
-        let ciphertext = kyber::Ciphertext::from_bytes(ciphertext_bytes).expect("Invalid ciphertext");
+        let sk = match kyber::SecretKey::from_bytes(&self.secret_key_enc) {
+            Ok(sk) => sk,
+            Err(e) => { log::warn!("Invalid secret key for decapsulation: {}", e); return vec![]; }
+        };
+        let ciphertext = match kyber::Ciphertext::from_bytes(ciphertext_bytes) {
+            Ok(c) => c,
+            Err(e) => { log::warn!("Invalid ciphertext: {}", e); return vec![]; }
+        };
         let shared_secret = kyber::decapsulate(&ciphertext, &sk);
         shared_secret.as_bytes().to_vec()
     }

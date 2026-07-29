@@ -54,10 +54,10 @@ pub struct UbeDaemon {
 impl UbeDaemon {
     /// Create a new UBE daemon
     pub fn new(binary_path: PathBuf) -> Self {
-        let home = binary_path.parent().unwrap().parent().unwrap();
+        let home = binary_path.parent().unwrap().parent().unwrap().to_path_buf();
 
         Self {
-            binary_path,
+            binary_path: binary_path.clone(),
             child: None,
             status: Arc::new(Mutex::new(DaemonStatus::Stopped)),
             pid_file: home.join(".ube_daemon_pid"),
@@ -80,8 +80,11 @@ impl UbeDaemon {
 
     /// Log a message
     fn log(&self, message: &str) {
-        let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        let log_entry = format!("[{}] {}\n", timestamp, message);
+        let now = SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let log_entry = format!("[{}] {}\n", now, message);
 
         if let Ok(mut file) = File::options().append(true).open(&self.log_file) {
             let _ = file.write_all(log_entry.as_bytes());
