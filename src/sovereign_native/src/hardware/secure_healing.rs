@@ -712,11 +712,13 @@ pub struct FaultDetectionSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hardware::{TestHSM, HardwareSecurityModule};
     use crate::intelligence::memory::SemanticMemory;
 
     #[test]
     fn test_secure_healing_engine_creation() {
-        let hsm = SovereignHSM::new();
+        use crate::hardware::{TestHSM, HardwareSecurityModule};
+        let hsm = SovereignHSM::new_with_hsm(Box::new(TestHSM::new()));
         let anti_tamper = AntiTamperSystem::new(hsm.clone());
         let ledger = ImmutableLedgerStorage::new(hsm.clone());
 
@@ -745,7 +747,8 @@ mod tests {
 
     #[test]
     fn test_fault_detection() {
-        let hsm = SovereignHSM::new();
+        use crate::hardware::{TestHSM, HardwareSecurityModule};
+        let hsm = SovereignHSM::new_with_hsm(Box::new(TestHSM::new()));
         let anti_tamper = AntiTamperSystem::new(hsm.clone());
         let ledger = ImmutableLedgerStorage::new(hsm.clone());
 

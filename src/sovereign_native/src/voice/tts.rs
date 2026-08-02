@@ -166,6 +166,19 @@ impl TextToSpeech {
             return Ok(());
         }
 
+        // Try eSpeak (works in Termux with pulseaudio)
+        if Command::new("espeak")
+            .arg("-v")
+            .arg(&lang_code)
+            .arg("-s")
+            .arg((self.rate * 160.0 + 80.0).to_string())
+            .arg(text)
+            .status()
+            .is_ok()
+        {
+            return Ok(());
+        }
+
         // Fallback: use termux-toast to show text
         self.speak_toast(text).await
     }

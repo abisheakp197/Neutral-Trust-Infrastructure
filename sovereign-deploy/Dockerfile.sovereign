@@ -1,0 +1,40 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache python3 py3-pip curl wget ca-certificates tzdata \
+    && pip3 install requests --break-system-packages \
+    && addgroup -S ube \
+    && adduser -S ube -G ube
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --only=production && npm cache clean --force
+
+COPY . .
+
+RUN mkdir -p \
+    /data/UBE_storage/uploads \
+    /data/UBE_storage/quarantine \
+    /data/UBE_storage/transformed \
+    /data/UBE_watch \
+    /data/UBE_logs \
+    /data/UBE_audit \
+    /app/data \
+    && chown -R ube:ube /data /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOST=0.0.0.0
+ENV UBE_STORAGE_ROOT=/data/UBE_storage
+ENV UBE_WATCH_DIR=/data/UBE_watch
+ENV DATA_DIR=/app/data
+ENV SOVEREIGN_MODE=true
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD wget -q --spider http://localhost:3000/api/v1/health || exit 1
+
+USER ube
+
+CMD ["npx", "ts-node", "src/index.ts"]

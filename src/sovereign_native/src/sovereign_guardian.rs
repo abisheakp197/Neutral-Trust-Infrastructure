@@ -198,8 +198,65 @@ impl PreValidator for BoundsValidator {
 
 struct TypeValidator;
 impl PreValidator for TypeValidator {
-    fn validate(&self, _: &ProxyWorkOrder, _: &ValidationContext) -> ValidationResult {
-        ValidationResult { validator_id: "type".into(), is_valid: true, risk_score: 0.0, reason: "OK".into() }
+    fn validate(&self, work: &ProxyWorkOrder, _: &ValidationContext) -> ValidationResult {
+        // SOVEREIGN SECURITY FIX: Actually validate the work order structure
+        // instead of always approving. Checks for required fields and consistency.
+
+        // Check that work order has a valid ID
+        if work.order_id.is_empty() {
+            return ValidationResult {
+                validator_id: "type".into(),
+                is_valid: false,
+                risk_score: 0.5,
+                reason: "Work order has empty ID".into(),
+            };
+        }
+
+        // Check that request is not null or empty
+        if work.request.is_null() {
+            return ValidationResult {
+                validator_id: "type".into(),
+                is_valid: false,
+                risk_score: 0.7,
+                reason: "Work order has null request".into(),
+            };
+        }
+
+        // Check for outer world operations
+        if work.source.is_outer_world() {
+            // Outer world operations cannot be undone - verify undo_token is absent
+            if work.undo_token.is_some() {
+                return ValidationResult {
+                    validator_id: "type".into(),
+                    is_valid: false,
+                    risk_score: 0.9,
+                    reason: "Outer world operation cannot have undo_token".into(),
+                };
+            }
+        }
+
+        // Check timeout is reasonable
+        if let Some(timeout) = work.timeout {
+            if timeout.as_secs() == 0 {
+                return ValidationResult {
+                    validator_id: "type".into(),
+                    is_valid: false,
+                    risk_score: 0.6,
+                    reason: "Work order has zero timeout".into(),
+                };
+            }
+            // Timeout should be reasonable (less than 24 hours)
+            if timeout.as_secs() > 86400 {
+                return ValidationResult {
+                    validator_id: "type".into(),
+                    is_valid: false,
+                    risk_score: 0.4,
+                    reason: format!("Work order timeout too long: {} seconds", timeout.as_secs()),
+                };
+            }
+        }
+
+        ValidationResult { validator_id: "type".into(), is_valid: true, risk_score: 0.0, reason: "All structural validations passed".into() }
     }
     fn id(&self) -> &str { "type" }
 }
@@ -224,8 +281,60 @@ impl ConsensusValidator for RiskConsensus {
 
 struct LogicConsensus;
 impl ConsensusValidator for LogicConsensus {
-    fn vote(&self, _: &ProxyWorkOrder, _: &[ValidationResult]) -> Vote { Vote::Approve }
+    fn vote(&self, work: &ProxyWorkOrder, pre: &[ValidationResult]) -> Vote {
+        // SOVEREIGN SECURITY FIX: Actually analyze the logic of the work order
+        // Instead of always approving, we check for logical consistency
+
+        // Rule 1: If pre-validation failed, reject
+        if pre.iter().any(|r| !r.is_valid) {
+            return Vote::Reject;
+        }
+
+        // Rule 2: Check for circular dependencies
+        if Self::has_circular_dependencies(work) {
+            return Vote::Reject;
+        }
+
+        // Rule 3: Check for invalid state transitions
+        if Self::has_invalid_transitions(work) {
+            return Vote::Reject;
+        }
+
+        // Rule 4: Check for empty work orders
+        if work.request.is_null() && work.order_id.is_empty() {
+            return Vote::Reject;
+        }
+
+        // Rule 5: Check risk scores from pre-validation
+        if !pre.is_empty() {
+            let avg_risk: f64 = pre.iter().map(|r| r.risk_score).sum::<f64>() / pre.len() as f64;
+            if avg_risk > 0.5 {
+                return Vote::Reject;
+            }
+        }
+
+        // Rule 6: Inner world operations should have undo_token
+        if work.source.is_inner_world() && work.undo_token.is_none() {
+            return Vote::Reject;
+        }
+
+        // Only approve if all checks pass
+        Vote::Approve
+    }
     fn id(&self) -> &str { "logic" }
+}
+
+impl LogicConsensus {
+    fn has_circular_dependencies(_work: &ProxyWorkOrder) -> bool {
+        // In a full implementation, this would check for circular
+        // dependencies between work orders. For now, we return false
+        false
+    }
+
+    fn has_invalid_transitions(_work: &ProxyWorkOrder) -> bool {
+        // In production, check against resource permissions
+        false
+    }
 }
 
 fn now() -> u64 {

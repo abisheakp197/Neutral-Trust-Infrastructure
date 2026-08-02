@@ -11,6 +11,7 @@
 
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::VecDeque;
+use serde::{Serialize, Deserialize};
 use crate::hardware::{SovereignHSM, HardwareError};
 use crate::hardware::anti_tamper::AntiTamperSystem;
 use crate::hardware::secure_healing::SecureHealingEngine;
@@ -18,7 +19,7 @@ use crate::hardware::absolute_security::AbsoluteSecurity;
 use crate::immutable_ledger::ImmutableLedgerStorage;
 
 /// Healing Layer Type
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HealingLayer {
     Code,
     Memory,

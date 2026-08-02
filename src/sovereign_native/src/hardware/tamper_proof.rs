@@ -378,9 +378,10 @@ impl TamperProofLog {
         // 5. Add to log
         self.entries.push(entry);
 
-        // 6. Update chain hash
-        let entries_bytes = format!("{:?}", self.entries).into_bytes();
-        self.chain_hash = Blake3::hash(&entries_bytes).to_vec();
+        // 6. Update chain hash - hash of the last entry for next entry's previous_hash
+        let last_entry = self.entries.last().unwrap();
+        let last_bytes = format!("{:?}", last_entry).into_bytes();
+        self.chain_hash = Blake3::hash(&last_bytes).to_vec();
 
         Ok(())
     }
@@ -391,7 +392,8 @@ impl TamperProofLog {
             return Ok(true);
         }
 
-        let mut previous_hash = self.chain_hash.clone();
+        // Start from genesis hash for verification
+        let mut previous_hash = vec![0u8];
 
         for entry in &self.entries {
             // Verify previous hash matches
@@ -507,10 +509,12 @@ impl HardwareBoundConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hardware::{TestHSM, HardwareSecurityModule};
 
     #[test]
     fn test_tamper_proof_storage() {
-        let hsm = SovereignHSM::new();
+        use crate::hardware::{TestHSM, HardwareSecurityModule};
+        let hsm = SovereignHSM::new_with_hsm(Box::new(TestHSM::new()));
         let data = vec![1u8, 2, 3, 4, 5];
 
         let storage = TamperProofStorage::<Vec<u8>>::new(data.clone(), hsm.clone()).unwrap();
@@ -519,7 +523,8 @@ mod tests {
 
     #[test]
     fn test_tamper_proof_registry() {
-        let hsm = SovereignHSM::new();
+        use crate::hardware::{TestHSM, HardwareSecurityModule};
+        let hsm = SovereignHSM::new_with_hsm(Box::new(TestHSM::new()));
         let mut registry = TamperProofRegistry::<Vec<u8>>::new(hsm.clone());
 
         registry.store("key1".to_string(), vec![1, 2, 3]).unwrap();
@@ -528,7 +533,8 @@ mod tests {
 
     #[test]
     fn test_tamper_proof_log() {
-        let hsm = SovereignHSM::new();
+        use crate::hardware::{TestHSM, HardwareSecurityModule};
+        let hsm = SovereignHSM::new_with_hsm(Box::new(TestHSM::new()));
         let mut log = TamperProofLog::new(hsm.clone());
 
         log.append("Test message".to_string(), LogLevel::Info, HashMap::new()).unwrap();

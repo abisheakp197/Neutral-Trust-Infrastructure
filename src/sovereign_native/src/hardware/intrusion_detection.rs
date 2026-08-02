@@ -886,10 +886,12 @@ pub struct IdsStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::hardware::{TestHSM, HardwareSecurityModule};
 
     #[test]
     fn test_ids_creation() {
-        let hsm = SovereignHSM::new();
+        use crate::hardware::{TestHSM, HardwareSecurityModule};
+        let hsm = SovereignHSM::new_with_hsm(Box::new(TestHSM::new()));
         let anti_tamper = AntiTamperSystem::new(hsm.clone());
 
         let ids = IntrusionDetectionSystem::new(hsm, anti_tamper);
@@ -923,16 +925,16 @@ mod tests {
 
     #[test]
     fn test_rate_limiting() {
-        let tracker = ConnectionTracker::new(100);
+        let tracker = ConnectionTracker::new(10);
         let ip: IpAddr = "192.168.1.1".parse().unwrap();
 
         // First 10 requests should succeed
         for _ in 0..10 {
-            assert!(tracker.check_rate_limit(&ip, 100, Duration::from_secs(60)).is_ok());
+            assert!(tracker.check_rate_limit(&ip, 10, Duration::from_secs(60)).is_ok());
         }
 
-        // 101st request should fail
-        let result = tracker.check_rate_limit(&ip, 100, Duration::from_secs(60));
+        // 11th request should fail (exceeds limit of 10)
+        let result = tracker.check_rate_limit(&ip, 10, Duration::from_secs(60));
         assert!(result.is_err());
     }
 }

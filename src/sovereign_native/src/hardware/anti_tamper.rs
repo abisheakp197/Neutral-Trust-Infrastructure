@@ -686,6 +686,7 @@ impl Drop for SecureMemoryZeroizer {
 mod tests {
     use super::*;
     use std::time::Duration;
+    use crate::hardware::{TestHSM, HardwareSecurityModule};
 
     #[test]
     fn test_anti_tamper_initialization() {
@@ -749,8 +750,10 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "SOVEREIGN HSM SELF-DESTRUCT: System compromised")]
     fn test_self_destruct() {
-        let hsm = SovereignHSM::new();
+        use crate::hardware::{TestHSM, HardwareSecurityModule};
+        let hsm = SovereignHSM::new_with_hsm(Box::new(TestHSM::new()));
         let mut destruct = SelfDestruct::new(hsm);
 
         // Add trigger
@@ -766,8 +769,7 @@ mod tests {
             action_taken: "".to_string(),
         };
 
-        // This should trigger destruct
-        let triggered = destruct.check(&event);
-        assert!(triggered);
+        // This should trigger destruct and panic
+        let _triggered = destruct.check(&event);
     }
 }
