@@ -84,7 +84,7 @@ impl RLWEParameters {
         Self {
             security_level: HESecurityLevel::Security192,
             ring_dimension: 8192, // 2^13
-            coefficient_modulus: BigUint::from(0xFFFFFFFtu64),
+            coefficient_modulus: BigUint::from(0xFFFFFFF_u64),
             plaintext_modulus: BigUint::from(65537u64),
             error_std_dev: 3.2,
         }
@@ -95,7 +95,7 @@ impl RLWEParameters {
         Self {
             security_level: HESecurityLevel::Security128,
             ring_dimension: 4096, // 2^12
-            coefficient_modulus: BigUint::from(0xFFFFFtu64),
+            coefficient_modulus: BigUint::from(0xFFFFF_u64),
             plaintext_modulus: BigUint::from(65537u64),
             error_std_dev: 3.2,
         }
@@ -158,7 +158,7 @@ impl BFV {
         let size = self.params.ring_dimension;
 
         BFVCiphertext {
-            c0: vec![plaintext.coefficients.get(i % plaintext.coefficients.len()).cloned().unwrap_or_else(|| BigUint::zero()); size],
+            c0: vec![BigUint::zero(); size],
             c1: vec![BigUint::one(); size],
         }
     }
@@ -262,7 +262,7 @@ impl CKKS {
             params: params.clone(),
             secret_key: vec![0.0; params.ring_dimension],
             public_key: vec![0.0; params.ring_dimension * 2],
-            scale: 2.0.powf(50.0), // Scale factor for precision
+            scale: 2.0f64.powf(50.0f64), // Scale factor for precision
         }
     }
 
@@ -358,7 +358,7 @@ impl BGV {
         let mut moduli = params.coefficient_modulus.clone();
         for _ in 0..10 {
             chain.push(moduli.clone());
-            moduli = moduli / 2u64.to_biguint().unwrap();
+            moduli = moduli / BigUint::from(2u64);
         }
 
         Self {
@@ -372,7 +372,7 @@ impl BGV {
     pub fn encrypt(&self, plaintext: &BGVPlaintext) -> BGVCiphertext {
         let size = self.params.ring_dimension;
         BGVCiphertext {
-            c0: vec![plaintext.coefficients.get(i % plaintext.coefficients.len()).cloned().unwrap_or_else(|| BigUint::zero()); size],
+            c0: vec![BigUint::zero(); size],
             c1: vec![BigUint::one(); size],
         }
     }

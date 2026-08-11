@@ -22,10 +22,11 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use std::collections::VecDeque;
 use serde::{Serialize, Deserialize};
 use sha2::{Sha256, Sha512, Digest};
 use thiserror::Error;
-use crate::voice::auth::VoiceFingerprint;
+use crate::voice::auth::{VoiceFingerprint, AuthLevel};
 
 /// Voice Security Errors
 #[derive(Debug, Error)]
@@ -170,7 +171,7 @@ impl SecurityToken {
 
         // Constant-time comparison (prevents timing attacks)
         use subtle::ConstantTimeEq;
-        expected.as_slice().ct_eq(signature)
+        expected.as_slice().ct_eq(signature).into()
     }
 
     /// Check if token is valid (not expired)
@@ -390,9 +391,9 @@ impl AuthorizationRules {
 /// Executes voice commands in an isolated sandbox that can only READ state,
 /// never MODIFY it directly. All write operations are routed through the
 /// Sovereign Guardian Bridge for verification.
-pub struct CommandSandbox<T: Clone> {
+pub struct CommandSandbox {
     /// The system state (read-only in sandbox)
-    state: Arc<RwLock<T>>,
+    state: Arc<RwLock<String>>,
     /// Authorization rules
     auth_rules: AuthorizationRules,
     /// Command classifier
@@ -403,9 +404,9 @@ pub struct CommandSandbox<T: Clone> {
     max_command_length: usize,
 }
 
-impl<T: Clone + Send + Sync + 'static> CommandSandbox<T> {
+impl CommandSandbox {
     /// Create a new command sandbox
-    pub fn new(state: Arc<RwLock<T>>) -> Self {
+    pub fn new(state: Arc<RwLock<String>>) -> Self {
         Self {
             state,
             auth_rules: AuthorizationRules,
@@ -430,7 +431,7 @@ impl<T: Clone + Send + Sync + 'static> CommandSandbox<T> {
         command: &str,
         user_level: AuthorizationLevel,
         signed_command: Option<SignedVoiceCommand>,
-    ) -> Result<CommandResult<T>, VoiceSecurityError> {
+    ) -> Result<CommandResult, VoiceSecurityError> {
         // Check command length
         if command.len() > self.max_command_length {
             return Err(VoiceSecurityError::CommandNotAllowed);
@@ -441,7 +442,7 @@ impl<T: Clone + Send + Sync + 'static> CommandSandbox<T> {
 
         // Check authorization
         let required_level = AuthorizationRules::get_required_level(classification);
-        self.auth_rules.can_perform(user_level, required_level)?;
+        AuthorizationRules::can_perform(user_level, required_level)?;
 
         // If this is a write operation, a signature is required
         match classification {
@@ -470,7 +471,7 @@ impl<T: Clone + Send + Sync + 'static> CommandSandbox<T> {
     }
 
     /// Execute a read-only query
-    fn execute_query(&self, command: &str) -> Result<CommandResult<T>, VoiceSecurityError> {
+    fn execute_query(&self, command: &str) -> Result<CommandResult, VoiceSecurityError> {
         // Parse and execute the query
         // In a real implementation, this would parse the command
         // and call appropriate read-only methods on state
@@ -503,7 +504,7 @@ impl<T: Clone + Send + Sync + 'static> CommandSandbox<T> {
         command: &str,
         signed: SignedVoiceCommand,
         classification: CommandClassification,
-    ) -> Result<CommandResult<T>, VoiceSecurityError> {
+    ) -> Result<CommandResult, VoiceSecurityError> {
         // In a real implementation, this would create a WriteRequest
         // that gets passed to the Sovereign Guardian Bridge
 
@@ -517,14 +518,14 @@ impl<T: Clone + Send + Sync + 'static> CommandSandbox<T> {
     }
 
     /// Get the system state (read-only)
-    pub fn get_state(&self) -> T {
+    pub fn get_state(&self) -> String {
         self.state.read().unwrap().clone()
     }
 }
 
 /// Command Result
 #[derive(Debug, Clone)]
-pub enum CommandResult<T> {
+pub enum CommandResult {
     /// Read operation result
     ReadResult(String),
     /// Write operation pending (requires approval)
@@ -629,11 +630,11 @@ impl CommandClassifier {
 /// 3. State modifications are validated before execution
 /// 4. All operations are logged for auditing
 
-pub struct SovereignGuardianBridge<T: Clone> {
+pub struct SovereignGuardianBridge<T: Clone + Send + Sync + 'static> {
     /// Reference to the system state
     state: Arc<RwLock<T>>,
     /// Command sandbox for initial parsing
-    sandbox: CommandSandbox<T>,
+    sandbox: CommandSandbox,
     /// Audit log
     audit_log: Arc<RwLock<Vec<AuditEntry>>>,
     /// Registered hardware tokens
@@ -647,7 +648,7 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
     pub fn new(state: Arc<RwLock<T>>, hardware_id: Vec<u8>) -> Self {
         Self {
             state: Arc::clone(&state),
-            sandbox: CommandSandbox::new(state),
+            sandbox: CommandSandbox::new(Arc::new(RwLock::new(String::new()))),
             audit_log: Arc::new(RwLock::new(Vec::new())),
             registered_tokens: Arc::new(RwLock::new(HashMap::new())),
             hardware_id,
@@ -656,7 +657,7 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
 
     /// Register a security token
     pub fn register_token(&self, token: SecurityToken) {
-        let mut tokens = self.registered_tokens.write();
+        let mut tokens = self.registered_tokens.write().unwrap();
         tokens.insert(token.token_id.clone(), Arc::new(token));
     }
 
@@ -672,7 +673,7 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
         command: String,
         user_level: AuthorizationLevel,
         signed_command: Option<SignedVoiceCommand>,
-    ) -> Result<BridgeResult<T>, VoiceSecurityError> {
+    ) -> Result<BridgeResult, VoiceSecurityError> {
         // Log the command attempt
         self.log_attempt(&command, user_level);
 
@@ -701,7 +702,7 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
     }
 
     /// Process a write request
-    fn process_write_request(&self, request: WriteRequest) -> Result<BridgeResult<T>, VoiceSecurityError> {
+    fn process_write_request(&self, request: WriteRequest) -> Result<BridgeResult, VoiceSecurityError> {
         // Verify the signed command
         self.verify_signed_command(&request.signed_command)?;
 
@@ -722,17 +723,20 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
         }
 
         // Look up the token
-        let tokens = self.registered_tokens.read();
+        let tokens = self.registered_tokens.read().unwrap();
         let token = tokens.get(&signed.token_id)
             .ok_or(VoiceSecurityError::TokenNotPresent)?;
 
         // Verify the signature
-        token.verify_signature(
+        if !token.verify_signature(
             &signed.command,
             signed.timestamp,
             &signed.nonce,
             &signed.signature,
-        ).map_err(|e| {
+        ) {
+            return Err(VoiceSecurityError::SignatureVerificationFailed);
+        }
+        Ok(()).map_err(|e| {
             // Map the error
             match e {
                 VoiceSecurityError::SignatureVerificationFailed => VoiceSecurityError::SignatureVerificationFailed,
@@ -758,7 +762,7 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
 
     /// Log an attempt
     fn log_attempt(&self, command: &str, user_level: AuthorizationLevel) {
-        let mut log = self.audit_log.write();
+        let mut log = self.audit_log.write().unwrap();
         log.push(AuditEntry {
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -774,7 +778,7 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
 
     /// Log a success
     fn log_success(&self, command: &str, user_level: AuthorizationLevel, is_read: bool) {
-        let mut log = self.audit_log.write();
+        let mut log = self.audit_log.write().unwrap();
         if let Some(last) = log.last_mut() {
             if last.command == command && !last.success {
                 last.success = true;
@@ -798,7 +802,7 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
 
     /// Log a failure
     fn log_failure(&self, command: &str, user_level: AuthorizationLevel, error: &str) {
-        let mut log = self.audit_log.write();
+        let mut log = self.audit_log.write().unwrap();
         if let Some(last) = log.last_mut() {
             if last.command == command && !last.success {
                 last.error = Some(error.to_string());
@@ -821,13 +825,13 @@ impl<T: Clone + Send + Sync + 'static> SovereignGuardianBridge<T> {
 
     /// Get audit log
     pub fn get_audit_log(&self) -> Vec<AuditEntry> {
-        self.audit_log.read().clone()
+        self.audit_log.read().unwrap().clone()
     }
 }
 
 /// Bridge Result
 #[derive(Debug, Clone)]
-pub enum BridgeResult<T> {
+pub enum BridgeResult {
     /// Read operation result
     Read(String),
     /// Write operation result
@@ -887,8 +891,8 @@ impl MultimodalZKAuth {
     }
 
     /// Register a voice fingerprint (zero-knowledge: only hash stored)
-    pub fn register_voice(&self, user_id: Vec<u8>, fingerprint_hash: Vec<u8>, auth_level: AuthorizationLevel) {
-        let mut fingerprints = self.voice_fingerprints.write();
+    pub fn register_voice(&self, user_id: Vec<u8>, fingerprint_hash: Vec<u8>, auth_level: AuthLevel) {
+        let mut fingerprints = self.voice_fingerprints.write().unwrap();
         fingerprints.entry(user_id)
             .or_insert_with(Vec::new)
             .push(VoiceFingerprint {
@@ -900,7 +904,7 @@ impl MultimodalZKAuth {
 
     /// Register a security token
     pub fn register_token(&self, token: SecurityToken) {
-        let mut tokens = self.security_tokens.write();
+        let mut tokens = self.security_tokens.write().unwrap();
         tokens.insert(token.token_id.clone(), Arc::new(token));
     }
 
@@ -940,7 +944,7 @@ impl MultimodalZKAuth {
 
     fn verify_voice_proof(&self, proof: &VoiceZKProof) -> Result<(), VoiceSecurityError> {
         // Check that the voice fingerprint is registered
-        let fingerprints = self.voice_fingerprints.read();
+        let fingerprints = self.voice_fingerprints.read().unwrap();
 
         // Find the user by voice fingerprint hash
         for (user_id, user_fingerprints) in fingerprints.iter() {
@@ -961,7 +965,7 @@ impl MultimodalZKAuth {
 
     fn verify_token_proof(&self, proof: &TokenZKProof) -> Result<(), VoiceSecurityError> {
         // Look up the token
-        let tokens = self.security_tokens.read();
+        let tokens = self.security_tokens.read().unwrap();
         let token = tokens.get(&proof.token_id)
             .ok_or(VoiceSecurityError::TokenNotPresent)?;
 

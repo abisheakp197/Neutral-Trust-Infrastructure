@@ -61,13 +61,13 @@ pub struct ThresholdParams {
 impl ThresholdParams {
     /// Create parameters for 2-of-3 threshold (common for small teams)
     pub fn new_2_of_3() -> Self {
-        // Safe prime: $$2^{256} - 2^{224} + 2^{192} + 2^{96} - 1$$
-        let prime = BigUint::from(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFu128);
+        // Safe prime: 2^256 - 2^224 + 2^192 + 2^96 - 1 (512-bit prime)
+        let prime = BigUint::parse_bytes(b"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap();
         Self {
             n: 3,
             t: 2,
             scheme: ThresholdScheme::Shamir,
-            prime: prime - 15u64.to_biguint().unwrap(), // Adjusted to be prime
+            prime: prime - BigUint::from(15u64), // Adjusted to be prime
             security_bits: 256,
         }
     }
@@ -80,7 +80,7 @@ impl ThresholdParams {
             n: 10,
             t: 7,
             scheme: ThresholdScheme::Feldman,
-            prime: prime - 59u64.to_biguint().unwrap(), // Make it prime
+            prime: prime - BigUint::from(59u64), // Make it prime
             security_bits: 256,
         }
     }
@@ -91,7 +91,7 @@ impl ThresholdParams {
             n: 5,
             t: 3,
             scheme: ThresholdScheme::Pedersen,
-            prime: BigUint::from(0xFFFFFFFFFFFFFFFFu64) - 17u64.to_biguint().unwrap(),
+            prime: BigUint::from(0xFFFFFFFFFFFFFFFFu64) - BigUint::from(17u64),
             security_bits: 256,
         }
     }
@@ -222,7 +222,7 @@ impl Shamir {
 
         let t_minus_1 = BigUint::from(shares.len() - 1);
         let mut secret = BigUint::zero();
-        let denominator = Self::factorial(&shares.len().to_biguint().unwrap());
+        let denominator = Self::factorial(BigUint::from(shares.len()));
 
         for i in 0..shares.len() {
             let mut numerator = BigUint::one();
@@ -238,7 +238,7 @@ impl Shamir {
                 sign *= -1; // Negate sign
             }
 
-            let lagrange_coeff = numerator * sign.to_biguint().unwrap() / &denominator;
+            let lagrange_coeff = numerator * BigUint::from(*sign) / &denominator;
             secret = (secret + &shares[i].share_y * lagrange_coeff) % &shares[i].share_x;
         }
 
@@ -258,7 +258,7 @@ impl Shamir {
     /// Factorial for Lagrange interpolation
     fn factorial(n: &BigUint) -> BigUint {
         let n_usize: usize = n.try_into().unwrap_or(0);
-        (1..=n_usize).fold(BigUint::one(), |acc, x| acc * x.to_biguint().unwrap())
+        (1..=n_usize).fold(BigUint::one(), |acc, x| acc * BigUint::from(*x))
     }
 }
 

@@ -317,7 +317,7 @@ impl SquareRootORAM {
         let target_block = client_storage.iter()
             .find(|&block| block.as_ref().map(|b| b.id == block_id).unwrap_or(false))
             .and_then(|block| block.clone())
-            .ok_or(ORAMError::BlockNotFound(block_id))??;
+            .ok_or_else(|| ORAMError::BlockNotFound(block_id))?;
 
         // Step 4: Update metadata
         let mut blocks = self.blocks.lock().unwrap();
@@ -404,7 +404,9 @@ impl SquareRootORAM {
         // Generate random seed for this remap
         let op_count = self.operation_count.lock().unwrap();
         let mut seed = self.rng_seed.lock().unwrap();
-        *seed = Blake3::hash(&[seed.as_slice(), &op_count.to_be_bytes()]).to_vec();
+        let mut hash_input = seed.to_vec();
+        hash_input.extend_from_slice(&op_count.to_be_bytes());
+        *seed = Blake3::hash(&hash_input).to_vec();
 
         // Create new bucket assignment
         let mut new_buckets = vec![Vec::new(); self.bucket_count];
@@ -412,7 +414,9 @@ impl SquareRootORAM {
 
         // Simple deterministic shuffle for demonstration
         // In real implementation, use proper pseudorandom permutation
-        let mut shuffled = Blake3::hash(&[&seed, b"permute"].concat()).to_vec();
+        let mut data = seed.to_vec();
+        data.extend_from_slice(b"permute");
+        let mut shuffled = Blake3::hash(&data).to_vec();
 
         // Assign blocks to new buckets
         for block_id in 0..n {
@@ -608,8 +612,8 @@ impl PathORAM {
 
         // Check path
         if found_block.is_none() {
-            for node_block in &path {
-                if let Some(ref encrypted) = node_block {
+            for node in &path {
+                if let Some(ref encrypted) = node.block {
                     if encrypted.id == block_id {
                         // Decrypt and return
                         let block = self.decrypt_block(encrypted)?;
@@ -727,7 +731,9 @@ impl PathORAM {
         let leaf_index = self.position_map.lock().unwrap().get(&block.id)
             .cloned().unwrap_or(block.id);
 
-        let key = Blake3::hash(&[&leaf_index.to_be_bytes(), &block.id.to_be_bytes()]).to_vec();
+        let mut key_input = leaf_index.to_be_bytes().to_vec();
+        key_input.extend_from_slice(&block.id.to_be_bytes());
+        let key = Blake3::hash(&key_input).to_vec();
 
         // Encrypt data (XOR with key for demonstration)
         let mut encrypted_data = block.data.clone();
@@ -736,7 +742,9 @@ impl PathORAM {
         }
 
         // Generate integrity tag
-        let tag = Blake3::hash(&[&encrypted_data, &key]).to_vec();
+        let mut tag_input = encrypted_data.clone();
+        tag_input.extend_from_slice(&key);
+        let tag = Blake3::hash(&tag_input).to_vec();
 
         Ok(EncryptedBlock {
             id: block.id,
@@ -750,7 +758,9 @@ impl PathORAM {
         let leaf_index = self.position_map.lock().unwrap().get(&encrypted.id)
             .cloned().unwrap_or(encrypted.id);
 
-        let key = Blake3::hash(&[&leaf_index.to_be_bytes(), &encrypted.id.to_be_bytes()]).to_vec();
+        let mut key_input2 = leaf_index.to_be_bytes().to_vec();
+        key_input2.extend_from_slice(&encrypted.id.to_be_bytes());
+        let key = Blake3::hash(&key_input2).to_vec();
 
         // Decrypt data
         let mut data = encrypted.data.clone();
@@ -759,7 +769,9 @@ impl PathORAM {
         }
 
         // Verify integrity (verify in case of block)
-        let expected_tag = Blake3::hash(&[&data, &key]).to_vec();
+        let mut tag_verify_input = data.clone();
+        tag_verify_input.extend_from_slice(&key);
+        let expected_tag = Blake3::hash(&tag_verify_input).to_vec();
         if expected_tag != encrypted.tag {
             return Err(ORAMError::ProofVerificationFailed);
         }
@@ -955,7 +967,7 @@ impl ObliviousRAM {
             ORAMScheme::SquareRoot => {
                 self.square_root.as_ref().unwrap().write(block_id, data)
             }
-            ORMAScheme::Path => {
+            ORAMScheme::Path => {
                 self.path.as_ref().unwrap().write(block_id, data)
             }
             ORAMScheme::Circuit | ORAMScheme::Tree | ORAMScheme::Ring => {

@@ -59,7 +59,7 @@ pub fn constant_time_compare_slices(a: &[u8], b: &[u8]) -> Choice {
 /// Execution time is constant regardless of choice value.
 #[inline(always)]
 pub fn constant_time_select<T: ConditionallySelectable>(choice: Choice, a: T, b: T) -> T {
-    T::conditional_select(choice, a, b)
+    T::conditional_select(&a, &b, choice)
 }
 
 /// Constant-time select for byte arrays
@@ -67,7 +67,7 @@ pub fn constant_time_select<T: ConditionallySelectable>(choice: Choice, a: T, b:
 pub fn constant_time_select_array(choice: Choice, a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
     let mut result = [0u8; 32];
     for i in 0..32 {
-        result[i] = u8::conditional_select(choice, a[i], b[i]);
+        result[i] = u8::conditional_select(&a[i], &b[i], choice);
     }
     result
 }
@@ -200,7 +200,7 @@ impl InformationTheoretic {
         }
 
         // Convert Choice to u8 in constant time
-        result = u8::conditional_select(all_match, 1u8, 0u8);
+        result = u8::conditional_select(&1u8, &0u8, all_match);
         result
     }
 }

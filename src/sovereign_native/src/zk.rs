@@ -41,20 +41,29 @@ pub struct ZkClient;
 impl ZkClient {
     /// Prove you own a key without revealing it
     pub fn prove_key_ownership(pubkey: &[u8], privkey: &[u8]) -> ZkProof {
-        let proof = Blake3::hash(&[pubkey, privkey].concat()).to_vec();
+        let mut data = pubkey.to_vec();
+        data.extend_from_slice(privkey);
+        let proof = Blake3::hash(&data).to_vec();
         ZkProof { proof, circuit: "key_ownership" }
     }
 
     /// Prove transaction is valid without revealing sender/receiver/amount
     pub fn prove_transaction(sender_pubkey: &[u8], receiver_pubkey: &[u8], amount_commitment: &[u8], sig: &[u8]) -> ZkProof {
-        let proof = Blake3::hash(&[sender_pubkey, receiver_pubkey, amount_commitment, sig].concat()).to_vec();
+        let mut data = Vec::new();
+        data.extend_from_slice(sender_pubkey);
+        data.extend_from_slice(receiver_pubkey);
+        data.extend_from_slice(amount_commitment);
+        data.extend_from_slice(sig);
+        let proof = Blake3::hash(&data).to_vec();
         ZkProof { proof, circuit: "valid_tx" }
     }
 
     /// Prove balance is sufficient without revealing balance
     pub fn prove_balance(commitment: &[u8], min_amount: u64) -> ZkProof {
         let min_bytes = min_amount.to_be_bytes();
-        let proof = Blake3::hash(&[commitment, &min_bytes].concat()).to_vec();
+        let mut data = commitment.to_vec();
+        data.extend_from_slice(&min_bytes);
+        let proof = Blake3::hash(&data).to_vec();
         ZkProof { proof, circuit: "sufficient_balance" }
     }
 }

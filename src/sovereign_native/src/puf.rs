@@ -137,10 +137,11 @@ impl CRPStore {
 
     pub fn remove_oldest(&mut self) {
         // Find and remove the oldest CRP
-        let oldest = self.crps.values()
-            .min_by_key(|crp| crp.timestamp);
-        if let Some(oldest_crp) = oldest {
-            self.crps.remove(&oldest_crp.challenge);
+        let oldest_challenge = self.crps.values()
+            .min_by_key(|crp| crp.timestamp)
+            .map(|crp| crp.challenge.clone());
+        if let Some(challenge) = oldest_challenge {
+            self.crps.remove(&challenge);
         }
     }
 
@@ -321,15 +322,17 @@ impl PUF {
         // The challenge selects which SRAM cells to read
 
         // Simulate SRAM power-up values (deterministic per instance, random across instances)
-        let base_seed = Blake3::hash(&format!("sram_{}_{}", self.instance_id, self.hardware_id));
+        let base_seed = Blake3::hash(format!("sram_{}_{}", self.instance_id, self.hardware_id).as_bytes());
 
         // Challenge selects 32 SRAM addresses to read
         let mut response = Vec::with_capacity(self.security_params.min_response_length);
         for (i, &challenge_byte) in challenge.iter().take(32).enumerate() {
             // Each challenge byte selects a "row" of SRAM
-            let row_seed = Blake3::hash(&[&base_seed, &[challenge_byte, i as u8]].concat());
-            // Take first byte of row seed as the SRAM value
-            response.extend_from_slice(&row_seed[..4].try_into().unwrap());
+            let mut data = base_seed.to_vec();
+            data.extend_from_slice(&[challenge_byte, i as u8]);
+            let row_seed = Blake3::hash(&data);
+            // Take first 4 bytes of row seed as the SRAM value
+            response.extend_from_slice(&row_seed[..4]);
         }
 
         // Ensure minimum length
@@ -348,7 +351,7 @@ impl PUF {
         // The challenge selects which oscillators to use and how to combine them
 
         // Simulate oscillator frequencies (unique per instance)
-        let base_freq = Blake3::hash(&format!("osc_{}_{}", self.instance_id, self.hardware_id));
+        let base_freq = Blake3::hash(format!("osc_{}_{}", self.instance_id, self.hardware_id).as_bytes());
 
         // Convert first 8 bytes to u64 frequency base
         let freq_base = u64::from_be_bytes(base_freq[..8].try_into().unwrap());
@@ -361,7 +364,9 @@ impl PUF {
             let measure_time = 1000 + (i * 100); // ns
 
             // Frequency = base + instance-specific variation + oscillator-specific variation
-            let oscillator_seed = Blake3::hash(&[&base_freq, &[osc_index as u8, i as u8]].concat());
+            let mut data = base_freq.to_vec();
+            data.extend_from_slice(&[osc_index as u8, i as u8]);
+            let oscillator_seed = Blake3::hash(&data);
             let freq_offset = u32::from_be_bytes(oscillator_seed[..4].try_into().unwrap()) as u64 % 100000;
 
             let frequency = freq_base + (freq_base / 100) + freq_offset;
@@ -388,7 +393,7 @@ impl PUF {
         // Measure which path wins the race
 
         // Simulate path delays (unique per instance)
-        let delay_seed = Blake3::hash(&format!("arbiter_{}_{}", self.instance_id, self.hardware_id));
+        let delay_seed = Blake3::hash(format!("arbiter_{}_{}", self.instance_id, self.hardware_id).as_bytes());
 
         // Challenge determines the multiplexer configuration
         // Each bit of challenge selects path configuration
@@ -396,7 +401,9 @@ impl PUF {
 
         for (i, &challenge_byte) in challenge.iter().enumerate().take(self.security_params.min_response_length / 4) {
             // Configure the arbiter with this challenge byte
-            let config_seed = Blake3::hash(&[&delay_seed, &[challenge_byte, i as u8]].concat());
+            let mut data = delay_seed.to_vec();
+            data.extend_from_slice(&[challenge_byte, i as u8]);
+            let config_seed = Blake3::hash(&data);
 
             // Simulate the two paths
             let path_seed = Blake3::hash(&config_seed);
@@ -427,17 +434,23 @@ impl PUF {
         // The scattering is unique and unclonable due to microscopic surface variations
 
         // Simulate light scattering pattern
-        let surface_seed = Blake3::hash(&format!("optical_{}_{}", self.instance_id, self.hardware_id));
+        let surface_seed = Blake3::hash(format!("optical_{}_{}", self.instance_id, self.hardware_id).as_bytes());
 
         // Challenge determines the laser parameters (angle, wavelength, position)
-        let laser_params = Blake3::hash(&[&surface_seed, challenge].concat());
+        let mut data = surface_seed.to_vec();
+        data.extend_from_slice(challenge);
+        let laser_params = Blake3::hash(&data);
 
         // Generate scattering pattern by hashing the interaction
-        let mut response = Blake3::hash(&[&surface_seed, &laser_params].concat()).to_vec();
+        let mut data2 = surface_seed.to_vec();
+        data2.extend_from_slice(&laser_params);
+        let mut response = Blake3::hash(&data2).to_vec();
 
         // Pad or truncate to minimum length
         while response.len() < self.security_params.min_response_length {
-            let extra = Blake3::hash(&[&response, &laser_params].concat()).to_vec();
+            let mut data3 = response.to_vec();
+            data3.extend_from_slice(&laser_params);
+            let extra = Blake3::hash(&data3).to_vec();
             response.extend_from_slice(&extra);
         }
 
@@ -610,7 +623,14 @@ impl HardwareBinding {
     /// The key can only be used when the PUF is available and produces the same response
     pub async fn bind_key(&self, name: &str, key_data: &[u8]) -> Result<(), PUFError> {
         // Generate a random challenge
-        let challenge = Blake3::hash(&[&self.puf.instance_id(), name, &self.puf.get_timestamp().to_be_bytes()]).to_vec();
+        let instance_bytes = self.puf.instance_id().as_bytes();
+        let name_bytes = name.as_bytes();
+        let timestamp_bytes = self.puf.get_timestamp().to_be_bytes();
+        let mut combined = Vec::new();
+        combined.extend_from_slice(instance_bytes);
+        combined.extend_from_slice(name_bytes);
+        combined.extend_from_slice(&timestamp_bytes);
+        let challenge = Blake3::hash(&combined).to_vec();
 
         // Get PUF response for this challenge
         let crp = self.puf.generate_crp(challenge.clone()).await?;

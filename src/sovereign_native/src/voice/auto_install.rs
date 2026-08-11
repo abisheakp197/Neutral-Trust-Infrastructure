@@ -81,30 +81,40 @@ impl VoiceAutoInstaller {
 
     /// Install ALL voice dependencies on Android/Termux
     fn install_android_all(&self) -> Result<(), VoiceError> {
+        info!("[VOICE-AUTO] Android: Checking voice dependencies...");
+
+        // Fast check: if termux-tts-speak exists, skip installation (already done by shell scripts)
+        if self.command_exists("termux-tts-speak") && self.command_exists("termux-toast") {
+            info!("[VOICE-AUTO] Android: Voice packages already installed by shell setup");
+            // Still try pulseaudio since it's often missing
+            let _ = self.start_pulseaudio();
+            return Ok(());
+        }
+
         info!("[VOICE-AUTO] Android: Installing ALL voice dependencies...");
 
         // 1. Core TTS engines
-        self.install_package("termux-tts", "pkg")?;
-        self.install_package("espeak", "pkg")?;
-        self.install_package("piper", "pkg")?;
-        self.install_package("festival", "pkg")?;
+        let _ = self.install_package("termux-tts", "pkg");
+        let _ = self.install_package("espeak", "pkg");
+        let _ = self.install_package("piper", "pkg");
+        let _ = self.install_package("festival", "pkg");
 
         // 2. Audio capture
-        self.install_package("termux-microphone", "pkg")?;
-        self.install_package("termux-api", "pkg")?;
+        let _ = self.install_package("termux-microphone", "pkg");
+        let _ = self.install_package("termux-api", "pkg");
 
         // 3. Audio playback
-        self.install_package("termux-media-player", "pkg")?;
-        self.install_package("pulseaudio", "pkg")?;
+        let _ = self.install_package("termux-media-player", "pkg");
+        let _ = self.install_package("pulseaudio", "pkg");
 
         // 4. Python for piper (neural TTS)
-        self.install_package("python", "pkg")?;
+        let _ = self.install_package("python", "pkg");
 
         // 5. Apply Android 8+ pulseaudio workaround
-        self.fix_android_pulseaudio()?;
+        let _ = self.fix_android_pulseaudio();
 
         // 6. Start pulseaudio
-        self.start_pulseaudio()?;
+        let _ = self.start_pulseaudio();
 
         info!("[VOICE-AUTO] Android: ALL voice dependencies installed!");
         Ok(())

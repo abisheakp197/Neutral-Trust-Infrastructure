@@ -40,6 +40,7 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 /// Physical Constants - Fundamental Limits of the Universe (Your Blueprint)
+#[derive(Debug, Clone)]
 pub struct PhysicalConstants;
 impl PhysicalConstants {
     /// Speed of light in vacuum (m/s) - PILLAR 1: Relativistic Causality
@@ -131,6 +132,8 @@ pub enum QuantumEventType {
     ConceptAdded,
     /// Security state change
     StateChange,
+    /// Warning
+    Warning,
 }
 
 impl QuantumSecurityCore {
@@ -683,7 +686,7 @@ impl QuantumSecurityCore {
         let event = QuantumSecurityEvent {
             timestamp: Instant::now(),
             domain: domain.to_string(),
-            universal_limit: self.security_state.get(domain.to_string())
+            universal_limit: self.security_state.get(domain)
                 .map(|s| s.universal_limit.clone())
                 .unwrap_or_else(|| "Unknown".to_string()),
             event_type,
@@ -781,7 +784,7 @@ impl QuantumRNG {
 
             // Mix with process-specific entropy
             let process_id = std::process::id();
-            let thread_id = std::thread::current().id().as_u64().get();
+            let thread_id = std::thread::current().id().as_u64().unwrap_or(0);
 
             // Create quantum-like randomness from unpredictable sources
             let quantum_seed: u64 = timestamp as u64 ^ process_id as u64 ^ thread_id as u64;

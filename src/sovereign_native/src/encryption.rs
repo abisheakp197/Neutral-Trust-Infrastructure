@@ -104,7 +104,7 @@ impl SovereignEncryption {
             Value::Number(n) => n.as_f64().map_or(vec![], |f| f.to_le_bytes().to_vec()),
             Value::Bool(b) => vec![if *b { 1 } else { 0 }],
             Value::Array(arr) => arr.iter().flat_map(|v| self.serialize_value(v)).collect(),
-            Value::Object(obj) => obj.iter().flat_map(|(k, v)| [k.as_bytes().to_vec(), self.serialize_value(v)].concat()).collect(),
+            Value::Object(obj) => { obj.iter().flat_map(|(k, v)| { let mut r = k.as_bytes().to_vec(); r.extend(self.serialize_value(v)); r }).collect() },
             Value::Null => vec![],
         }
     }

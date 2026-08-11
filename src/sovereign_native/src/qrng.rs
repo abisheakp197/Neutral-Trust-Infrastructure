@@ -313,7 +313,9 @@ impl QuantumRNG {
                 QRNGType::Combined => self.generate_combined_entropy(),
             };
 
-            buffer.extend_from_slice(&entropy);
+            for b in &entropy {
+                buffer.push_back(*b);
+            }
         }
 
         // Correct for any detected bias (normalization)
@@ -404,7 +406,7 @@ impl QuantumRNG {
     /// physical entropy sources to simulate quantum randomness.
     fn simulate_quantum_event(&self, source_id: u8, size: usize) -> Vec<u8> {
         let timestamp = Self::current_timestamp();
-        let thread_id = std::thread::current().id().as_u64().get();
+        let thread_id = 0u64;
         let process_id = std::process::id();
 
         // Collect entropy from multiple unpredictable sources

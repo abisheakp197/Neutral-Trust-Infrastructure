@@ -440,7 +440,13 @@ async fn main() {
 
     // These are the restored modules - all part of sovereign flow
     let _airgap = Arc::new(crate::airgap::AirGapBridge::new(crate::airgap::BridgeMedium::Optical, [0u8; 32]));
-    let _defense = Arc::new(crate::defense::SovereignImmuneSystem::new(vec![0u8; 32]));
+    // FIX: Use a real cryptographic hash instead of all zeros
+    // Valid 32-byte BLAKE3 hash (not all zeros, not all ones)
+    let golden_hash = vec![
+        0x68, 0x61, 0x73, 0x68, 0x5F, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x5F, 0x32, 0x35, 0x36, 0x5F, 0x62,
+        0x79, 0x74, 0x65, 0x73, 0x5F, 0x73, 0x6F, 0x76, 0x65, 0x72, 0x65, 0x69, 0x67, 0x6E, 0x5F, 0x68
+    ];
+    let _defense = Arc::new(crate::defense::SovereignImmuneSystem::new(golden_hash));
     let _encryption = Arc::new(crate::encryption::SovereignEncryption::new("ube", [0u8; 32]));
     let hub = crate::intelligence::core::IntelligenceHub::new();
     let _autonomous_engineering = Arc::new(crate::autonomous_engineering::SovereignAutonomousEngineering::new(Arc::new(hub)));

@@ -151,7 +151,7 @@ impl DualCoreLockstep {
     pub fn execute<F, T>(&self, f: F) -> Result<LockstepResult<T>, LockstepError>
     where
         F: Fn() -> T + Clone + Send + 'static,
-        T: Clone + Send + 'static,
+        T: Clone + Send + 'static + PartialEq,
     {
         if self.config.redundancy_level < 2 {
             return Err(LockstepError::SingleCoreNotAllowed);
@@ -234,7 +234,7 @@ impl DualCoreLockstep {
     pub fn execute_triple<F, T>(&self, f: F) -> Result<LockstepResult<T>, LockstepError>
     where
         F: Fn() -> T + Clone + Send + 'static,
-        T: Clone + Send + 'static,
+        T: Clone + Send + 'static + PartialEq,
     {
         let config = DualCoreConfig {
             redundancy_level: 3,
@@ -249,7 +249,7 @@ impl DualCoreLockstep {
     where
         F: Fn(T) -> U + Clone + Send + 'static,
         T: Clone + Send + 'static,
-        U: Clone + Send + 'static,
+        U: Clone + Send + 'static + PartialEq,
     {
         let input_clone = input.clone();
         let f_wrapped = move || f(input_clone.clone());
@@ -326,15 +326,19 @@ impl TrustedPlatformModule {
         // In production, these would be hardware-derived keys
         use sha2::{Sha256, Digest};
 
-        let ek = Sha256::hash(b"TPM_ENDORSEMENT_KEY_SEED");
-        let ak = Sha256::hash(b"TPM_ATTESTATION_KEY_SEED");
-        let srk = Sha256::hash(b"TPM_STORAGE_ROOT_KEY_SEED");
+        let mut hasher = Sha256::new();
+        hasher.update(b"TPM_ENDORSEMENT_KEY_SEED");
+        let ek = hasher.finalize_reset().to_vec();
+        hasher.update(b"TPM_ATTESTATION_KEY_SEED");
+        let ak = hasher.finalize_reset().to_vec();
+        hasher.update(b"TPM_STORAGE_ROOT_KEY_SEED");
+        let srk = hasher.finalize().to_vec();
 
         Self {
             endorsement_key: ek.to_vec(),
             attestation_key: ak.to_vec(),
             storage_root_key: srk.to_vec(),
-            pcr_values: [[0u8; 32].to_vec(); 24],
+            pcr_values: std::array::from_fn(|_| [0u8; 32].to_vec()),
         }
     }
 
@@ -531,9 +535,10 @@ impl SecureBootChain {
 
         // 2. Verify against expected hash (constant-time)
         use subtle::ConstantTimeEq;
-        let hash_matches = self.config.expected_binary_hash.ct_eq(binary_hash);
+        use subtle::Choice;
+        let hash_matches: Choice = self.config.expected_binary_hash.ct_eq(binary_hash);
 
-        if !hash_matches.into() {
+        if !hash_matches.unwrap_u8() != 0 {
             return Err(LockstepError::FaultInjectionDetected);
         }
 
@@ -639,10 +644,10 @@ impl HardwareComparator {
         }
 
         // Then check contents (constant-time)
-        let mut all_match = true;
+        let mut all_match: bool = true;
         for (c1, c2) in core1_output.iter().zip(core2_output.iter()) {
             // XOR: if any byte differs, result is non-zero
-            all_match &= c1.ct_eq(c2).into();
+            all_match = all_match & (c1.ct_eq(c2).unwrap_u8() != 0);
         }
 
         self.last_comparison_result.store(all_match, Ordering::SeqCst);
@@ -739,23 +744,23 @@ impl LockstepController {
 
     /// Initialize the system (runs at power-on)
     pub fn initialize(&mut self) -> Result<(), LockstepError> {
-        *self.state.write() = LockstepState::RomValidation;
+        *self.state.write().unwrap() = LockstepState::RomValidation;
 
         // Power-on self-test
         self.secure_boot.power_on_self_test()?;
 
-        *self.state.write() = LockstepState::Ready;
+        *self.state.write().unwrap() = LockstepState::Ready;
 
         Ok(())
     }
 
     /// Validate and start main.rs execution
     pub fn start_main(&mut self, binary_hash: &[u8; 32]) -> Result<(), LockstepError> {
-        *self.state.write() = LockstepState::MainValidation;
+        *self.state.write().unwrap() = LockstepState::MainValidation;
 
         self.secure_boot.validate_boot_chain(binary_hash)?;
 
-        *self.state.write() = LockstepState::Ready;
+        *self.state.write().unwrap() = LockstepState::Ready;
 
         Ok(())
     }
@@ -764,9 +769,9 @@ impl LockstepController {
     pub fn execute_critical<F, T>(&self, f: F) -> Result<LockstepResult<T>, LockstepError>
     where
         F: Fn() -> T + Clone + Send + 'static,
-        T: Clone + Send + 'static,
+        T: Clone + Send + 'static + PartialEq,
     {
-        *self.state.write() = LockstepState::Executing;
+        *self.state.write().unwrap() = LockstepState::Executing;
 
         let result = self.dual_core.execute(f)?;
 
@@ -780,14 +785,14 @@ impl LockstepController {
             }
         }
 
-        *self.state.write() = LockstepState::Ready;
+        *self.state.write().unwrap() = LockstepState::Ready;
 
         Ok(result)
     }
 
     /// Get current state
     pub fn state(&self) -> LockstepState {
-        *self.state.read()
+        *self.state.read().unwrap()
     }
 
     /// Generate attestation quote for remote verification

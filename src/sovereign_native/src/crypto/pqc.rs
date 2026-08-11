@@ -368,7 +368,9 @@ impl ZeroKnowledge {
         }
 
         // Also check length
-        all_equal.into() as u8
+        use subtle::Choice;
+        let len_equal = a.len().ct_eq(&b.len());
+        (all_equal & len_equal).unwrap_u8()
     }
 
     /// Verify zero-knowledge equality proof
@@ -432,15 +434,15 @@ impl ZeroKnowledge {
 /// physical attacks (voltage glitching, lasers, etc.).
 pub struct DualRail;
 
-impl DualRail {
-    /// Dual-rail encoded bit: (false_bit, true_bit)
-    /// If value is 0: (1, 0)
-    /// If value is 1: (0, 1)
-    pub type DualBit = (u8, u8);
+/// Dual-rail encoded bit: (false_bit, true_bit)
+/// If value is 0: (1, 0)
+/// If value is 1: (0, 1)
+pub type DualBit = (u8, u8);
 
+impl DualRail {
     /// Encode a bit to dual-rail
     #[inline(always)]
-    pub fn encode_bit(bit: u8) -> Self::DualBit {
+    pub fn encode_bit(bit: u8) -> DualBit {
         // Constant-time encoding
         let true_bit = bit;
         let false_bit = 1u8.wrapping_sub(bit);
@@ -449,7 +451,7 @@ impl DualRail {
 
     /// Decode a dual-rail bit (constant-time)
     #[inline(always)]
-    pub fn decode_bit(dual: Self::DualBit) -> u8 {
+    pub fn decode_bit(dual: DualBit) -> u8 {
         // Return the true bit (second element)
         // In a real implementation, we'd verify that exactly one rail is set
         dual.1
@@ -457,7 +459,7 @@ impl DualRail {
 
     /// Dual-rail AND operation (constant-time)
     #[inline(always)]
-    pub fn and(a: Self::DualBit, b: Self::DualBit) -> Self::DualBit {
+    pub fn and(a: DualBit, b: DualBit) -> DualBit {
         // For dual-rail: (a0 & b0 | a1 & b1, a0 & b1 | a1 & b0)
         // But simplified for our encoding
         let out_false = a.0 & b.0 | a.1 & b.1;
@@ -467,7 +469,7 @@ impl DualRail {
 
     /// Dual-rail XOR operation (constant-time)
     #[inline(always)]
-    pub fn xor(a: Self::DualBit, b: Self::DualBit) -> Self::DualBit {
+    pub fn xor(a: DualBit, b: DualBit) -> DualBit {
         // XOR: (a0 & b0 | a1 & b1, a0 & b1 | a1 & b0)
         let out_false = a.0 & b.0 | a.1 & b.1;
         let out_true = a.0 & b.1 | a.1 & b.0;
@@ -476,7 +478,7 @@ impl DualRail {
 
     /// Encode a byte to dual-rail (8 dual bits)
     #[inline(always)]
-    pub fn encode_byte(byte: u8) -> [Self::DualBit; 8] {
+    pub fn encode_byte(byte: u8) -> [DualBit; 8] {
         let mut result = [(0u8, 0u8); 8];
         for i in 0..8 {
             let bit = (byte >> i) & 1;
@@ -487,7 +489,7 @@ impl DualRail {
 
     /// Decode a dual-rail byte (constant-time)
     #[inline(always)]
-    pub fn decode_byte(dual: &[Self::DualBit; 8]) -> u8 {
+    pub fn decode_byte(dual: &[DualBit; 8]) -> u8 {
         let mut result = 0u8;
         for i in 0..8 {
             result |= Self::decode_bit(dual[i]) << i;
