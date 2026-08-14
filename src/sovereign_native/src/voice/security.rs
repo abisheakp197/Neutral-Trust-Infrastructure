@@ -26,7 +26,23 @@ use std::collections::VecDeque;
 use serde::{Serialize, Deserialize};
 use sha2::{Sha256, Sha512, Digest};
 use thiserror::Error;
-use crate::voice::auth::{VoiceFingerprint, AuthLevel};
+
+/// Voice Fingerprint - Hash of voice biometric data (zero-knowledge)
+#[derive(Debug, Clone)]
+pub struct VoiceFingerprint {
+    pub fingerprint_hash: Vec<u8>,
+    pub auth_level: AuthLevel,
+    pub user_id: Option<String>,
+}
+
+/// Authentication Level for voice
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum AuthLevel {
+    Low,
+    Medium,
+    High,
+    Sovereign,
+}
 
 /// Voice Security Errors
 #[derive(Debug, Error)]
@@ -560,7 +576,8 @@ pub struct CommandClassifier;
 impl CommandClassifier {
     /// Classify a command based on its content
     pub fn classify(&self, command: &str) -> CommandClassification {
-        let command_lower = command.to_lowercase().trim();
+        let command_lower = command.to_lowercase();
+        let command_lower = command_lower.trim();
 
         // Sovereign commands
         if self.is_sovereign_command(&command_lower) {
@@ -893,12 +910,13 @@ impl MultimodalZKAuth {
     /// Register a voice fingerprint (zero-knowledge: only hash stored)
     pub fn register_voice(&self, user_id: Vec<u8>, fingerprint_hash: Vec<u8>, auth_level: AuthLevel) {
         let mut fingerprints = self.voice_fingerprints.write().unwrap();
-        fingerprints.entry(user_id)
+        let user_id_str = std::str::from_utf8(&user_id).unwrap_or("unknown").to_string();
+        fingerprints.entry(user_id.clone())
             .or_insert_with(Vec::new)
             .push(VoiceFingerprint {
                 fingerprint_hash,
                 auth_level,
-                user_id: Some(std::str::from_utf8(&user_id).unwrap_or("unknown").to_string()),
+                user_id: Some(user_id_str),
             });
     }
 

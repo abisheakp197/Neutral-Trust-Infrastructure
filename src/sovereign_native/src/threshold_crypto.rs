@@ -220,9 +220,9 @@ impl Shamir {
         // Secret = sum of (share_y * L_i(0)) for all shares
         // where L_i(0) is the Lagrange coefficient at x=0
 
-        let t_minus_1 = BigUint::from(shares.len() - 1);
+        let t_minus_1 = BigUint::from(shares.len() as u64 - 1);
         let mut secret = BigUint::zero();
-        let denominator = Self::factorial(BigUint::from(shares.len()));
+        let denominator = Self::factorial(&BigUint::from(shares.len() as u64));
 
         for i in 0..shares.len() {
             let mut numerator = BigUint::one();
@@ -238,7 +238,7 @@ impl Shamir {
                 sign *= -1; // Negate sign
             }
 
-            let lagrange_coeff = numerator * BigUint::from(*sign) / &denominator;
+            let lagrange_coeff = numerator * BigUint::from(sign as u64) / &denominator;
             secret = (secret + &shares[i].share_y * lagrange_coeff) % &shares[i].share_x;
         }
 
@@ -258,7 +258,7 @@ impl Shamir {
     /// Factorial for Lagrange interpolation
     fn factorial(n: &BigUint) -> BigUint {
         let n_usize: usize = n.try_into().unwrap_or(0);
-        (1..=n_usize).fold(BigUint::one(), |acc, x| acc * BigUint::from(*x))
+        (1..=n_usize).fold(BigUint::one(), |acc, x| acc * BigUint::from(x as u32))
     }
 }
 
@@ -305,7 +305,7 @@ impl Feldman {
         // g^y = product of (commitment_i)^(x^i) mod prime
 
         // For simplified implementation, just check it's one of our generated shares
-        self.shamir.shares.iter().any(|s| s.party_id == share.party_id && s.share_y == share.share_y).ok_or(ThresholdError::InvalidShare)
+        Ok(self.shamir.shares.iter().any(|s| s.party_id == share.party_id && s.share_y == share.share_y))
     }
 
     /// Get the public commitments (for share verification)
@@ -528,6 +528,7 @@ impl BLSSignature {
         // 2. Give each party their share
         // 3. Each party has: private_share, public_share = G * private_share
 
+        let master_key_clone = master_key.clone();
         let shamir = Shamir::new(params.clone(), master_key)?;
 
         let mut party_keys = Vec::new();
@@ -543,7 +544,7 @@ impl BLSSignature {
 
         Ok(Self {
             params,
-            public_key: master_key,
+            public_key: master_key_clone,
             party_keys,
             signature_shares: HashMap::new(),
         })

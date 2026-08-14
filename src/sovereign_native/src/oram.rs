@@ -612,13 +612,15 @@ impl PathORAM {
 
         // Check path
         if found_block.is_none() {
-            for node in &path {
-                if let Some(ref encrypted) = node.block {
-                    if encrypted.id == block_id {
-                        // Decrypt and return
-                        let block = self.decrypt_block(encrypted)?;
-                        found_block = Some(block);
-                        break;
+            for node_opt in &path {
+                if let Some(ref node) = node_opt {
+                    if let Some(ref encrypted) = node.block {
+                        if encrypted.id == block_id {
+                            // Decrypt and return
+                            let block = self.decrypt_block(encrypted)?;
+                            found_block = Some(block);
+                            break;
+                        }
                     }
                 }
             }
@@ -807,7 +809,9 @@ impl PathORAM {
 
         let mut new_positions = HashMap::new();
         for block_id in 0..n {
-            let hash_input = Blake3::hash(&[&seed, &block_id.to_be_bytes()]).to_vec();
+            let mut hash_input = seed.clone();
+            hash_input.extend(&block_id.to_be_bytes());
+            let hash_input = Blake3::hash(&hash_input);
             let new_pos = (u32::from_be_bytes([hash_input[0], hash_input[1], hash_input[2], hash_input[3]]) as usize) % n;
             new_positions.insert(block_id, new_pos);
         }
@@ -887,7 +891,7 @@ pub struct ORAMSecurityProof {
 
 impl ORAMSecurityProof {
     /// Create security proof for Path ORAM
-    pub fn new_path_oram_Proof() -> Self {
+    pub fn new_path_oram_proof() -> Self {
         Self {
             scheme: ORAMScheme::Path,
             security_parameter: 80,
@@ -979,7 +983,7 @@ impl ObliviousRAM {
     /// Get security proof
     pub fn get_security_proof(&self) -> ORAMSecurityProof {
         match self.scheme {
-            ORAMScheme::Path => ORAMSecurityProof::new_path_oram_Proof(),
+            ORAMScheme::Path => ORAMSecurityProof::new_path_oram_proof(),
             _ => ORAMSecurityProof {
                 scheme: self.scheme,
                 security_parameter: self.params.security_bits,

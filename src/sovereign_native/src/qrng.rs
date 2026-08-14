@@ -499,11 +499,12 @@ impl QuantumRNG {
         health_monitor.health_score = passed_count as f64 / 10.0;
 
         // Check if we need to add alerts for low health
-        if health_monitor.health_score < self.config.health_check_threshold {
+        let current_score = health_monitor.health_score;
+        if current_score < self.config.health_check_threshold {
             if health_monitor.alerts.is_empty() || health_monitor.alerts.last().unwrap().level != AlertLevel::Critical {
                 health_monitor.alerts.push(HealthAlert {
                     level: AlertLevel::Critical,
-                    message: format!("Health score below threshold: {}", health_monitor.health_score),
+                    message: format!("Health score below threshold: {}", current_score),
                     timestamp: now,
                     resolved: false,
                 });
@@ -540,7 +541,7 @@ impl QuantumRNG {
         let sample = self.generate(512);
         let mut counts = vec![0u32; 16];
 
-        for byte in sample {
+        for byte in &sample {
             let nibble = byte & 0x0F;
             counts[nibble as usize] += 1;
         }
@@ -720,7 +721,9 @@ impl QuantumRNG {
 
         // Update seed with new entropy
         let new_entropy = self.generate_combined_entropy();
-        state.internal_state = Blake3::hash(&[&state.internal_state, &new_entropy]).to_vec();
+        let mut combined = state.internal_state.clone();
+        combined.extend(new_entropy);
+        state.internal_state = Blake3::hash(&combined).to_vec();
     }
 }
 

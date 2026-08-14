@@ -241,7 +241,7 @@ impl QuantumSecurityCore {
     ///
     /// PILLAR 1: Speed of Light (c) - Relativistic Causality
     /// No signal can travel faster than light, preventing remote signal spoofing
-    pub fn enforce_speed_of_light(&self, distance_meters: f64, signal_time_ns: f64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_speed_of_light(&mut self, distance_meters: f64, signal_time_ns: f64) -> Result<(), QuantumSecurityError> {
         let min_time_ns = distance_meters / PhysicalConstants::C * 1e9;
 
         if signal_time_ns < min_time_ns {
@@ -285,7 +285,7 @@ impl QuantumSecurityCore {
     /// PILLAR 6: Landauer's Principle
     /// Bit erasure requires minimum energy: E_min = k_B * T * ln(2)
     /// This sets absolute minimum energy cost for erasing/overwriting key memory
-    pub fn enforce_landauer_limit(&self, temperature_kelvin: f64, memory_bits: u64, energy_joules: f64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_landauer_limit(&mut self, temperature_kelvin: f64, memory_bits: u64, energy_joules: f64) -> Result<(), QuantumSecurityError> {
         let min_energy = temperature_kelvin * PhysicalConstants::K_B * (2.0f64.ln());
         let required_energy = min_energy * memory_bits as f64;
 
@@ -318,7 +318,7 @@ impl QuantumSecurityCore {
     /// PILLAR 7: Bremermann's Limit
     /// Maximum computation rate is bounded by mass-energy equivalence
     /// Brute-forcing a 256-bit key requires more energy than exists in the observable galaxy
-    pub fn enforce_bremermann_limit(&self, mass_kg: f64, computation_rate_bps: f64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_bremermann_limit(&mut self, mass_kg: f64, computation_rate_bps: f64) -> Result<(), QuantumSecurityError> {
         let max_rate = mass_kg * PhysicalConstants::BREMERMANN_LIMIT_BITS_PER_SECOND_PER_KG;
 
         if computation_rate_bps > max_rate {
@@ -359,7 +359,7 @@ impl QuantumSecurityCore {
     /// PILLAR 3: Heisenberg Uncertainty Principle
     /// Δx·Δp ≥ ħ/2 - Cannot simultaneously measure position and momentum exactly
     /// This provides true, non-deterministic cryptographic seeds from quantum fluctuations
-    pub fn enforce_heisenberg_uncertainty(&self, position_uncertainty: f64, momentum_uncertainty: f64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_heisenberg_uncertainty(&mut self, position_uncertainty: f64, momentum_uncertainty: f64) -> Result<(), QuantumSecurityError> {
         let min_uncertainty = PhysicalConstants::H_BAR / 2.0;
         let actual_uncertainty = position_uncertainty * momentum_uncertainty;
 
@@ -398,7 +398,7 @@ impl QuantumSecurityCore {
     /// PILLAR 12: Quantum No-Cloning Theorem (Wootters-Zurek 1982)
     /// It is IMPOSSIBLE to create an identical copy of an arbitrary unknown quantum state
     /// This prevents interception and replication of quantum-entangled keys
-    pub fn enforce_no_cloning(&self, source_state: &[u8], cloned_state: &[u8]) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_no_cloning(&mut self, source_state: &[u8], cloned_state: &[u8]) -> Result<(), QuantumSecurityError> {
         // In a real quantum system, we can't measure the state directly (it would collapse)
         // But we CAN enforce that states cannot be perfectly copied
 
@@ -432,7 +432,7 @@ impl QuantumSecurityCore {
     /// PILLAR 13: Pauli Exclusion Principle
     /// No two identical fermions can occupy the same quantum state
     /// Maps to: Rust's strict type system enforces unique memory references (no two mutable refs to same data)
-    pub fn enforce_pauli_exclusion(&self, ref1_ptr: usize, ref2_ptr: usize) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_pauli_exclusion(&mut self, ref1_ptr: usize, ref2_ptr: usize) -> Result<(), QuantumSecurityError> {
         if ref1_ptr == ref2_ptr {
             // TWO REFERENCES TO SAME MEMORY - Violates Pauli-like exclusion for references
             let error = QuantumSecurityError::MemoryViolation {
@@ -463,7 +463,7 @@ impl QuantumSecurityCore {
     /// PILLAR 8: Bekenstein Bound
     /// Maximum information that can be stored in a given volume with given energy
     /// I_max = 2πRE / (ħ c ln 2) where R = radius, E = energy
-    pub fn enforce_bekenstein_bound(&self, mass_kg: f64, volume_m3: f64, bits_stored: u64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_bekenstein_bound(&mut self, mass_kg: f64, volume_m3: f64, bits_stored: u64) -> Result<(), QuantumSecurityError> {
         // Simplified check: Bekenstein Bound per kg·m²
         let max_bits = volume_m3.sqrt() * mass_kg * PhysicalConstants::BEKENSTEIN_BOUND_BITS_PER_KG_M2;
 
@@ -494,7 +494,7 @@ impl QuantumSecurityCore {
     /// PILLAR 9: Shannon Channel Capacity Theorem
     /// Maximum rate at which information can be transmitted over a noisy channel
     /// C = B * log2(1 + S/N) where B = bandwidth, S/N = signal-to-noise ratio
-    pub fn enforce_shannon_capacity(&self, bandwidth_hz: f64, snr_db: f64, data_rate_bps: f64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_shannon_capacity(&mut self, bandwidth_hz: f64, snr_db: f64, data_rate_bps: f64) -> Result<(), QuantumSecurityError> {
         let snr_linear = 10.0f64.powf(snr_db / 10.0);
         let capacity = bandwidth_hz * snr_linear.log2();
 
@@ -525,7 +525,7 @@ impl QuantumSecurityCore {
     /// PILLAR 10: Godel's Incompleteness Theorems
     /// In any consistent formal system, there exist true statements that cannot be proven within the system
     /// Therefore: we CANNOT rely on self-attestation alone - need external root-of-trust
-    pub fn enforce_godel_incompleteness(&self, proof_system: &str) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_godel_incompleteness(&mut self, proof_system: &str) -> Result<(), QuantumSecurityError> {
         // If the system is trying to self-verify without external input, it's incomplete
         if proof_system == "self" || proof_system == "internal_only" {
             let error = QuantumSecurityError::LogicalViolation {
@@ -555,7 +555,7 @@ impl QuantumSecurityCore {
     /// PILLAR 11: Turing's Halting Problem & Rice's Theorem
     /// It is undecidable whether an arbitrary program will halt
     /// Therefore: we use symbolic execution and formal proofs (Kani/Verus) to eliminate unmapped execution paths
-    pub fn enforce_turing_undecidability(&self, code_path: &str, has_formal_proof: bool) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_turing_undecidability(&mut self, code_path: &str, has_formal_proof: bool) -> Result<(), QuantumSecurityError> {
         if !has_formal_proof {
             let error = QuantumSecurityError::LogicalViolation {
                 domain: "Formal Verification".to_string(),
@@ -584,7 +584,7 @@ impl QuantumSecurityCore {
     /// PILLAR 4: Second Law of Thermodynamics
     /// Entropy in a closed system cannot decrease (ΔS ≥ 0)
     /// We use constant-power execution to flatten heat signatures into background noise
-    pub fn enforce_second_law_thermodynamics(&self, initial_entropy: f64, final_entropy: f64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_second_law_thermodynamics(&mut self, initial_entropy: f64, final_entropy: f64) -> Result<(), QuantumSecurityError> {
         if final_entropy < initial_entropy {
             // ENTROPY DECREASED - Violates Second Law (IMPOSSIBLE in closed system)
             // This could indicate thermal attacks trying to cool the system
@@ -616,7 +616,7 @@ impl QuantumSecurityCore {
     /// PILLAR 5: Third Law of Thermodynamics
     /// Cannot reach absolute zero (0K)
     /// Monitor for physical cooling attacks
-    pub fn enforce_third_law_thermodynamics(&self, temperature_kelvin: f64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_third_law_thermodynamics(&mut self, temperature_kelvin: f64) -> Result<(), QuantumSecurityError> {
         const ABSOLUTE_ZERO: f64 = 0.0;
         const MIN_TOLERABLE_TEMP: f64 = 10.0; // Very cold but physically possible
 
@@ -652,7 +652,7 @@ impl QuantumSecurityCore {
     /// PILLAR 2: Planck Scale
     /// Spacetime is discrete below 10^-35 m / 10^-44 s
     /// Clock cycles and memory addresses operate as discrete quantum steps
-    pub fn enforce_planck_scale(&self, time_interval_s: f64, length_m: f64) -> Result<(), QuantumSecurityError> {
+    pub fn enforce_planck_scale(&mut self, time_interval_s: f64, length_m: f64) -> Result<(), QuantumSecurityError> {
         if time_interval_s < PhysicalConstants::PLANCK_TIME {
             let error = QuantumSecurityError::QuantumViolation {
                 domain: "Physical Hardware".to_string(),
@@ -682,7 +682,7 @@ impl QuantumSecurityCore {
     }
 
     /// Log a security event to the immutable audit log
-    fn log_event(&mut self, event_type: QuantumEventType, domain: &str, details: &str) {
+    fn log_event(&self, event_type: QuantumEventType, domain: &str, details: &str) {
         let event = QuantumSecurityEvent {
             timestamp: Instant::now(),
             domain: domain.to_string(),
@@ -784,10 +784,12 @@ impl QuantumRNG {
 
             // Mix with process-specific entropy
             let process_id = std::process::id();
-            let thread_id = std::thread::current().id().as_u64().unwrap_or(0);
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            std::hash::Hash::hash(&std::thread::current().id(), &mut hasher);
+            let thread_id = std::hash::Hasher::finish(&hasher);
 
             // Create quantum-like randomness from unpredictable sources
-            let quantum_seed: u64 = timestamp as u64 ^ process_id as u64 ^ thread_id as u64;
+            let quantum_seed: u64 = timestamp as u64 ^ process_id as u64 ^ thread_id;
 
             // Use Blake3 to mix and extract entropy
             let hash = crate::crypto::blake3::Blake3::hash(&quantum_seed.to_be_bytes());
@@ -999,7 +1001,8 @@ impl MovingTargetDefense {
     }
 
     fn generate_new_ports(&self) -> Vec<u16> {
-        use std::collections::hash_set::HashSet;
+        use std::collections::HashSet;
+        use rand::Rng;
         let mut rng = rand::thread_rng();
         let mut ports = HashSet::new();
 
@@ -1066,7 +1069,7 @@ impl DataBlackBox {
         if self.encryption_key.is_empty() {
             // Generate encryption key from QRNG
             let qrng = QuantumRNG::new();
-            self.encryption_key = qrng.generate(32);
+            self.encryption_key = QuantumRNG::new().generate(32);
         }
 
         // In real implementation, use AEAD encryption

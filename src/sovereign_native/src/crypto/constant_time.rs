@@ -192,7 +192,6 @@ impl InformationTheoretic {
     /// This is a building block for zero-knowledge proofs.
     #[inline(always)]
     pub fn zk_equality_bit(a: &[u8; 32], b: &[u8; 32]) -> u8 {
-        let mut result = 0u8;
         let mut all_match = Choice::from(1u8);
 
         for i in 0..32 {
@@ -200,8 +199,7 @@ impl InformationTheoretic {
         }
 
         // Convert Choice to u8 in constant time
-        result = u8::conditional_select(&1u8, &0u8, all_match);
-        result
+        u8::conditional_select(&1u8, &0u8, all_match)
     }
 }
 
