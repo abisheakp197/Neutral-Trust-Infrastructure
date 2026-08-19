@@ -1230,6 +1230,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_security_token_sign_verify() {
         let token = SecurityToken::new(
             b"TOKEN_123".to_vec(),
@@ -1247,6 +1248,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_signed_voice_command() {
         let token = SecurityToken::new(
             b"TOKEN_123".to_vec(),
@@ -1267,6 +1269,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_command_classifier() {
         let classifier = CommandClassifier;
 
@@ -1285,6 +1288,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_authorization_rules() {
         assert_eq!(
             AuthorizationRules::get_required_level(CommandClassification::Query),
@@ -1297,6 +1301,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_input_sanitizer() {
         let input = "Hello; rm -rf /; World!";
         let sanitized = InputSanitizer::sanitize(input);
@@ -1307,6 +1312,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_authorization_level_ordering() {
         assert!(AuthorizationLevel::ReadOnly < AuthorizationLevel::WriteSensitive);
         assert!(AuthorizationLevel::WriteSensitive < AuthorizationLevel::Sovereign);

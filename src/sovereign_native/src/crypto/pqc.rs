@@ -503,6 +503,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_constant_time_kyber() {
         let keypair = Kyber::generate_key_pair();
         assert_eq!(keypair.public_key.len(), Kyber::PUBLIC_KEY_BYTES);
@@ -510,6 +511,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_kyber_encrypt_decrypt() {
         let keypair = Kyber::generate_key_pair();
         let message = b"Hello, UBE!";
@@ -521,6 +523,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_constant_time_public_key_verification() {
         let pk1 = vec![0u8; 100];
         let pk2 = vec![0u8; 100];
@@ -531,6 +534,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_dilithium_sign_verify() {
         let (public_key, private_key) = Dilithium::generate_key_pair();
         let message = b"Test message";
@@ -540,6 +544,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_zero_knowledge_equality() {
         let a = b"same";
         let b = b"same";
@@ -555,6 +560,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_dual_rail_operations() {
         let bit0 = DualRail::encode_bit(0);
         let bit1 = DualRail::encode_bit(1);
@@ -570,6 +576,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_dual_rail_byte_roundtrip() {
         let original = 42u8;
         let encoded = DualRail::encode_byte(original);

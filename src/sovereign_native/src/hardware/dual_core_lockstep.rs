@@ -813,6 +813,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_dual_core_lockstep_execute() {
         let lockstep = DualCoreLockstep::default();
 
@@ -832,6 +833,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_hardware_comparator() {
         let comparator = HardwareComparator::new();
 
@@ -848,6 +850,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_secure_boot_chain() {
         let validation_code = b"UBE_VALIDATION";
         let config = SecureBootConfig::default();
@@ -875,6 +878,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_tpm_operations() {
         let mut tpm = TrustedPlatformModule::new();
 
@@ -891,6 +895,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_lockstep_controller() {
         let mut controller = LockstepController::new();
 

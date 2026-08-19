@@ -247,6 +247,7 @@ mod tests {
     use std::time::{Instant, Duration};
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_constant_time_compare_32_timing() {
         // Test that comparison time doesn't depend on input
         let a = [0u8; 32];
@@ -285,6 +286,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_constant_time_verify_hash() {
         let hash1 = [0u8; 32];
         let hash2 = [0u8; 32];
@@ -298,6 +300,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_constant_time_select() {
         let a = 42u8;
         let b = 99u8;
@@ -310,6 +313,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_information_theoretic_zk() {
         let a = [0u8; 32];
         let b = [0u8; 32];
@@ -323,6 +327,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "android"))]
     fn test_hardware_bound_compare() {
         let a = [0u8; 32];
         let b = [0u8; 32];

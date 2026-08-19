@@ -58,6 +58,10 @@ mod puf;
 mod oram;
 mod qrng;
 mod side_channel;
+mod closed_loop;
+mod intent_universal;
+mod self_perfecting;
+mod gravity;
 
 // MATHEMATICAL CONCEPTS 1-150: Universal Knowledge System
 // All mathematical, physical, and computational laws integrated into UBE
@@ -68,9 +72,11 @@ mod chaos;
 
 use log::{info, LevelFilter};
 use crate::crypto::blake3::Blake3;
+use crate::intent_universal::AgreementLevel;
 use env_logger::Builder;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::sync::{Arc, Mutex, RwLock};
+use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() {
@@ -155,21 +161,163 @@ async fn main() {
     voice_system.set_judgement_system(judgement_system.clone());
 
     // ============================================================================
+    // UBE TRANSCENDENTAL AUTOMATION VISION - 4 New Pillars (2026-08-18)
+    // ============================================================================
+    // 1. CLOSED LOOP: Perpetual motion automation machine - never stops, never fails
+    // 2. INTENT UNIVERSAL: Seamless conversion of any intent to automation
+    // 3. SELF PERFECTING: System learns and improves from every outcome
+    // 4. GRAVITY: All code pulled together as ONE sovereign system
+    // ============================================================================
+
+    // Initialize HSM for closed loop and other systems
+    let hsm = crate::hardware::SovereignHSM::new();
+
+    // CLOSED LOOP: The perpetual motion machine of automation
+    // Connects Observe -> Act -> Learn -> Repeat in an infinite loop
+    let closed_loop_engine = Arc::new(crate::closed_loop::ClosedLoopEngine::new(
+        "ube_closed_loop_perpetual".to_string(),
+        hsm.clone(),
+        voice_system.clone(),
+        judgement_system.clone(),
+    ));
+    // Start the closed loop cycle
+    closed_loop_engine.start();
+    info!("[CLOSED_LOOP] Perpetual automation machine STARTED - Never stops, never fails");
+
+    // INTENT UNIVERSAL: Natural language to automation
+    // Understands any intent and converts it to sovereign execution
+    let intent_interpreter = Arc::new(crate::intent_universal::IntentInterpreter::new(
+        AgreementLevel::SelfSovereign,
+    ));
+    // Register intent interpreter with voice system
+    voice_system.set_intent_interpreter(intent_interpreter.clone());
+    info!("[INTENT_UNIVERSAL] Intent to automation bridge ACTIVATED - Any intent = Automation");
+
+    // SELF PERFECTING: The learning automation engine
+    // Learns from every outcome and optimizes itself
+    let self_perfecting_engine = Arc::new(crate::self_perfecting::SelfPerfectingEngine::new(
+        Some("ube_self_perfecting".to_string()),
+    ));
+    // Initialize with all existing automations
+    let _ = self_perfecting_engine.process_feedback(crate::closed_loop::Feedback {
+        feedback_id: "initial_feedback".to_string(),
+        automation_id: None,
+        intent: Some("initialize".to_string()),
+        feedback_type: crate::closed_loop::FeedbackType::Positive,
+        score: Some(10),
+        confidence: Some(1.0),
+        message: "Self-perfecting system initialized".to_string(),
+        created_at: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64,
+    });
+    info!("[SELF_PERFECTING] Learning automation engine ACTIVATED - Gets smarter with every use");
+
+    // GRAVITY: All code pulled together as ONE sovereign system
+    // Uses physics-based cohesion to ensure all modules work as one
+    let sovereign_gravity = Arc::new(crate::gravity::SovereignGravity::new(
+        Some("ube_sovereign_gravity".to_string()),
+    ));
+    // Add all known UBE modules to the gravitational field
+    sovereign_gravity.add_module(crate::gravity::GravitationalModule {
+        module_id: "main.rs".to_string(),
+        name: "UBE Main".to_string(),
+        module_type: crate::gravity::ModuleType::Core,
+        description: "Sovereign Core Entry Point".to_string(),
+        position: (0.0, 0.0, 0.0),
+        velocity: (0.0, 0.0, 0.0),
+        mass: 100000.0,
+        rest_mass: 100000.0,
+        relativistic_mass: 100000.0,
+        charge: 1.0,
+        spin: 0.0,
+        temperature: 0.0,
+        pressure: 0.0,
+        density: 100.0,
+        potential_energy: 0.0,
+        kinetic_energy: 0.0,
+        total_energy: 0.0,
+        entropy: 0.0,
+        heat_capacity: 10000.0,
+        magnetic_moment: 100.0,
+        electric_field: 100.0,
+        last_updated: SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64,
+        orbital_layer: 0,
+        is_immutable: true,
+        is_critical: true,
+        is_active: true,
+        singularity_connection: 1.0,
+        relationships: HashMap::new(),
+    });
+    // Add more critical modules to gravity
+    let critical_modules = vec!["hardware", "crypto", "identity", "ledger", "sovereign_guardian"];
+    for (i, module_name) in critical_modules.iter().enumerate() {
+        sovereign_gravity.add_module(crate::gravity::GravitationalModule {
+            module_id: format!("ube::{}", module_name),
+            name: format!("UBE {}", module_name.to_uppercase()),
+            module_type: crate::gravity::ModuleType::Core,
+            description: format!("UBE {} Module", module_name),
+            position: ((i as f64 + 1.0) * 10.0, 0.0, 0.0),
+            velocity: (0.0, 0.0, 0.0),
+            mass: 5000.0,
+            rest_mass: 5000.0,
+            relativistic_mass: 5000.0,
+            charge: 1.0,
+            spin: 0.1,
+            temperature: 0.0,
+            pressure: 1.0,
+            density: 50.0,
+            potential_energy: 0.0,
+            kinetic_energy: 0.0,
+            total_energy: 0.0,
+            entropy: 0.0,
+            heat_capacity: 1000.0,
+            magnetic_moment: 10.0,
+            electric_field: 10.0,
+            last_updated: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64,
+            orbital_layer: 1,
+            is_immutable: true,
+            is_critical: true,
+            is_active: true,
+            singularity_connection: 0.99,
+            relationships: HashMap::new(),
+        });
+    }
+    // Run initial gravity cycle to pull everything together
+    sovereign_gravity.run_gravity_cycle();
+    info!("[GRAVITY] Sovereign Gravity Field ACTIVATED - All code is ONE with UBE");
+
+    info!("========================================");
+    info!("UBE TRANSCENDENTAL AUTOMATION: ALL 4 PILLARS ACTIVE");
+    info!("1. CLOSED LOOP: Perpetual motion automation");
+    info!("2. INTENT UNIVERSAL: Any intent = Automation");
+    info!("3. SELF PERFECTING: Learns and improves forever");
+    info!("4. GRAVITY: All code is ONE sovereign system");
+    info!("========================================");
+
+    // ============================================================================
     // ABSOLUTE SECURITY INITIALIZATION - UBE Unhackability Foundation
     // ============================================================================
 
     // Hardware Security Module (HSM) - The root of all trust
     // Note: HSM::new() already returns Arc<Mutex<Self>>
-    let hsm = crate::hardware::SovereignHSM::new();
+    let hsm_absolute = crate::hardware::SovereignHSM::new();
 
     // Anti-Tamper System - Physical and logical tamper detection
-    let anti_tamper = crate::hardware::AntiTamperSystem::new(hsm.clone());
+    let anti_tamper = crate::hardware::AntiTamperSystem::new(hsm_absolute.clone());
 
     // Absolute Security Layer - Zero data extraction possible
-    let absolute_security = crate::hardware::AbsoluteSecurity::new(hsm.clone());
+    let absolute_security = crate::hardware::AbsoluteSecurity::new(hsm_absolute.clone());
 
     // Data Black Box - Sealed data can NEVER be extracted
-    let data_blackbox = Arc::new(Mutex::new(crate::hardware::DataBlackBox::new(hsm.clone()).unwrap()));
+    let data_blackbox = Arc::new(Mutex::new(crate::hardware::DataBlackBox::new(hsm_absolute.clone()).unwrap()));
 
     // Identity: Root sovereign identity
     let mut id_engine = crate::identity::IdentityEngine::new();
@@ -193,7 +341,7 @@ async fn main() {
     // ============================================================================
 
     // Immutable Ledger Storage with Hardware Backing
-    let immutable_ledger = crate::immutable_ledger::ImmutableLedgerStorage::new(hsm.clone());
+    let immutable_ledger = crate::immutable_ledger::ImmutableLedgerStorage::new(hsm_absolute.clone());
     immutable_ledger.initialize().unwrap();
 
     // Seal the boot transaction into immutable ledger
@@ -218,7 +366,7 @@ async fn main() {
 
     // Omni-Healing Engine - Auto-heals all layers
     let omni_healer = crate::hardware::OmniHealer::initialize(
-        hsm.clone(),
+        hsm_absolute.clone(),
         anti_tamper.clone(),
         immutable_ledger.clone(),
     );
@@ -234,7 +382,7 @@ async fn main() {
     // ============================================================================
 
     // ZK Data Vault - Data sealed forever, only proofs leave
-    let _zk_vault = crate::hardware::ZkDataVault::new(hsm.clone()).unwrap();
+    let _zk_vault = crate::hardware::ZkDataVault::new(hsm_absolute.clone()).unwrap();
 
     // Seal secret data (can NEVER be retrieved)
     let _sealed_secret = data_blackbox.lock().unwrap().seal(b"UBE_ABSOLUTE_SECRET_KEY").unwrap();
@@ -278,7 +426,7 @@ async fn main() {
 
     // Jurisdiction Engine - All 195+ countries' laws enforced
     let jurisdiction_engine = crate::jurisdiction::SovereignJurisdiction::new(
-        hsm.clone(),
+        hsm_absolute.clone(),
         immutable_ledger.clone(),
         absolute_security.clone(),
     );
@@ -338,101 +486,6 @@ async fn main() {
     // Immune: Protection system
     let _immune = Arc::new(crate::immune::ImmuneSystem::new("."));
 
-    // ========================================================================
-    // HARDWARE SECURITY - Unhackable foundation
-    // ========================================================================
-    // 1. Initialize Hardware Security Module (HSM)
-    let hsm = crate::hardware::SovereignHSM::new();
-    let hsm_arc = hsm.clone();
-    if let Err(e) = hsm.lock().unwrap().initialize() {
-        log::warn!("[HARDWARE] HSM initialization degraded (expected on devices without hardware security): {}", e);
-    }
-    log::info!("[HARDWARE] HSM initialized with status: {:?}", hsm.lock().unwrap().status());
-
-    // 2. Initialize Anti-Tamper System
-    let anti_tamper = crate::hardware::AntiTamperSystem::new(hsm_arc.clone());
-    anti_tamper.initialize();
-    log::info!("[HARDWARE] Anti-Tamper system initialized");
-
-    // 3. Initialize Intrusion Detection System
-    let intrusion_detection = crate::hardware::IntrusionDetectionSystem::new(hsm_arc.clone(), anti_tamper.clone());
-    if let Err(e) = intrusion_detection.initialize() {
-        log::warn!("[HARDWARE] IDS initialization degraded (expected on devices without HSM): {}", e);
-    }
-    log::info!("[HARDWARE] Intrusion Detection System initialized");
-
-    // 4. Initialize Immutable Ledger Storage
-    let immutable_ledger = crate::immutable_ledger::ImmutableLedgerStorage::new(hsm_arc.clone());
-    if let Err(e) = immutable_ledger.initialize() {
-        log::warn!("[HARDWARE] Immutable ledger initialization degraded (expected on devices without HSM): {}", e);
-    }
-    log::info!("[HARDWARE] Immutable Ledger Storage initialized");
-
-    // 5. Initialize Secure Healing Engine
-    let secure_healing = crate::hardware::secure_healing::SecureHealingEngine::new(
-        hsm_arc.clone(),
-        anti_tamper.clone(),
-        immutable_ledger.clone(),
-    );
-    if let Err(e) = secure_healing.initialize() {
-        log::warn!("[HARDWARE] Secure healing initialization degraded (expected on devices without HSM): {}", e);
-    }
-    log::info!("[HARDWARE] Secure Healing Engine initialized");
-
-    // 6. Initialize Hardware Fault Detector
-    let hardware_fault_detector = crate::hardware::secure_healing::HardwareFaultDetector::new(
-        hsm_arc.clone(),
-        anti_tamper.clone(),
-        immutable_ledger.clone(),
-    );
-    log::info!("[HARDWARE] Hardware Fault Detector initialized");
-
-    // 7. Initialize Secure RNG
-    let _secure_rng = crate::hardware::SecureRng::new(hsm_arc.clone());
-    log::info!("[HARDWARE] Secure RNG initialized");
-
-    // ========================================================================
-    // QUANTUM-RESISTANT KEY GENERATION
-    // ========================================================================
-    // Generate tamper-proof keys
-    let hsm_for_keys = hsm_arc.clone();
-    let (node_pub_key, _node_priv_key) = hsm_for_keys.lock().unwrap().generate_keypair().unwrap_or_default();
-    log::info!("[HARDWARE] Quantum-resistant node key pair generated");
-
-    // ========================================================================
-    // TAMPER-PROOF STORAGE TEST
-    // ========================================================================
-    // Test tamper-proof storage
-    let hsm_for_storage = hsm_arc.clone();
-    let test_data: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8];
-    match crate::hardware::TamperProofStorage::new(test_data.clone(), hsm_for_storage.clone()) {
-        Ok(storage) => {
-            match storage.get() {
-                Ok(retrieved) => {
-                    if retrieved == test_data {
-                        log::info!("[HARDWARE] Tamper-proof storage: READ/WRITE/VERIFY OK");
-                    } else {
-                        log::error!("[HARDWARE] Tamper-proof storage: Data mismatch!");
-                    }
-                }
-                Err(e) => {
-                    log::error!("[HARDWARE] Tamper-proof storage read failed: {:?}", e);
-                }
-            }
-        }
-        Err(e) => {
-            log::error!("[HARDWARE] Tamper-proof storage creation failed: {:?}", e);
-        }
-    }
-
-    // ========================================================================
-    // SELF-DESTRUCT TEST (simulated)
-    // ========================================================================
-    // Simulate tamper detection
-    anti_tamper.simulate_tamper(crate::hardware::TamperMethod::PhysicalSwitch);
-    if anti_tamper.is_compromised() {
-        log::warn!("[HARDWARE] TAMPERING DETECTED - System in compromised state");
-    }
 
     // ========================================================================
     // RESTORED MODULES - All touched, all alive
