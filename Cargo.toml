@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["src/sovereign_native", "src/ube_kernel"]
+members = ["src/sovereign_native"]
 
 [profile.release]
 opt-level = 3
