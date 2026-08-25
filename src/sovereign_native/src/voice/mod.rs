@@ -24,7 +24,7 @@ pub mod auth;
 pub mod sovereign_executor;
 pub mod security;
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
 use capture::{AudioCapture, create_capture};
@@ -195,6 +195,7 @@ pub struct VoiceCommandResult {
 }
 
 /// Main Voice Control System
+#[derive(Clone)]
 pub struct UniversalVoiceControl {
     config: VoiceConfig,
     speech: SpeechRecognizer,
@@ -203,6 +204,7 @@ pub struct UniversalVoiceControl {
     parser: CommandParser,
     judgement_system: Option<Arc<RwLock<crate::judgement::JudgementSystem>>>,
     sovereign_executor: Option<sovereign_executor::SovereignCommandExecutor>,
+    intent_interpreter: Option<Arc<Mutex<crate::intent_universal::IntentUniversal>>>,
 }
 
 impl UniversalVoiceControl {
@@ -217,6 +219,7 @@ impl UniversalVoiceControl {
             parser: CommandParser::new(),
             judgement_system: None,
             sovereign_executor: Some(sovereign_executor::SovereignCommandExecutor::new()),
+            intent_interpreter: None,
         }
     }
 
@@ -224,6 +227,12 @@ impl UniversalVoiceControl {
     pub fn set_judgement_system(&mut self, judgement: Arc<RwLock<crate::judgement::JudgementSystem>>) {
         self.judgement_system = Some(judgement);
         log::info!("[VOICE] Judgement System connected - zero mistake mode ACTIVE");
+    }
+
+    /// Set the intent interpreter for natural language understanding
+    pub fn set_intent_interpreter(&mut self, interpreter: Arc<Mutex<crate::intent_universal::IntentUniversal>>) {
+        self.intent_interpreter = Some(interpreter);
+        log::info!("[VOICE] Intent Interpreter connected - natural language ACTIVE");
     }
 
     pub async fn initialize(&mut self) -> Result<(), VoiceError> {

@@ -364,7 +364,7 @@ impl DigitalProxy {
             }],
             options: AutomationOptions {
                 encryption_mode: crate::automation::EncryptionMode::Standard,
-                retry_policy: crate::automation::RetryPolicy { max_attempts: 3, delay: Duration::from_secs(30) },
+                retry_policy: crate::automation::RetryPolicy { max_attempts: 3, delay: 30000 },
                 tags: vec![],
             },
         };

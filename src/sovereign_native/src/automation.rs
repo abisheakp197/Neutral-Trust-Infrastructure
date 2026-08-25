@@ -3,11 +3,12 @@
 //! Zero-dependency, memory-safe, and provably correct execution.
 
 use std::time::{Duration, Instant};
+use serde::{Serialize, Deserialize};
 use crate::types::Value;
 use crate::pipeline::PipelineError;
 
 /// Status of an automation execution.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AutomationStatus {
     Idle,
     Running,
@@ -19,7 +20,7 @@ pub enum AutomationStatus {
 
 /// Types of automation steps.
 /// Each variant represents a deterministic action in the UBE Sovereign Fabric.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AutomationStep {
     /// Connector: Interaction with external data sources (HTTP, Socket, etc.)
     Connector {
@@ -62,7 +63,7 @@ pub enum AutomationStep {
 }
 
 /// A request to execute a sovereign automation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutomationRequest {
     pub id: String,
     pub name: String,
@@ -71,7 +72,7 @@ pub struct AutomationRequest {
     pub options: AutomationOptions,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutomationOptions {
     pub encryption_mode: EncryptionMode,
     pub retry_policy: RetryPolicy,
@@ -82,27 +83,27 @@ impl Default for AutomationOptions {
     fn default() -> Self {
         Self {
             encryption_mode: EncryptionMode::QuantumResistant,
-            retry_policy: RetryPolicy { max_attempts: 3, delay: std::time::Duration::from_millis(100) },
+            retry_policy: RetryPolicy { max_attempts: 3, delay: 100 },
             tags: vec![],
         }
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EncryptionMode {
     None,
     Standard,
     QuantumResistant,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RetryPolicy {
     pub max_attempts: u32,
-    pub delay: Duration,
+    pub delay: u64,
 }
 
 /// The result of an automation execution.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutomationResult {
     pub id: String,
     pub status: AutomationStatus,
@@ -111,7 +112,7 @@ pub struct AutomationResult {
     pub step_results: Vec<StepResult>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StepResult {
     pub step_name: String,
     pub status: AutomationStatus,

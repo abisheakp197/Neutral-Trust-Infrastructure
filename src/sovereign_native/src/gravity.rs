@@ -2017,11 +2017,11 @@ impl ClosedLoopTrait for SovereignGravity {
         let modules = self.get_all_modules();
         let cohesion = self.calculate_system_cohesion();
 
-        Value::Object(serde_json::json!({
+        serde_json::json!({
             "modules": modules.len(),
             "cohesion": cohesion,
             "gravity_stats": self.stats,
-        }))
+        })
     }
 
     fn act(&self, input: &Value) -> Value {
@@ -2029,10 +2029,10 @@ impl ClosedLoopTrait for SovereignGravity {
         self.observe();
 
         // Depending on input, perform different gravity actions
-        Value::Object(serde_json::json!({
+        serde_json::json!({
             "action": "gravity_cycle_completed",
             "cohesion": self.calculate_system_cohesion(),
-        }))
+        })
     }
 
     fn learn(&self, feedback: Value) {

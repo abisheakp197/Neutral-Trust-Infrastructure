@@ -42,6 +42,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde::{Serialize, Deserialize};
+use serde_json;
 use crate::types::Value;
 use crate::automation::{AutomationRequest, AutomationResult, AutomationStatus, AutomationStep};
 use crate::closed_loop::{Feedback, FeedbackType, LearningResult, OptimizationSuggestion, SelfPerfectingTrait};
@@ -71,7 +72,7 @@ pub struct SelfPerfectingEngine {
     /// Configuration for the engine
     config: SelfPerfectingConfig,
     /// Statistics and metrics
-    stats: SelfPerfectingStats,
+    stats: Arc<Mutex<SelfPerfectingStats>>,
 }
 
 /// Configuration for the Self-Perfecting Engine
@@ -493,6 +494,15 @@ pub enum ValidationSeverity {
     Critical,
 }
 
+/// Convert ValidationSeverity to f64 for calculations
+fn severity_to_f64(severity: ValidationSeverity) -> f64 {
+    match severity {
+        ValidationSeverity::Warning => 0.1,
+        ValidationSeverity::Error => 0.5,
+        ValidationSeverity::Critical => 1.0,
+    }
+}
+
 /// Failed validation record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FailedValidation {
@@ -544,6 +554,12 @@ pub struct PerfectingKnowledgeBase {
     pub domain_knowledge: HashMap<String, DomainKnowledge>,
     /// Historical performance data
     pub performance_history: Vec<PerformanceRecord>,
+}
+
+impl PerfectingKnowledgeBase {
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 
 /// Domain-specific knowledge for self-perfecting
@@ -629,13 +645,13 @@ impl SelfPerfectingEngine {
             validation_engine,
             knowledge_base,
             config: SelfPerfectingConfig::default(),
-            stats: SelfPerfectingStats::default(),
+            stats: Arc::new(Mutex::new(SelfPerfectingStats::default())),
         }
     }
 
     /// Create a new SelfPerfectingEngine with configuration
     pub fn with_config(mut self, config: SelfPerfectingConfig) -> Self {
-        self.config = config;
+        self.config = config.clone();
         self.outcome_tracker.lock().unwrap().set_max_history(config.max_history);
         self.learning_engine.lock().unwrap().set_learning_rate(config.learning_rate);
         self.learning_engine.lock().unwrap().set_min_confidence(config.min_confidence_threshold);
@@ -649,9 +665,8 @@ impl SelfPerfectingEngine {
 
         // Trigger analysis
         let mut pa = self.pattern_analyzer.lock().unwrap();
-        if let Some(recent) = ot.get_recent(self.config.max_history) {
-            pa.analyze(&recent);
-        }
+        let recent = ot.get_recent(self.config.max_history);
+        pa.analyze(&recent);
 
         // Trigger learning
         let mut le = self.learning_engine.lock().unwrap();
@@ -661,10 +676,10 @@ impl SelfPerfectingEngine {
         // Trigger optimization
         let mut oe = self.optimization_engine.lock().unwrap();
         let models = le.get_models();
-        oe.optimize(&models);
+        OptimizationEngine::optimize(&mut oe, &models);
 
         // Update stats
-        self.stats.total_outcomes_tracked += 1;
+        self.stats.lock().unwrap().total_outcomes_tracked += 1;
     }
 
     /// Record an automation result
@@ -753,7 +768,7 @@ impl SelfPerfectingEngine {
         oe.apply_optimization(automation, suggestion)?;
 
         // Update stats
-        self.stats.successful_optimizations += 1;
+        self.stats.lock().unwrap().successful_optimizations += 1;
 
         Ok(())
     }
@@ -777,7 +792,7 @@ impl SelfPerfectingEngine {
             }
         }
 
-        self.stats.feedback_processed += 1;
+        self.stats.lock().unwrap().feedback_processed += 1;
     }
 
     /// Analyze patterns in recent outcomes
@@ -805,13 +820,13 @@ impl SelfPerfectingEngine {
     }
 
     /// Get stats
-    pub fn stats(&self) -> &SelfPerfectingStats {
-        &self.stats
+    pub fn stats(&self) -> SelfPerfectingStats {
+        self.stats.lock().unwrap().clone()
     }
 
     /// Reset stats
     pub fn reset_stats(&mut self) {
-        self.stats = SelfPerfectingStats::default();
+        *self.stats.lock().unwrap() = SelfPerfectingStats::default();
     }
 
     /// Run self-perfecting cycle (periodic maintenance)
@@ -914,14 +929,13 @@ impl OutcomeTracker {
         while self.outcomes.len() > self.max_history {
             if let Some(old) = self.outcomes.pop_front() {
                 // Remove from indexes
-                if let Some(ref id) = old.automation_id.clone() {
-                    if let Some(vec) = self.outcomes_by_id.get_mut(id) {
-                        if let Some(pos) = vec.iter().position(|o| o.outcome_id == old.outcome_id) {
-                            vec.remove(pos);
-                        }
-                        if vec.is_empty() {
-                            self.outcomes_by_id.remove(id);
-                        }
+                let id = old.automation_id.clone();
+                if let Some(vec) = self.outcomes_by_id.get_mut(&id) {
+                    if let Some(pos) = vec.iter().position(|o| o.outcome_id == old.outcome_id) {
+                        vec.remove(pos);
+                    }
+                    if vec.is_empty() {
+                        self.outcomes_by_id.remove(&id);
                     }
                 }
                 if let Some(ref classification) = old.classification {
@@ -1084,7 +1098,8 @@ impl PatternAnalyzer {
                     // Promote to confirmed if enough evidence
                     if emerging.detection_count >= 3 && emerging.confidence >= 0.7 {
                         let pattern = emerging.pattern.clone();
-                        self.patterns.insert(pattern_key, pattern);
+                        let pk = pattern_key.clone();
+                        self.patterns.insert(pk, pattern);
                         self.emerging_patterns.remove(&pattern_key);
                     }
                 } else {
@@ -1361,8 +1376,17 @@ impl LearningEngine {
         }
 
         // Update each model
+        let learning_rate = self.learning_rate;
         for model in self.models.values_mut() {
-            self.update_model(model, &by_type);
+            let pattern_count = by_type.values().map(|v| v.len()).sum::<usize>() as f64;
+            if pattern_count > 0.0 {
+                model.training_iterations += by_type.len() as u64;
+                let avg_confidence: f64 = by_type.values()
+                    .flat_map(|v| v.iter().map(|p| p.confidence))
+                    .sum::<f64>() / by_type.values().map(|v| v.len()).sum::<usize>() as f64;
+                model.accuracy = model.accuracy * (1.0 - learning_rate) +
+                    avg_confidence * learning_rate;
+            }
         }
 
         // Process pending updates
@@ -1440,7 +1464,7 @@ impl LearningEngine {
             UpdateType::WeightAdjustment => {
                 // Adjust weights towards the update data
                 for (key, value) in &update.data {
-                    if let Some(Value::Number(num)) = value {
+                    if let Value::Number(num) = value {
                         let current = model.weights.get(key).cloned().unwrap_or(0.0);
                         let target = num.as_f64().unwrap_or(0.0);
                         model.weights.insert(key.to_string(), current + (target - current) * self.learning_rate);
@@ -1452,7 +1476,7 @@ impl LearningEngine {
                 for (key, value) in &update.data {
                     if !model.features.contains(key) {
                         model.features.push(key.clone());
-                        if let Some(Value::Number(num)) = value {
+                        if let Value::Number(num) = value {
                             model.weights.insert(key.to_string(), num.as_f64().unwrap_or(0.0));
                         } else {
                             model.weights.insert(key.to_string(), 0.0);
@@ -2058,6 +2082,51 @@ impl OptimizationEngine {
     pub fn next_suggestion(&mut self) -> Option<OptimizationSuggestion> {
         self.suggestions.pop_front()
     }
+
+    /// Optimize based on learning models - generates suggestions from models
+    pub fn optimize(&mut self, models: &[LearningModel]) {
+        for model in models {
+            let suggestions = self.generate_suggestions_from_model(model);
+            for suggestion in suggestions {
+                self.suggestions.push_back(suggestion);
+            }
+        }
+        self.apply_pending_optimizations();
+    }
+
+    /// Generate optimization suggestions from a learning model
+    fn generate_suggestions_from_model(&self, model: &LearningModel) -> Vec<OptimizationSuggestion> {
+        let mut suggestions = Vec::new();
+        for (feature, weight) in &model.weights {
+            if *weight > 0.5 {
+                let suggestion = OptimizationSuggestion {
+                    suggestion_id: format!("model_{}_{}", model.model_id, feature),
+                    rule_id: format!("learned_{}", model.model_id),
+                    automation_id: "learned_optimization".to_string(),
+                    description: format!("Optimize based on learned weight: {}", feature),
+                    action: OptimizationAction {
+                        action_type: ActionType::Custom,
+                        parameters: {
+                            let mut params = HashMap::new();
+                            params.insert("feature".to_string(), Value::String(feature.clone()));
+                            params.insert("weight".to_string(), Value::from(*weight));
+                            params
+                        },
+                        target_field: format!("model_{}", model.model_id),
+                    },
+                    confidence: model.accuracy,
+                    expected_improvement: *weight,
+                    priority: 5,
+                    created_at: SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as u64,
+                };
+                suggestions.push(suggestion);
+            }
+        }
+        suggestions
+    }
 }
 
 // ============================================================================
@@ -2162,7 +2231,7 @@ impl ValidationEngine {
                         });
                     }
                 }
-                result.confidence *= 1.0 - rule.severity as f64 * 0.1;
+                result.confidence *= 1.0 - severity_to_f64(rule.severity) * 0.1;
             }
         }
 
@@ -2345,17 +2414,18 @@ impl SelfPerfectingTrait for SelfPerfectingEngine {
     }
 
     fn get_stats(&self) -> crate::types::Value {
-        Value::Object(serde_json::json!({
-            "total_outcomes": self.stats.total_outcomes_tracked,
-            "successful_optimizations": self.stats.successful_optimizations,
-            "failed_optimizations": self.stats.failed_optimizations,
-            "patterns_learned": self.stats.patterns_learned,
-            "anomalies_detected": self.stats.anomalies_detected,
-            "feedback_processed": self.stats.feedback_processed,
-            "avg_learning_rate": self.stats.avg_learning_rate,
-            "avg_optimization_confidence": self.stats.avg_optimization_confidence,
-            "improvement_rate": self.stats.improvement_rate,
-        }))
+        let stats = self.stats.lock().unwrap();
+        serde_json::json!({
+            "total_outcomes": stats.total_outcomes_tracked,
+            "successful_optimizations": stats.successful_optimizations,
+            "failed_optimizations": stats.failed_optimizations,
+            "patterns_learned": stats.patterns_learned,
+            "anomalies_detected": stats.anomalies_detected,
+            "feedback_processed": stats.feedback_processed,
+            "avg_learning_rate": stats.avg_learning_rate,
+            "avg_optimization_confidence": stats.avg_optimization_confidence,
+            "improvement_rate": stats.improvement_rate,
+        })
     }
 
     fn id(&self) -> &str {

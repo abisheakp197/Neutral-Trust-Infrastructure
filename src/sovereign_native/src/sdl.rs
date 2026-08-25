@@ -116,7 +116,7 @@ impl SdlCompiler {
                 encryption_mode: crate::automation::EncryptionMode::QuantumResistant,
                 retry_policy: crate::automation::RetryPolicy {
                     max_attempts: 3,
-                    delay: std::time::Duration::from_secs(5),
+                    delay: 5000,
                 },
                 tags: vec!["sdl-compiled".to_string()],
             },

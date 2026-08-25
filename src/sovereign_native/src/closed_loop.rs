@@ -694,7 +694,7 @@ impl Default for LearningOutcome {
 }
 
 /// Improvement metric tracking
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImprovementMetric {
     /// Metric name
     pub metric_name: String,
@@ -834,7 +834,7 @@ pub struct OptimizationSuggestion {
     pub rule_id: String,
     pub automation_id: String,
     pub description: String,
-    pub action: ActionType,
+    pub action: crate::self_perfecting::OptimizationAction,
     pub confidence: f64,
     pub expected_improvement: f64,
     pub priority: usize,
@@ -843,12 +843,17 @@ pub struct OptimizationSuggestion {
 
 impl OptimizationSuggestion {
     pub fn new(suggestion_id: String, automation_id: String, description: String) -> Self {
+        use crate::self_perfecting::{ActionType, OptimizationAction};
         Self {
             suggestion_id,
             rule_id: "default".to_string(),
             automation_id,
             description,
-            action: ActionType::Custom,
+            action: OptimizationAction {
+                action_type: ActionType::Custom,
+                parameters: std::collections::HashMap::new(),
+                target_field: String::new(),
+            },
             confidence: 0.8,
             expected_improvement: 0.1,
             priority: 5,
@@ -888,7 +893,7 @@ impl Default for LearningResult {
             learned_at: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
-                .as_mallis() as u64,
+                .as_millis() as u64,
         }
     }
 }
@@ -1003,7 +1008,7 @@ pub trait TranscendentAutomation: Send + Sync {
 ///
 /// It implements the infinite automation loop:
 /// Observe -> Parse Intent -> Predict -> Execute -> Verify -> Learn -> Repeat
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ClosedLoopEngine {
     engine_id: String,
     /// Intent interpreter for natural language understanding
@@ -1046,12 +1051,26 @@ impl Default for ClosedLoopStats {
     }
 }
 
+impl std::fmt::Debug for ClosedLoopEngine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClosedLoopEngine")
+            .field("engine_id", &self.engine_id)
+            .field("intent_interpreter", &self.intent_interpreter.as_ref().map(|_| "Some"))
+            .field("self_perfecting", &self.self_perfecting.as_ref().map(|_| "Some"))
+            .field("gravity", &self.gravity.as_ref().map(|_| "Some"))
+            .field("running", &self.running)
+            .field("cycle_count", &self.cycle_count)
+            .field("stats", &self.stats)
+            .finish()
+    }
+}
+
 impl ClosedLoopEngine {
     /// Create a new Closed Loop Engine
     pub fn new(
         engine_id: String,
         _hsm: Option<Arc<Mutex<crate::hardware::SovereignHSM>>>,
-        _voice: Option<Arc<Mutex<crate::voice::UniversalVoiceControl>>>,s
+        _voice: Option<Arc<Mutex<crate::voice::UniversalVoiceControl>>>,
         _judgement: Option<Arc<Mutex<crate::judgement::JudgementSystem>>>,
     ) -> Self {
         Self {
@@ -1202,14 +1221,14 @@ impl ClosedLoopTrait for ClosedLoopEngine {
             cycle_count: self.cycle_count,
             stats: self.stats.clone(),
         };
-        Value::from(state)
+        serde_json::to_value(state).unwrap_or(Value::Null)
     }
 
     fn act(&self, input: &Value) -> Value {
         // Parse intent from input
-        if let Some(Value::String(intent)) = input.as_string() {
-            if let Some(result) = self.process_intent(&intent) {
-                return Value::from(result);
+        if let Some(intent) = input.as_str() {
+            if let Some(result) = self.process_intent(intent) {
+                return serde_json::to_value(result).unwrap_or(Value::Null);
             }
         }
         Value::Null
@@ -1218,11 +1237,11 @@ impl ClosedLoopTrait for ClosedLoopEngine {
     fn learn(&self, feedback: Value) {
         if let Some(value) = feedback.as_object() {
             let mut fb = Feedback::new("learned_feedback".to_string(), "Learned from system".to_string());
-            if let Some(Value::String(id)) = value.get("feedback_id").and_then(|v| v.as_string()) {
-                fb.feedback_id = id.clone();
+            if let Some(id) = value.get("feedback_id").and_then(|v| v.as_str()) {
+                fb.feedback_id = id.to_string();
             }
-            if let Some(Value::String(intent)) = value.get("intent").and_then(|v| v.as_string()) {
-                fb.intent = Some(intent.clone());
+            if let Some(intent) = value.get("intent").and_then(|v| v.as_str()) {
+                fb.intent = Some(intent.to_string());
             }
             self.submit_feedback(fb);
         }
@@ -1264,29 +1283,6 @@ impl fmt::Display for ClosedLoopEngine {
 /// Default implementations for traits
 ///
 /// Note: These provide basic implementations that can be overridden by specific modules
-
-impl IntentTranslator for crate::intent_universal::IntentUniversal {
-    fn translate(&self, intent: &str) -> Result<ParsedIntent, String> {
-        // Create a mutable copy for translation
-        let mut translator = crate::intent_universal::IntentUniversal::new(None);
-        translator.translate(intent)
-    }
-
-    fn supported_languages(&self) -> &[String] {
-        // Return a static slice of supported languages
-        static LANGUAGES: once_cell::sync::Lazy<Vec<String>> = once_cell::sync::Lazy::new(|| {
-            vec![
-                "en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko",
-                "ar", "hi", "bn", "pa", "tr", "nl", "sv", "fi", "da", "no",
-            ]
-        });
-        &LANGUAGES
-    }
-
-    fn id(&self) -> &str {
-        "intent_universal_default"
-    }
-}
 
 // ============================================================================
 // CONVENIENCE FUNCTIONS

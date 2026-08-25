@@ -40,6 +40,7 @@
 //! - `sovereign_guardian.rs`: For security validation of intents
 
 use std::collections::{HashMap, HashSet};
+use std::hash::Hasher;
 use std::sync::{Arc, Mutex, RwLock};
 use serde::{Serialize, Deserialize};
 use crate::types::Value;
@@ -153,7 +154,6 @@ pub struct ClassificationRule {
 }
 
 /// Entity extraction pattern
-#[derive(Debug, Clone)]
 pub struct EntityPattern {
     pub name: String,
     pub entity_type: EntityType,
@@ -537,7 +537,7 @@ impl IntentUniversal {
                     "max retries".to_string(),
                 ],
                 value_type: ParameterValueType::Number,
-                default_value: Some(Value::Number(3.0.into())),
+                default_value: Some(Value::Number(serde_json::Number::from_f64(3.0).unwrap())),
                 confidence_weight: 0.85,
             },
             ParameterParser {
@@ -648,9 +648,12 @@ impl IntentUniversal {
         let intent_id = format!(
             "intent_{}_{}",
             now,
-            std::hash::DefaultHasher::new()
-                .hash_with(normalized.as_bytes())
-                .finish()
+{
+                use std::hash::{DefaultHasher, Hasher};
+                let mut hasher = DefaultHasher::new();
+                hasher.write(normalized.as_bytes());
+                hasher.finish()
+            }
         );
 
         Ok(ParsedIntent {
@@ -706,9 +709,13 @@ impl IntentUniversal {
         let intent_id = format!(
             "intent_{}_{}",
             now,
-            std::collections::hash_map::DefaultHasher::new()
-                .hash_with(normalized.as_bytes())
-                .finish()
+{
+                use std::collections::hash_map::DefaultHasher;
+                use std::hash::Hasher;
+                let mut hasher = DefaultHasher::new();
+                hasher.write(normalized.as_bytes());
+                hasher.finish()
+            }
         );
 
         Ok(ParsedIntent {
@@ -760,7 +767,7 @@ impl IntentUniversal {
 
             // Extract numeric entities
             for cap in Regex::new(r"\d+").unwrap().captures_iter(intent) {
-                if let Ok(m) = cap.get(0) {
+                if let Some(m) = cap.get(0) {
                     entities.push(IntentEntity {
                         name: m.as_str().to_string(),
                         entity_type: EntityType::Value,
@@ -773,7 +780,7 @@ impl IntentUniversal {
 
             // Extract quoted strings
             for cap in Regex::new(r#""[^"]*""#).unwrap().captures_iter(intent) {
-                if let Ok(m) = cap.get(0) {
+                if let Some(m) = cap.get(0) {
                     let content = m.as_str().trim_matches('"').to_string();
                     entities.push(IntentEntity {
                         name: content.clone(),
@@ -881,7 +888,7 @@ impl IntentUniversal {
             if let Some(ref regex) = pattern.extraction_regex {
                 if let Ok(re) = Regex::new(regex) {
                     for cap in re.captures_iter(intent) {
-                        if let Ok(m) = cap.get(0) {
+                        if let Some(m) = cap.get(0) {
                             let value = m.as_str().to_string();
                             let confidence = pattern.confidence_weight;
 
@@ -982,7 +989,7 @@ impl IntentUniversal {
                 ParameterValueType::Duration => {
                     // Parse duration like "30s", "5min", "2h", etc.
                     if let Some(duration) = parse_duration(value_str) {
-                        Ok(Value::Number(duration.as_secs_f64().into()))
+                        Ok(Value::Number(serde_json::Number::from_f64(duration.as_secs_f64()).unwrap_or(serde_json::Number::from(0))))
                     } else {
                         Ok(parser.default_value.clone().unwrap_or(Value::Null))
                     }
@@ -1351,7 +1358,7 @@ impl ConfidenceCalculator {
 
     /// Calculate overall confidence score
     pub fn calculate(
-        &self,
+        &mut self,
         intent: &str,
         classification: &IntentClassification,
         entities: &[IntentEntity],
@@ -1482,9 +1489,9 @@ impl IntentInterpreter {
     }
 
     /// Translate intent
-    pub fn interpret_natural_language(&self, intent: &str) -> Option<Value> {
+    pub fn interpret_natural_language(&mut self, intent: &str) -> Option<Value> {
         match self.translator.translate(intent) {
-            Ok(parsed) => Some(Value::from(parsed)),
+            Ok(parsed) => serde_json::to_value(parsed).ok(),
             Err(_) => None,
         }
     }
@@ -1512,28 +1519,19 @@ impl Default for IntentInterpreter {
 
 impl crate::closed_loop::IntentTranslator for IntentUniversal {
     fn translate(&self, intent: &str) -> Result<crate::closed_loop::ParsedIntent, String> {
-        // Create a mutable copy for translation
-        let mut translator = IntentUniversal {
-            translator_id: self.translator_id.clone(),
-            supported_languages: self.supported_languages.clone(),
-            classification_rules: self.classification_rules.clone(),
-            entity_patterns: self.entity_patterns.clone(),
-            parameter_parsers: self.parameter_parsers.clone(),
-            context_manager: self.context_manager.clone(),
-            confidence_calculator: self.confidence_calculator.clone(),
-            normalizer: self.normalizer.clone(),
-            knowledge_base: self.knowledge_base.clone(),
-            stats: IntentStats::default(),
-        };
-        translator.translate(intent)
+        // Direct implementation - parse the intent
+        let parsed = self.parse(intent);
+        Ok(parsed)
     }
 
     fn supported_languages(&self) -> &[String] {
         // Convert HashSet to Vec for the trait
         static LANGUAGES: once_cell::sync::Lazy<Vec<String>> = once_cell::sync::Lazy::new(|| {
             vec![
-                "en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko",
-                "ar", "hi", "bn", "pa", "tr", "nl", "sv", "fi", "da", "no",
+                "en".to_string(), "es".to_string(), "fr".to_string(), "de".to_string(), "it".to_string(),
+                "pt".to_string(), "ru".to_string(), "zh".to_string(), "ja".to_string(), "ko".to_string(),
+                "ar".to_string(), "hi".to_string(), "bn".to_string(), "pa".to_string(), "tr".to_string(),
+                "nl".to_string(), "sv".to_string(), "fi".to_string(), "da".to_string(), "no".to_string(),
             ]
         });
         &LANGUAGES
@@ -1550,34 +1548,20 @@ impl crate::closed_loop::IntentTranslator for IntentInterpreter {
     }
 
     fn supported_languages(&self) -> &[String] {
-        self.translator.supported_languages()
-    }
-
-    fn id(&self) -> &str {
-        self.translator.id()
-    }
-}
-
-// Trait implementation for IntentUniversal
-impl crate::closed_loop::IntentTranslator for IntentUniversal {
-    fn translate(&self, intent: &str) -> Result<crate::closed_loop::ParsedIntent, String> {
-        // IntentUniversal already has a translate method
-        self.translate(intent)
-    }
-
-    fn supported_languages(&self) -> &[String] {
         // Convert HashSet to Vec for the trait
         static LANGUAGES: once_cell::sync::Lazy<Vec<String>> = once_cell::sync::Lazy::new(|| {
             vec![
-                "en", "es", "fr", "de", "it", "pt", "ru", "zh", "ja", "ko",
-                "ar", "hi", "bn", "pa", "tr", "nl", "sv", "fi", "da", "no",
+                "en".to_string(), "es".to_string(), "fr".to_string(), "de".to_string(), "it".to_string(),
+                "pt".to_string(), "ru".to_string(), "zh".to_string(), "ja".to_string(), "ko".to_string(),
+                "ar".to_string(), "hi".to_string(), "bn".to_string(), "pa".to_string(), "tr".to_string(),
+                "nl".to_string(), "sv".to_string(), "fi".to_string(), "da".to_string(), "no".to_string(),
             ]
         });
         &LANGUAGES
     }
 
     fn id(&self) -> &str {
-        &self.translator_id
+        self.translator.id()
     }
 }
 

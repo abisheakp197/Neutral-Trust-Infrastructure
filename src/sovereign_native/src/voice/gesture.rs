@@ -30,6 +30,7 @@ pub struct GestureData {
 }
 
 /// Gesture Recognizer
+#[derive(Clone)]
 pub struct GestureRecognizer {
     initialized: bool,
     sensitivity: f32,
