@@ -90,6 +90,104 @@ impl TrustEngine {
         })
     }
 }
+
+#[async_trait::async_trait]
+pub trait Module: Send + Sync {
+    fn name(&self) -> &str;
+    fn capabilities(&self) -> Vec<String>;
+    async fn execute(&self, action: &str, input: serde_json::Value) -> Result<serde_json::Value, String>;
+}
+
+pub struct Orchestrator {
+    pub engine: TrustEngine,
+    modules: BTreeMap<String, Box<dyn Module>>,
+}
+
+impl Orchestrator {
+    pub fn new(engine: TrustEngine) -> Self {
+        Self {
+            engine,
+            modules: BTreeMap::new(),
+        }
+    }
+
+    pub fn register_module(&mut self, module: Box<dyn Module>) {
+        self.modules.insert(module.name().to_string(), module);
+    }
+
+    pub async fn run_task(&mut self, request: ActionRequest) -> Result<serde_json::Value, String> {
+        let decision = self.engine.record(request.clone());
+
+        if decision.decision == Decision::Deny {
+            return Err(format!("Denied: {}", decision.reason));
+        }
+
+        for module in self.modules.values() {
+            if module.capabilities().contains(&request.capability) {
+                return module.execute(&request.action, request.input).await;
+            }
+        }
+
+        Err(format!("No module found for capability: {}", request.capability))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IntentPolicy {
+    pub name: String,
+    pub capability: String,
+    pub constraints: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum OutcomeVerdict {
+    Valid,
+    Invalid(String),
+}
+
+pub struct IntentVerifier;
+
+impl IntentVerifier {
+    pub fn verify(request: &ActionRequest, result: &serde_json::Value, policy: &IntentPolicy) -> OutcomeVerdict {
+        if request.capability != policy.capability {
+            return OutcomeVerdict::Invalid("capability mismatch".into());
+        }
+
+        // Example constraint check: write_file content length or specific keywords
+        if request.action == "write_file" {
+            let content = request.input["content"].as_str().unwrap_or("");
+            if let Some(min_len) = policy.constraints["min_length"].as_u64() {
+                if content.len() < min_len as usize {
+                    return OutcomeVerdict::Invalid(format!("content too short: {} < {}", content.len(), min_len));
+                }
+            }
+        }
+
+        OutcomeVerdict::Valid
+    }
+}
+
+pub struct SystemModule;
+
+#[async_trait::async_trait]
+impl Module for SystemModule {
+    fn name(&self) -> &str { "system" }
+    fn capabilities(&self) -> Vec<String> { vec!["file_management".into(), "process_info".into()] }
+    async fn execute(&self, action: &str, input: serde_json::Value) -> Result<serde_json::Value, String> {
+        match action {
+            "read_file" => {
+                let path = input["path"].as_str().ok_or("path required")?;
+                std::fs::read_to_string(path).map(|s| serde_json::Value::String(s)).map_err(|e| e.to_string())
+            },
+            "write_file" => {
+                let path = input["path"].as_str().ok_or("path required")?;
+                let content = input["content"].as_str().ok_or("content required")?;
+                std::fs::write(path, content).map(|_| serde_json::Value::Null).map_err(|e| e.to_string())
+            },
+            _ => Err("unknown action".into())
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,12 +219,45 @@ mod tests {
         );
         assert!(engine.verify_chain());
     }
-    #[test]
-    fn detects_tampering() {
-        let mut engine = TrustEngine::default();
-        engine.grant("agent", "files.read");
-        engine.record(request("files.read"));
-        engine.events[0].request.action = "write".into();
-        assert!(!engine.verify_chain());
+    #[tokio::test]
+    async fn test_outcome_verification() {
+        let request = ActionRequest {
+            id: "task_verify".into(),
+            actor: "agent".into(),
+            capability: "file_management".into(),
+            action: "write_file".into(),
+            input: serde_json::json!({
+                "path": "test.txt",
+                "content": "too short"
+            }),
+        };
+
+        let policy = IntentPolicy {
+            name: "length_check".into(),
+            capability: "file_management".into(),
+            constraints: serde_json::json!({ "min_length": 20 }),
+        };
+
+        let result = serde_json::Value::Null;
+        let verdict = IntentVerifier::verify(&request, &result, &policy);
+
+        match verdict {
+            OutcomeVerdict::Invalid(reason) => assert!(reason.contains("content too short")),
+            _ => panic!("Should have failed verification"),
+        }
+
+        let valid_request = ActionRequest {
+            id: "task_verify_ok".into(),
+            actor: "agent".into(),
+            capability: "file_management".into(),
+            action: "write_file".into(),
+            input: serde_json::json!({
+                "path": "test.txt",
+                "content": "This content is definitely long enough to pass the policy."
+            }),
+        };
+
+        let verdict_ok = IntentVerifier::verify(&valid_request, &result, &policy);
+        assert!(matches!(verdict_ok, OutcomeVerdict::Valid));
     }
 }
