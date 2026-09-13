@@ -1,49 +1,6 @@
-# Build artifacts
 target/
-
-# IDE/Editor files
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
+**/target/
+Cargo.lock
 *.log
-
-# PID files
-*.pid
-
-# Environment files
 .env
-
-# Python
-node_modules/
-dist/
-__pycache__/
-*.pyc
-*.pyo
-
-# Generated code-dump / context snapshots
-intelligence_state.json
-fix_api.py
-data/
-uploads/
-watch/
-*.db
-fix-*.js
-patch-*.js
-src/core/_test_phase1.ts
-README-INTERNAL.md
-*-INTERNAL.md
-all_code.txt
-codebase_snapshot.txt
-combined_code.txt
-gatekeeper_complete.txt
-my_ube_source.txt
-phase11_combined.txt
-ube_complete_context.txt
-src/sovereign_native/target/
+.DS_Store
