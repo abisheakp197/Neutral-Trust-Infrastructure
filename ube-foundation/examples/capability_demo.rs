@@ -32,7 +32,9 @@ async fn main() -> Result<(), String> {
         action: "list_dir".into(),
         input: serde_json::json!({ "path": "." }),
         signature: None,
+        pqc_signature: None,
         public_key: None,
+        pqc_public_key: None,
         token: None,
         identity_claim: None,
     };
@@ -52,7 +54,7 @@ async fn main() -> Result<(), String> {
         caveats: vec![
             Caveat {
                 location: None,
-                condition: "expires < 2026-12-31".into(),
+                condition: ube_foundation::CaveatType::Expires("2026-12-31".into()),
             }
         ],
         signature: Vec::new(),
@@ -72,7 +74,9 @@ async fn main() -> Result<(), String> {
         action: "list_dir".into(),
         input: serde_json::json!({ "path": "." }),
         signature: None,
+        pqc_signature: None,
         public_key: None,
+        pqc_public_key: None,
         token: Some(token),
         identity_claim: None,
     };

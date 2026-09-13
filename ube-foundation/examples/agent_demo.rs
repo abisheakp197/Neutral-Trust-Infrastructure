@@ -30,8 +30,10 @@ async fn main() -> Result<(), String> {
         capability: "file_management".into(),
         action: "list_dir".into(),
         input: serde_json::json!({ "path": "." }),
-        public_key: None,
         signature: None,
+        pqc_signature: None,
+        public_key: None,
+        pqc_public_key: None,
         token: None,
         identity_claim: None,
     };
@@ -49,8 +51,10 @@ async fn main() -> Result<(), String> {
             "path": "secret.txt",
             "content": "stolen data"
         }),
-        public_key: None,
         signature: None,
+        pqc_signature: None,
+        public_key: None,
+        pqc_public_key: None,
         token: None,
         identity_claim: None,
     };
@@ -72,13 +76,15 @@ async fn main() -> Result<(), String> {
             "path": "secret.txt",
             "content": "stolen data (logged)"
         }),
-        public_key: None,
         signature: None,
+        pqc_signature: None,
+        public_key: None,
+        pqc_public_key: None,
         token: None,
         identity_claim: None,
     };
 
-    let res3 = agent.execute_step(req3).await?;
+    let res3 = agent.execute_task(req3).await?;
     println!("Result (FailOpen): {:?}", res3);
 
     // Clean up
