@@ -1,4 +1,3 @@
-
 # Universal Trust Layer (UTL)
 
 A cryptographic trust and accountability layer for autonomous agents — built in the open, from day one, for the world we're actually entering.
@@ -71,6 +70,12 @@ If you recognize yourself in one of these, keep reading:
 - AI agent builders who are already running into the exact problem this solves: your agents call other people's agents, and right now you have no real way to verify what they did versus what they claim they did.
 - Early-stage engineers who want ownership on a project from near-zero, not a fork of someone else's roadmap — where a well-scoped PR on the consensus-signing gap above could become the foundation others build on.
 
+## Bring what I haven't thought of
+
+Everything above is scoped to gaps I already know about. That's not the ceiling — it's the floor.
+
+If you look at this problem — verifiable trust between autonomous agents — and see an angle, a primitive, or an entire approach I haven't considered, that's not out of scope. This project doesn't need more hands finishing my list; it needs people who see something in this space that I don't. Open an issue, propose it, argue for it even if it means ripping out something I built. The goal was never "my design, executed by others" — it's the strongest, most real version of this problem getting solved, however that happens.
+
 ## Why I'm building this, and why in the open
 
 I'm one person. I can't build the whole trust infrastructure this future needs by myself, and pretending otherwise would slow this down, not speed it up. So this is being built in the open, honestly, from the start — not as a growth hack, not as a bait-and-switch.
@@ -100,7 +105,7 @@ cd Universal-Trust-Layer/ube-foundation
 cargo build
 cargo test
 
-Look at the "structurally present but incomplete" section above for real, scoped first contributions. Open an issue before a large PR so we can align on approach — this project would rather have five focused, honest PRs than one sprawling one.
+Look at the "structurally present but incomplete" section above for real, scoped first contributions — or bring your own, per the section above. Open an issue before a large PR so we can align on approach — this project would rather have five focused, honest PRs than one sprawling one.
 
 ## Contributing
 
@@ -112,11 +117,6 @@ Look at the "structurally present but incomplete" section above for real, scoped
 
 Licensed under the Apache License, Version 2.0. See the LICENSE file for full terms.
 
-This means: you're free to use, modify, and distribute this code — including in commercial
-products — as long as you include the original copyright notice and state any changes you
-made. It includes an explicit patent grant, which matters for a cryptography project:
-contributors and users are protected from patent claims tied to contributions made here.
+This means: you're free to use, modify, and distribute this code — including in commercial products — as long as you include the original copyright notice and state any changes you made. It includes an explicit patent grant, which matters for a cryptography project: contributors and users are protected from patent claims tied to contributions made here.
 
-Contributions require agreeing to the Contributor License Agreement (CLA) in CONTRIBUTING.md —
-this keeps the core layer genuinely open while giving the project room to build a sustainable
-business on top of it later, without ever taking back what's built here in the open.
+Contributions require agreeing to the Contributor License Agreement (CLA) in CONTRIBUTING.md — this keeps the core layer genuinely open while giving the project room to build a sustainable business on top of it later, without ever taking back what's built here in the open.
