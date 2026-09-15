@@ -1,6 +1,6 @@
 # Neutral Trust Infrastructure (NTI)
 
-A cryptographic trust and accountability layer for autonomous agents — built in the open, from day one, for the world we're actually entering.
+A cryptographic trust and accountability layer for autonomous agents — built for the world we're actually entering.
 
 ## Why this exists
 
@@ -66,27 +66,27 @@ Claiming this is "PQC-ready" today would be exactly the kind of overstatement th
 If you recognize yourself in one of these, keep reading:
 
 - Systems and distributed-systems engineers who want to work on real consensus, networking, and fault-tolerance problems with actual adversarial stakes, not academic toy examples.
-- Applied cryptographers who want to take a project from "structurally ready" to "cryptographically sound" — signing, PQC, zero-knowledge proofs, threshold schemes — and see their work matter to something being built in the open.
+- Applied cryptographers who want to take a project from "structurally ready" to "cryptographically sound" — signing, PQC, zero-knowledge proofs, threshold schemes — and see their work matter to something real.
 - AI agent builders who are already running into the exact problem this solves: your agents call other people's agents, and right now you have no real way to verify what they did versus what they claim they did.
-- Early-stage engineers who want ownership on a project from near-zero, not a fork of someone else's roadmap — where a well-scoped PR on the consensus-signing gap above could become the foundation others build on.
+- Early-stage engineers who want real ownership conversations on a project from near-zero, not a fork of someone else's roadmap.
 
 ## Bring what I haven't thought of
 
 Everything above is scoped to gaps I already know about. That's not the ceiling — it's the floor.
 
-If you look at this problem — verifiable trust between autonomous agents — and see an angle, a primitive, or an entire approach I haven't considered, that's not out of scope. This project doesn't need more hands finishing my list; it needs people who see something in this space that I don't. Open an issue, propose it, argue for it even if it means ripping out something I built. The goal was never "my design, executed by others" — it's the strongest, most real version of this problem getting solved, however that happens.
+If you look at this problem — verifiable trust between autonomous agents — and see an angle, a primitive, or an entire approach I haven't considered, that's not out of scope. This project doesn't need more hands finishing my list; it needs people who see something in this space that I don't. Open an issue, propose it, argue for it even if it means ripping out something I built. The goal was never "my design, executed by others" — it's the strongest, most real version of this problem getting solved.
 
-## Why I'm building this, and why in the open
+## Why I'm building this
 
-I'm one person. I can't build the whole trust infrastructure this future needs by myself, and pretending otherwise would slow this down, not speed it up. So this is being built in the open, honestly, from the start — not as a growth hack, not as a bait-and-switch.
+I'm one person. I can't build the whole trust infrastructure this future needs by myself, and pretending otherwise would slow this down, not speed it up.
 
 Here's the actual, stated plan, so nobody joining this is surprised later:
 
-- The core trust layer — identity, capability tokens, outcome verification, consensus — stays open. This is the part that needs to be trusted by everyone, which means it needs to be inspectable by everyone. A trust protocol that isn't open source is asking people to trust it on faith, which defeats the entire point.
-- The business, when it exists, will be built on top of this layer — hosted infrastructure, enterprise compliance tooling, managed deployments, support — the same way most successful open infrastructure companies have built sustainable businesses without ever taking back what the community built together.
-- Anyone who contributes meaningfully early is not free labor for someone else's exit. Real contribution — code, review, design, testing — earns real ownership conversations as this moves toward being a company, not just a thank-you in a commit log.
+- This project is being built with outside contributors under a Contributor License Agreement (CLA). By contributing, you agree that your contribution becomes part of the project under terms set out in the CLA.
+- Ownership, licensing terms, and future commercial direction are set by the founding team. This is not being run as a fully open-source project, and I'd rather say that plainly now than have anyone assume otherwise and feel misled later.
+- Anyone who contributes meaningfully early is not free labor for someone else's exit. Real contribution — code, review, design, testing — earns real conversations about ownership, equity, and role as this moves toward being a company, not just a thank-you in a commit log. Those terms are discussed directly, not assumed from a license file.
 
-I want to be direct about the ambition here, because I think false modesty wastes everyone's time: I think agent-to-agent trust is going to be one of the foundational infrastructure layers of the next decade, the way TCP/IP and HTTPS were foundational to the internet nobody could have built alone. I don't know yet exactly what this becomes. Neither did the people who started building the protocols we now take for granted. What I do know is that it has to be real, it has to be honest about what it is at every stage, and it has to be built by more hands than mine.
+I want to be direct about the ambition here, because I think false modesty wastes everyone's time: I think agent-to-agent trust is going to be one of the foundational infrastructure layers of the next decade, the way TCP/IP and HTTPS were foundational to the internet nobody could have built alone. I don't know yet exactly what this becomes. What I do know is that it has to be real, it has to be honest about what it is at every stage, and it has to be built by more hands than mine.
 
 If that's a problem you want to work on — not because I'm asking you to believe a pitch, but because you read the code above and it held up — this is where you start.
 
@@ -96,8 +96,6 @@ Every one of you reading this is building something. There are millions of repos
 
 That's the standard for every contribution here. Not the fastest hack that makes a demo look impressive — the version that's actually correct, actually signed, actually verified, actually hard to break. If you find a weak spot, harden it. If you see a gap, close it with a real implementation and a real test, not a comment promising it later. Move fast on the work that's genuinely done, and be honest the moment something isn't.
 
-This is how we make this strong enough for the world it's built for — a world full of autonomous systems acting at machine speed, where the only thing standing between order and chaos is whether the trust underneath is real.
-
 ## Getting started
 
 git clone https://github.com/abisheakp197/Universal-Trust-Layer.git
@@ -105,18 +103,16 @@ cd Universal-Trust-Layer/ube-foundation
 cargo build
 cargo test
 
-Look at the "structurally present but incomplete" section above for real, scoped first contributions — or bring your own, per the section above. Open an issue before a large PR so we can align on approach — this project would rather have five focused, honest PRs than one sprawling one.
+Look at the "structurally present but incomplete" section above for real, scoped first contributions — or bring your own, per the section above. Open an issue before a large PR so we can align on approach.
+
+Contributing requires signing the CLA in CONTRIBUTING.md before any pull request is merged.
 
 ## Contributing
 
-- Read the code before the pitch. If something in this README doesn't match what you find in src/, file an issue — that's a documentation bug, and it matters more here than in most projects, because honesty about current state is the product's credibility.
+- Read the code before the pitch. If something in this README doesn't match what you find in src/, file an issue.
 - Small, provable, tested changes over large speculative ones.
 - If you're adding a claim (a new capability, a new guarantee), add the test that proves it in the same PR.
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See the LICENSE file for full terms.
-
-This means: you're free to use, modify, and distribute this code — including in commercial products — as long as you include the original copyright notice and state any changes you made. It includes an explicit patent grant, which matters for a cryptography project: contributors and users are protected from patent claims tied to contributions made here.
-
-Contributions require agreeing to the Contributor License Agreement (CLA) in CONTRIBUTING.md — this keeps the core layer genuinely open while giving the project room to build a sustainable business on top of it later, without ever taking back what's built here in the open.
+Proprietary — All Rights Reserved. This code is not released under an open-source license. Contributions are accepted under the Contributor License Agreement in CONTRIBUTING.md, which assigns contribution copyright to the project. Licensing or partnership inquiries: contact the maintainer directly.
