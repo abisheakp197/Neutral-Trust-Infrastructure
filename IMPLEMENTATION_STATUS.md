@@ -1,4 +1,4 @@
-# Universal Trust Layer — Implementation Status
+# Neutral Trust Infrastructure — Implementation Status
 
 This document is the engineering source of truth for the current
 implementation state of Universal Trust Layer.
