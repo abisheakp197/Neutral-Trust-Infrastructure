@@ -1,8 +1,8 @@
-Universal Trust Layer — Contributor Engineering Roadmap
+Neutral Trust Infrastructure — Contributor Engineering Roadmap
 
 Mission
 
-Universal Trust Layer is being built as trust infrastructure for systems that need to make, authorize, execute, verify, and audit decisions safely.
+Neutral Trust Infrastructure is being built as trust infrastructure for systems that need to make, authorize, execute, verify, and audit decisions safely.
 
 The goal is not to build a collection of demos or isolated features.
 
