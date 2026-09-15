@@ -1,4 +1,4 @@
-# Universal Trust Layer (UTL)
+# Neutral Trust Infrastructure (NTI)
 
 A cryptographic trust and accountability layer for autonomous agents — built in the open, from day one, for the world we're actually entering.
 
