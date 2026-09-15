@@ -1483,7 +1483,7 @@ The best contribution is one that makes the Trust Layer more trustworthy, more v
 
 14. PROJECT STANDARD
 
-Universal Trust Layer should remain:
+Neutral Trust Infrastructure should remain:
 
 - security-first
 - implementation-driven
