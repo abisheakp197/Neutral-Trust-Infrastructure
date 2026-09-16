@@ -116,3 +116,13 @@ Contributing requires signing the CLA in CONTRIBUTING.md before any pull request
 ## License
 
 Proprietary — All Rights Reserved. This code is not released under an open-source license. Contributions are accepted under the Contributor License Agreement in CONTRIBUTING.md, which assigns contribution copyright to the project. Licensing or partnership inquiries: contact the maintainer directly.
+
+
+[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/License-PolyForm_Shield_1.0.0-blue.svg)](LICENSE)
+
+## License & Commercial Terms
+This repository is licensed under the **PolyForm Shield License 1.0.0** (Source-Available / Non-Compete).
+* **Open Access:** Free for personal, internal, non-competing, and research use.
+* **Commercial Protection:** Managed cloud hosting (SaaS) or competing commercial deployments require an enterprise license.
+* **Contributions:** All external contributors must sign the mandatory Contributor License Agreement (CLA) before pull requests can be merged.
+* 
