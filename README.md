@@ -2,6 +2,8 @@
 
 A cryptographic trust and accountability layer for autonomous agents — built for the world we're actually entering.
 
+This is for commercial as a business in future...
+
 ## Why this exists
 
 We are entering a decade where software doesn't just run — it acts. Agents will negotiate on our behalf, move money, write and deploy code, make decisions with real consequences, and coordinate with other agents we've never met, built by people we'll never meet, running on infrastructure we don't control.
