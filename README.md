@@ -3,6 +3,8 @@
 A cryptographic trust and accountability layer for autonomous agents — built for the world we're actually entering.
 
 This is for commercial as a business in future...
+[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/License-PolyForm_Shield_1.0.0-6A5ACD.svg)](LICENSE)
+
 
 ## Why this exists
 
