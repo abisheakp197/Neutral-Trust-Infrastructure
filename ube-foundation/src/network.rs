@@ -92,17 +92,41 @@ impl DistributedNode {
                         }
                     );
 
-                    let vote = RemoteVote {
+                    let mut vote = RemoteVote {
                         proposal_id: proposal.id,
                         voter_id: node.mesh_node.id.clone(),
                         verdict,
-                        signature: vec![], // TODO: Sign the vote using identity keys
+                        public_key: node.mesh_node.verifying_key.to_bytes().to_vec(),
+                        signature: vec![],
                     };
+                    let msg = vote.message_to_sign();
+                    vote.signature = node.mesh_node.signing_key.sign(&msg).to_bytes().to_vec();
                     Ok::<_, warp::Rejection>(warp::reply::json(&vote))
                 }
             });
 
-        let routes = execute.or(handshake).or(get_peers).or(vote);
+        // POST /submit_vote - Receive and verify an incoming vote from a remote peer
+        let node_submit_vote = self.clone();
+        let submit_vote = warp::post()
+            .and(warp::path("submit_vote"))
+            .and(warp::body::json())
+            .and_then(move |remote_vote: RemoteVote| {
+                let _node = node_submit_vote.clone();
+                async move {
+                    if !remote_vote.verify() {
+                        return Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({
+                            "status": "rejected",
+                            "reason": "invalid or missing vote signature"
+                        })));
+                    }
+                    Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({
+                        "status": "accepted",
+                        "voter_id": remote_vote.voter_id
+                    })))
+                }
+            });
+
+        let routes = execute.or(handshake).or(get_peers).or(vote).or(submit_vote);
         warp::serve(routes).run(([127, 0, 0, 1], port)).await;
     }
 

@@ -57,10 +57,26 @@ impl TrustEngine {
     pub fn verify_consensus(&self, proposal: &ConsensusProposal, threshold: usize) -> bool {
         let mut valid_votes = 0;
         let mut hash_counts: BTreeMap<String, usize> = BTreeMap::new();
+        let mut seen_voters: BTreeSet<String> = BTreeSet::new();
 
         for vote in &proposal.votes {
-            // In a real implementation, we would verify the Ed25519 signature here
-            // using the voter's public key registered in the TrustEngine.
+            // Verify vote signature against payload
+            if !vote.verify() {
+                continue;
+            }
+
+            // If voter key is registered in TrustEngine, enforce key binding to voter_id
+            if let Some(registered_key) = self.voter_keys.get(&vote.voter_id) {
+                if registered_key != &vote.public_key {
+                    continue;
+                }
+            }
+
+            // Prevent duplicate votes from the same voter identity
+            if !seen_voters.insert(vote.voter_id.clone()) {
+                continue;
+            }
+
             if vote.decision.as_ref().map(|d| d.decision == Decision::Allow).unwrap_or(false) {
                 valid_votes += 1;
                 *hash_counts.entry(vote.outcome_hash.clone()).or_insert(0) += 1;
@@ -158,7 +174,36 @@ pub struct ConsensusVote {
     pub request_id: String,
     pub decision: Option<PolicyDecision>,
     pub outcome_hash: String,
+    pub public_key: Vec<u8>,
     pub signature: Vec<u8>,
+}
+
+impl ConsensusVote {
+    pub fn message_to_sign(&self) -> Vec<u8> {
+        let data = (
+            &self.voter_id,
+            &self.request_id,
+            &self.decision,
+            &self.outcome_hash,
+        );
+        serde_json::to_vec(&data).expect("serialization for vote signing")
+    }
+
+    pub fn verify(&self) -> bool {
+        if self.public_key.is_empty() || self.signature.is_empty() {
+            return false;
+        }
+        let Ok(bytes) = self.public_key.as_slice().try_into() else {
+            return false;
+        };
+        let Ok(public_key) = VerifyingKey::from_bytes(bytes) else {
+            return false;
+        };
+        let Ok(signature) = Signature::from_slice(&self.signature) else {
+            return false;
+        };
+        public_key.verify(&self.message_to_sign(), &signature).is_ok()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -187,6 +232,7 @@ pub struct AuditBatch {
 pub struct TrustEngine {
     capabilities: BTreeMap<String, BTreeSet<String>>,
     expected_code_hashes: BTreeMap<String, String>,
+    voter_keys: BTreeMap<String, Vec<u8>>,
     revocation_list: BTreeSet<String>,
     events: Vec<AuditEvent>,
     batches: Vec<AuditBatch>,
@@ -239,11 +285,16 @@ impl TrustEngine {
         Self {
             capabilities: BTreeMap::new(),
             expected_code_hashes: BTreeMap::new(),
+            voter_keys: BTreeMap::new(),
             revocation_list: BTreeSet::new(),
             events: Vec::new(),
             batches: Vec::new(),
             last_batch_hash: "".into(),
         }
+    }
+
+    pub fn register_voter_key(&mut self, voter_id: impl Into<String>, public_key: Vec<u8>) {
+        self.voter_keys.insert(voter_id.into(), public_key);
     }
     pub fn revoke_token(&mut self, token_id: impl Into<String>) {
         self.revocation_list.insert(token_id.into());
@@ -646,7 +697,35 @@ pub struct RemoteVote {
     pub proposal_id: String,
     pub voter_id: String,
     pub verdict: OutcomeVerdict,
+    pub public_key: Vec<u8>,
     pub signature: Vec<u8>,
+}
+
+impl RemoteVote {
+    pub fn message_to_sign(&self) -> Vec<u8> {
+        let data = (
+            &self.proposal_id,
+            &self.voter_id,
+            &self.verdict,
+        );
+        serde_json::to_vec(&data).expect("serialization for remote vote signing")
+    }
+
+    pub fn verify(&self) -> bool {
+        if self.public_key.is_empty() || self.signature.is_empty() {
+            return false;
+        }
+        let Ok(bytes) = self.public_key.as_slice().try_into() else {
+            return false;
+        };
+        let Ok(public_key) = VerifyingKey::from_bytes(bytes) else {
+            return false;
+        };
+        let Ok(signature) = Signature::from_slice(&self.signature) else {
+            return false;
+        };
+        public_key.verify(&self.message_to_sign(), &signature).is_ok()
+    }
 }
 
 pub struct UserIntentTranslator;

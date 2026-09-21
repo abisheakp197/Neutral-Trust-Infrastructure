@@ -1,3 +1,4 @@
+use ed25519_dalek::Signer;
 use ube_foundation::{
     AgentMeshNode, ConsensusProposal, ConsensusVote, Decision, PolicyDecision, TrustEngine,
 };
@@ -39,29 +40,26 @@ fn main() {
         reason: "Valid outcome".into(),
     };
 
-    // Simulate 3 agents voting
+    // Helper to build and sign votes
+    let make_signed_vote = |node: &AgentMeshNode, decision: Option<PolicyDecision>, hash: String| {
+        let mut vote = ConsensusVote {
+            voter_id: node.id.clone(),
+            request_id: request_id.clone(),
+            decision,
+            outcome_hash: hash,
+            public_key: node.verifying_key.to_bytes().to_vec(),
+            signature: vec![],
+        };
+        let msg = vote.message_to_sign();
+        vote.signature = node.signing_key.sign(&msg).to_bytes().to_vec();
+        vote
+    };
+
+    // Simulate 3 agents voting with valid digital signatures
     let votes = vec![
-        ConsensusVote {
-            voter_id: "agent-a".into(),
-            request_id: request_id.clone(),
-            decision: Some(decision_ok.clone()),
-            outcome_hash: outcome_hash.clone(),
-            signature: vec![], // Placeholder
-        },
-        ConsensusVote {
-            voter_id: "agent-b".into(),
-            request_id: request_id.clone(),
-            decision: Some(decision_ok.clone()),
-            outcome_hash: outcome_hash.clone(),
-            signature: vec![],
-        },
-        ConsensusVote {
-            voter_id: "agent-c".into(),
-            request_id: request_id.clone(),
-            decision: None,
-            outcome_hash: "corrupt-hash".into(),
-            signature: vec![],
-        },
+        make_signed_vote(&node_a, Some(decision_ok.clone()), outcome_hash.clone()),
+        make_signed_vote(&node_b, Some(decision_ok.clone()), outcome_hash.clone()),
+        make_signed_vote(&node_c, None, "corrupt-hash".into()),
     ];
 
     let proposal = ConsensusProposal {

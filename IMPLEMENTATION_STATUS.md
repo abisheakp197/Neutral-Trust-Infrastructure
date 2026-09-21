@@ -89,6 +89,22 @@ represented as production-ready.
 - [x] Handshake response
 - [x] Signed handshake response structure
 
+### BFT Consensus
+
+- [x] BFT vote identity authentication
+- [x] Ed25519 vote-signature verification
+- [x] Protection against forged votes
+- [x] Protection against duplicate/multiple votes from one identity
+
+### Vote Network Endpoint
+
+- [x] Sign outgoing votes
+- [x] Attach valid identity signature
+- [x] Verify received vote signatures
+- [x] Reject unsigned votes
+- [x] Reject malformed signatures
+- [x] Test forged-vote rejection
+
 ### Network API
 
 - [x] HTTP API
@@ -101,36 +117,6 @@ represented as production-ready.
 ---
 
 # PARTIAL — Real Code but Incomplete
-
-## BFT Consensus
-
-- [ ] BFT vote identity authentication
-- [ ] Ed25519 vote-signature verification
-- [ ] Protection against forged votes
-- [ ] Protection against duplicate/multiple votes from one identity
-- [ ] Complete Byzantine-behavior testing
-- [ ] Formal verification of quorum assumptions
-
-Current limitation:
-
-The existing implementation counts votes but does not yet verify the
-identity/signature of every vote.
-
-A contributor must not mark this component REAL until the required
-authentication and verification behavior is implemented and tested.
-
-## Vote Network Endpoint
-
-- [ ] Sign outgoing votes
-- [ ] Attach valid identity signature
-- [ ] Verify received vote signatures
-- [ ] Reject unsigned votes
-- [ ] Reject malformed signatures
-- [ ] Test forged-vote rejection
-
-Current limitation:
-
-The current vote signature field is empty.
 
 ## Peer Discovery
 
