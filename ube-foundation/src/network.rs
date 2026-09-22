@@ -92,12 +92,32 @@ impl DistributedNode {
                         }
                     );
 
-                    let vote = RemoteVote {
+                    let mut vote = RemoteVote {
                         proposal_id: proposal.id,
                         voter_id: node.mesh_node.id.clone(),
                         verdict,
-                        signature: vec![], // TODO: Sign the vote using identity keys
+                        signature: vec![],
                     };
+
+                    let consensus_vote = ConsensusVote {
+                        voter_id: vote.voter_id.clone(),
+                        request_id: vote.proposal_id.clone(),
+                        decision: match &vote.verdict {
+                            OutcomeVerdict::Valid => Some(PolicyDecision {
+                                decision: Decision::Allow,
+                                reason: "Network Vote Allow".into(),
+                            }),
+                            _ => Some(PolicyDecision {
+                                decision: Decision::Deny,
+                                reason: "Network Vote Deny".into(),
+                            }),
+                        },
+                        outcome_hash: proposal.request.id.clone(),
+                        signature: vec![],
+                    };
+
+                    let sig = node.mesh_node.signing_key.sign(&consensus_vote.message_to_sign());
+                    vote.signature = sig.to_bytes().to_vec();
                     Ok::<_, warp::Rejection>(warp::reply::json(&vote))
                 }
             });
@@ -119,7 +139,25 @@ impl DistributedNode {
         if resp.status().is_success() {
             let handshake_resp: HandshakeResponse = resp.json().await.map_err(|e| e.to_string())?;
 
-            // In a real implementation, verify signature here
+            // Cryptographic signature verification of handshake response
+            let Ok(pk_bytes) = handshake_resp.responder_public_key.as_slice().try_into() else {
+                return Err("Invalid responder public key length".into());
+            };
+            let Ok(responder_pk) = VerifyingKey::from_bytes(pk_bytes) else {
+                return Err("Invalid responder public key format".into());
+            };
+            let Ok(sig) = Signature::from_slice(&handshake_resp.signature) else {
+                return Err("Invalid handshake response signature format".into());
+            };
+
+            let mut msg = Vec::new();
+            msg.extend_from_slice(&req.ephemeral_public_key);
+            msg.extend_from_slice(&handshake_resp.ephemeral_public_key);
+
+            if responder_pk.verify(&msg, &sig).is_err() {
+                return Err("Peer handshake signature verification failed".into());
+            }
+
             let mut peers = self.known_peers.lock().await;
             peers.insert(handshake_resp.responder_id.clone(), PeerInfo {
                 id: handshake_resp.responder_id,

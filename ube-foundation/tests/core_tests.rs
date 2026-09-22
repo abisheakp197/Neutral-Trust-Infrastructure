@@ -1,16 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
     use ube_foundation::*;
     use chrono::{Utc, Duration};
 
     #[tokio::test]
     async fn test_capability_token_expiry() {
-        let mut engine = TrustEngine::default();
+        let engine = TrustEngine::default();
         let future_date = (Utc::now() + Duration::days(1)).to_rfc3339();
         let past_date = (Utc::now() - Duration::days(1)).to_rfc3339();
 
-        let mut valid_token = CapabilityToken {
+        let valid_token = CapabilityToken {
             id: "valid".into(),
             root_actor: "alice".into(),
             capability: "test".into(),
@@ -18,7 +17,7 @@ mod tests {
             signature: vec![],
         };
 
-        let mut expired_token = CapabilityToken {
+        let expired_token = CapabilityToken {
             id: "expired".into(),
             root_actor: "alice".into(),
             capability: "test".into(),
@@ -91,7 +90,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_consensus_orchestrator() {
-        let mut engine = TrustEngine::default();
+        let engine = TrustEngine::default();
         let mut orchestrator = Orchestrator::new(engine);
         orchestrator.set_consensus_threshold(2);
 

@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[test]
 fn test_adversarial_malformed_pqc_signatures() {
-    let mut engine = TrustEngine::default();
+    let engine = TrustEngine::default();
 
     // Test Case 1: Wrong Algorithm Name (Fuzzing the algorithm string)
     let req_wrong_algo = ActionRequest {
@@ -29,7 +29,7 @@ fn test_adversarial_malformed_pqc_signatures() {
 
 #[test]
 fn test_adversarial_empty_identities() {
-    let mut engine = TrustEngine::default();
+    let engine = TrustEngine::default();
 
     // Test Case 2: Action request with no credentials at all
     let req_empty = ActionRequest {
@@ -52,30 +52,53 @@ fn test_adversarial_empty_identities() {
 
 #[test]
 fn test_adversarial_merkle_tampering() {
+    use ed25519_dalek::SigningKey;
+    let mut bytes = [0u8; 32];
+    rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut bytes);
+    let signing_key = SigningKey::from_bytes(&bytes);
+
     let mut engine = TrustEngine::default();
+    let req = ActionRequest {
+        id: "req-1".into(),
+        actor: "actor-1".into(),
+        capability: "cap-1".into(),
+        action: "act-1".into(),
+        input: json!({}),
+        signature: None,
+        pqc_signature: None,
+        public_key: None,
+        pqc_public_key: None,
+        token: None,
+        identity_claim: None,
+    };
+    engine.grant("actor-1", "cap-1");
+    engine.record(req);
+    engine.commit_batch();
+
+    let valid_bundle = engine.export_airgap_bundle(Some(&signing_key)).unwrap();
+
     let mut registry = DistributedRegistry {
         peers: std::collections::BTreeMap::new(),
         state_root: "initial".into(),
     };
 
-    // Test Case 3: Tampered Merkle Root in AirGap bundle
-    let tampered_bundle = AirGapBundle {
-        state_merkle_root: "fake_root".into(),
-        batch: AuditBatch {
-            events: vec![],
-            merkle_root: "real_root".into(),
-            prev_batch_hash: "none".into(),
-        },
-        signature: vec![],
-    };
+    // Valid signed bundle should sync successfully
+    assert!(registry.sync_state(valid_bundle.clone()).is_ok());
 
-    let result = registry.sync_state(tampered_bundle);
-    assert!(result.is_err(), "Sync should fail when state_merkle_root does not match batch.merkle_root");
+    // Tampered Merkle Root in AirGap bundle should fail
+    let mut tampered_bundle = valid_bundle.clone();
+    tampered_bundle.state_merkle_root = "fake_root".into();
+    assert!(registry.sync_state(tampered_bundle).is_err());
+
+    // Unsigned bundle (stripped signature) should fail
+    let mut unsigned_bundle = valid_bundle.clone();
+    unsigned_bundle.signature = vec![];
+    assert!(registry.sync_state(unsigned_bundle).is_err());
 }
 
 #[test]
 fn test_adversarial_identity_spoofing() {
-    let mut engine = TrustEngine::default();
+    let engine = TrustEngine::default();
 
     // Create a request claiming a version it doesn't have
     let req_spoof = ActionRequest {

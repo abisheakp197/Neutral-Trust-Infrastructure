@@ -1,12 +1,11 @@
 use ube_foundation::*;
-use ed25519_dalek::{SigningKey, Signer, VerifyingKey, Signature};
+use ed25519_dalek::{SigningKey, Signer};
 use rand::rngs::OsRng;
 use serde_json::json;
-use std::collections::BTreeMap;
 
 #[tokio::test]
 async fn test_adversarial_replay_attack() {
-    let mut engine = TrustEngine::default();
+    let engine = TrustEngine::default();
     let mut csprng = OsRng;
     let mut bytes = [0u8; 32];
     rand::RngCore::fill_bytes(&mut csprng, &mut bytes);
@@ -20,7 +19,7 @@ async fn test_adversarial_replay_attack() {
         capability: "test".into(),
         action: "run".into(),
         input: json!({}),
-        signature: Some(vec![0u8; 64]), // Placeholder
+        signature: Some(vec![0u8; 64]), // Invalid signature
         pqc_signature: None,
         public_key: Some(public_key_bytes.clone()),
         pqc_public_key: None,
@@ -28,19 +27,100 @@ async fn test_adversarial_replay_attack() {
         identity_claim: None,
     };
 
-    // Current engine is stateless regarding request IDs, so we just check it evaluates
-    let _ = engine.evaluate(&req);
+    let decision = engine.evaluate(&req);
+    assert_eq!(decision.decision, Decision::Deny);
+}
+
+#[tokio::test]
+async fn test_pqc_signature_and_encryption_flow() {
+    let keypair_alice = PqcKeyPair::generate();
+    let keypair_bob = PqcKeyPair::generate();
+
+    // 1. PQC Signature test
+    let message = b"Critical Post-Quantum Command";
+    let sig = keypair_alice.sign(message);
+    assert!(keypair_alice.public_key.verify(message, &sig));
+
+    // Tampering test
+    let tampered_msg = b"Tampered Command";
+    assert!(!keypair_alice.public_key.verify(tampered_msg, &sig));
+
+    // 2. PQC Encryption/Decryption test
+    let plaintext = b"Top secret post-quantum payload";
+    let encrypted = keypair_alice.encrypt(&keypair_bob.public_key, plaintext).unwrap();
+    let decrypted = keypair_bob.decrypt(&encrypted).unwrap();
+    assert_eq!(decrypted, plaintext);
+}
+
+#[tokio::test]
+async fn test_consensus_vote_signature_rejection() {
+    let mut engine = TrustEngine::default();
+    let mut bytes = [0u8; 32];
+    rand::RngCore::fill_bytes(&mut OsRng, &mut bytes);
+    let signing_key = SigningKey::from_bytes(&bytes);
+    let verifying_key = signing_key.verifying_key();
+
+    engine.register_voter_key("voter-1", verifying_key.to_bytes().to_vec());
+
+    let vote = ConsensusVote {
+        voter_id: "voter-1".into(),
+        request_id: "req-1".into(),
+        decision: Some(PolicyDecision {
+            decision: Decision::Allow,
+            reason: "ok".into(),
+        }),
+        outcome_hash: "hash-1".into(),
+        signature: vec![1u8; 64], // Invalid signature
+    };
+
+    let proposal = ConsensusProposal {
+        request_id: "req-1".into(),
+        votes: vec![vote],
+    };
+
+    // Should fail signature verification and thus threshold check
+    assert!(!engine.verify_consensus(&proposal, 1));
 }
 
 #[tokio::test]
 async fn test_adversarial_consensus_threshold_bypass() {
-    let engine = TrustEngine::default();
+    let mut engine = TrustEngine::default();
+    let mut bytes = [0u8; 32];
+    rand::RngCore::fill_bytes(&mut OsRng, &mut bytes);
+    let signing_key = SigningKey::from_bytes(&bytes);
+    let verifying_key = signing_key.verifying_key();
+
+    engine.register_voter_key("agent-a", verifying_key.to_bytes().to_vec());
+
+    let mut vote = ConsensusVote {
+        voter_id: "agent-a".into(),
+        request_id: "prop-1".into(),
+        decision: Some(PolicyDecision {
+            decision: Decision::Allow,
+            reason: "ok".into(),
+        }),
+        outcome_hash: "hash-1".into(),
+        signature: vec![],
+    };
+    vote.signature = signing_key.sign(&vote.message_to_sign()).to_bytes().to_vec();
 
     let proposal = ConsensusProposal {
         request_id: "prop-1".into(),
+        votes: vec![vote],
+    };
+
+    // Threshold of 2 should fail with only 1 valid vote
+    assert!(!engine.verify_consensus(&proposal, 2));
+
+    // Threshold of 1 should pass
+    assert!(engine.verify_consensus(&proposal, 1));
+
+    // Unregistered voter with empty signature should fail even at threshold 1
+    let unauth_proposal = ConsensusProposal {
+        request_id: "prop-1".into(),
         votes: vec![
             ConsensusVote {
-                voter_id: "agent-a".into(),
+                voter_id: "unregistered-attacker".into(),
                 request_id: "prop-1".into(),
                 decision: Some(PolicyDecision {
                     decision: Decision::Allow,
@@ -51,12 +131,7 @@ async fn test_adversarial_consensus_threshold_bypass() {
             }
         ],
     };
-
-    // Threshold of 2 should fail with only 1 vote
-    assert!(!engine.verify_consensus(&proposal, 2));
-
-    // Threshold of 1 should pass
-    assert!(engine.verify_consensus(&proposal, 1));
+    assert!(!engine.verify_consensus(&unauth_proposal, 1));
 }
 
 #[tokio::test]

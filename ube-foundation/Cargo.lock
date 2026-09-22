@@ -129,6 +129,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "005ec2760ca554fae18df7a11195552ec576cd665632a881bc011d5bb2fd4d80"
 dependencies = [
  "find-msvc-tools",
+ "jobserver",
+ "libc",
  "shlex",
 ]
 
@@ -342,6 +344,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dunce"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
+
+[[package]]
 name = "ed25519"
 version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -550,6 +558,12 @@ dependencies = [
  "rand_core 0.10.1",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "glob"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
 
 [[package]]
 name = "h2"
@@ -925,6 +939,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
+name = "jobserver"
+version = "0.1.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c00acbd29eabad4a2392fa0e921c874934dbbf4194312ad20f04a0ed67a3cb3"
+dependencies = [
+ "getrandom 0.4.3",
+ "libc",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1123,6 +1147,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "pqcrypto-dilithium"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "685de0fa68c6786559d5fcdaa414f0cd68ef3f5d162f61823bd7424cd276726f"
+dependencies = [
+ "cc",
+ "glob",
+ "libc",
+ "pqcrypto-internals",
+ "pqcrypto-traits",
+]
+
+[[package]]
+name = "pqcrypto-internals"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4a326caf27cbf2ac291ca7fd56300497ba9e76a8cc6a7d95b7a18b57f22b61d"
+dependencies = [
+ "cc",
+ "dunce",
+ "getrandom 0.3.4",
+ "libc",
+]
+
+[[package]]
+name = "pqcrypto-kyber"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15c00293cf898859d0c771455388054fd69ab712263c73fdc7f287a39b1ba000"
+dependencies = [
+ "cc",
+ "glob",
+ "libc",
+ "pqcrypto-internals",
+ "pqcrypto-traits",
+]
+
+[[package]]
+name = "pqcrypto-traits"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94e851c7654eed9e68d7d27164c454961a616cf8c203d500607ef22c737b51bb"
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1169,7 +1237,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "thiserror",
  "tokio",
  "tracing",
@@ -1207,9 +1275,9 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.5",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1906,6 +1974,9 @@ dependencies = [
  "ed25519-dalek",
  "futures",
  "hex",
+ "pqcrypto-dilithium",
+ "pqcrypto-kyber",
+ "pqcrypto-traits",
  "proptest",
  "rand 0.8.8",
  "reqwest",

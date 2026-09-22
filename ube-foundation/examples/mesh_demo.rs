@@ -1,3 +1,4 @@
+use ed25519_dalek::Signer;
 use ube_foundation::{
     AgentMeshNode, ConsensusProposal, ConsensusVote, Decision, PolicyDecision, TrustEngine,
 };
@@ -8,7 +9,7 @@ fn main() {
     // 1. Setup Mesh Nodes
     let mut node_a = AgentMeshNode::new("agent-a".into());
     let mut node_b = AgentMeshNode::new("agent-b".into());
-    let node_c = AgentMeshNode::new("agent-c".into());
+    let _node_c = AgentMeshNode::new("agent-c".into());
 
     // Register peers so they can verify each other
     node_a.register_peer("agent-b".into(), node_b.verifying_key);
@@ -30,7 +31,6 @@ fn main() {
 
     // 3. Demonstrate BFT Consensus
     println!("\n[2] Simulating BFT Consensus (Majority Voting)...");
-    let trust = TrustEngine::default();
     let request_id = "task-123".to_string();
     let outcome_hash = "hash-of-successful-result".to_string();
 
@@ -39,6 +39,28 @@ fn main() {
         reason: "Valid outcome".into(),
     };
 
+    let vote_a = ConsensusVote {
+        voter_id: "agent-a".into(),
+        request_id: request_id.clone(),
+        decision: Some(decision_ok.clone()),
+        outcome_hash: outcome_hash.clone(),
+        signature: vec![],
+    };
+    let vote_b = ConsensusVote {
+        voter_id: "agent-b".into(),
+        request_id: request_id.clone(),
+        decision: Some(decision_ok.clone()),
+        outcome_hash: outcome_hash.clone(),
+        signature: vec![],
+    };
+
+    let sig_a = node_a.signing_key.sign(&vote_a.message_to_sign()).to_bytes().to_vec();
+    let sig_b = node_b.signing_key.sign(&vote_b.message_to_sign()).to_bytes().to_vec();
+
+    let mut trust = TrustEngine::default();
+    trust.register_voter_key("agent-a", node_a.verifying_key.to_bytes().to_vec());
+    trust.register_voter_key("agent-b", node_b.verifying_key.to_bytes().to_vec());
+
     // Simulate 3 agents voting
     let votes = vec![
         ConsensusVote {
@@ -46,14 +68,14 @@ fn main() {
             request_id: request_id.clone(),
             decision: Some(decision_ok.clone()),
             outcome_hash: outcome_hash.clone(),
-            signature: vec![], // Placeholder
+            signature: sig_a,
         },
         ConsensusVote {
             voter_id: "agent-b".into(),
             request_id: request_id.clone(),
             decision: Some(decision_ok.clone()),
             outcome_hash: outcome_hash.clone(),
-            signature: vec![],
+            signature: sig_b,
         },
         ConsensusVote {
             voter_id: "agent-c".into(),

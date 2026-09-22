@@ -2,8 +2,7 @@
 mod trust_marketplace_tests {
     use ube_foundation::*;
     use chrono::{Utc, Duration};
-    use ed25519_dalek::{SigningKey, VerifyingKey, Signer};
-    use std::collections::BTreeMap;
+    use ed25519_dalek::{SigningKey, Signer};
 
     fn setup_verifier(id: &str) -> (SigningKey, VerifierProfile) {
         let mut bytes = [0u8; 32];
@@ -21,7 +20,7 @@ mod trust_marketplace_tests {
     #[test]
     fn test_payment_has_zero_effect_on_rank() {
         let mut layer = RecommendationLayer::new();
-        let (v_key, v_profile) = setup_verifier("auditor");
+        let (_v_key, v_profile) = setup_verifier("auditor");
         layer.verifiers.insert(v_profile.id.clone(), v_profile);
 
         // Provider A: High reputation, standard fee
@@ -164,7 +163,7 @@ mod trust_marketplace_tests {
             total_outcomes: 9, // One outcome away from 10
         };
 
-        let logic = SelectionLogic { required_standards: vec![], min_reputation: 0.0 };
+        let _logic = SelectionLogic { required_standards: vec![], min_reputation: 0.0 };
         let eligible = vec![&profile];
 
         // This is tricky to test purely because of randomness,
