@@ -126,4 +126,67 @@ mod tests {
         assert!(res.is_ok());
         assert_eq!(res.unwrap()["result"], 42);
     }
+
+    #[test]
+    fn test_trust_engine_persistence_and_recovery() {
+        let temp_dir = std::env::temp_dir();
+        let file_path = temp_dir.join(format!("nti_test_state_{}.json", rand::random::<u64>()));
+
+        let mut engine = TrustEngine::new().with_persistence(&file_path);
+        engine.grant("alice", "admin_access");
+        engine.revoke_token("token-revoked-99");
+        engine.register_voter_key("voter-alice", vec![1, 2, 3, 4]);
+
+        let req = ActionRequest {
+            id: "persist-req-1".into(),
+            actor: "alice".into(),
+            capability: "admin_access".into(),
+            action: "read".into(),
+            input: serde_json::json!({}),
+            signature: None,
+            pqc_signature: None,
+            public_key: None,
+            pqc_public_key: None,
+            token: None,
+            identity_claim: None,
+        };
+
+        engine.record(req);
+        assert!(file_path.exists());
+
+        // Recover engine from file
+        let recovered_engine = TrustEngine::load_from_file(&file_path).unwrap();
+
+        assert_eq!(recovered_engine.capabilities.get("alice").unwrap().contains("admin_access"), true);
+        assert!(recovered_engine.revocation_list.contains("token-revoked-99"));
+        assert_eq!(recovered_engine.voter_keys.get("voter-alice").unwrap(), &vec![1, 2, 3, 4]);
+        assert_eq!(recovered_engine.events.len(), 1);
+        assert!(recovered_engine.verify_history());
+
+        let _ = std::fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn test_key_rotation_lifecycle() {
+        let mut node = AgentMeshNode::new("agent-x".into());
+        let initial_pk = node.verifying_key.to_bytes().to_vec();
+
+        assert!(node.is_current_key(&initial_pk));
+        assert_eq!(node.previous_verifying_keys.len(), 0);
+
+        // Rotate Mesh node identity key
+        node.rotate_key();
+        let new_pk = node.verifying_key.to_bytes().to_vec();
+
+        assert!(!node.is_current_key(&initial_pk));
+        assert!(node.is_current_key(&new_pk));
+        assert_eq!(node.previous_verifying_keys.len(), 1);
+
+        // PQC KeyPair rotation
+        let mut pqc_pair = PqcKeyPair::generate();
+        let old_pqc_pk = pqc_pair.public_key.clone();
+        let new_pqc_pk = pqc_pair.rotate();
+
+        assert_ne!(old_pqc_pk.key_bytes, new_pqc_pk.key_bytes);
+    }
 }
