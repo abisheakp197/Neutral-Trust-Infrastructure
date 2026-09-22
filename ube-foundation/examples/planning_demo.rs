@@ -1,6 +1,6 @@
 use ube_foundation::{
     ActionRequest, AutonomousAgent, AutonomousPlan, IntentPolicy, Orchestrator, PlanStep,
-    SafetyMode, SystemModule, TrustEngine, TaskStatus,
+    SystemModule, TrustEngine, TaskStatus,
 };
 
 #[tokio::main]

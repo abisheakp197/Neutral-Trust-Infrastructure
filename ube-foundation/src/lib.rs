@@ -1,6 +1,11 @@
 pub mod network;
 
+use chacha20poly1305::{aead::{Aead, KeyInit}, ChaCha20Poly1305, Key, Nonce};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey, SigningKey, Signer};
+use pqcrypto_dilithium::dilithium5;
+use pqcrypto_kyber::kyber1024;
+use pqcrypto_traits::kem::{PublicKey as KemPublicKeyTrait, SecretKey as KemSecretKeyTrait, Ciphertext as KemCiphertextTrait, SharedSecret as KemSharedSecretTrait};
+use pqcrypto_traits::sign::{PublicKey as SignPublicKeyTrait, SecretKey as SignSecretKeyTrait, DetachedSignature as SignDetachedSignatureTrait};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
@@ -53,14 +58,45 @@ impl CapabilityToken {
     }
 }
 
+impl ConsensusVote {
+    pub fn message_to_sign(&self) -> Vec<u8> {
+        let data = (&self.voter_id, &self.request_id, &self.decision, &self.outcome_hash);
+        serde_json::to_vec(&data).expect("serialization for consensus vote")
+    }
+
+    pub fn verify(&self, public_key_bytes: &[u8]) -> bool {
+        let Ok(bytes) = public_key_bytes.try_into() else { return false; };
+        let Ok(public_key) = VerifyingKey::from_bytes(bytes) else { return false; };
+        let Ok(signature) = Signature::from_slice(&self.signature) else { return false; };
+        public_key.verify(&self.message_to_sign(), &signature).is_ok()
+    }
+}
+
 impl TrustEngine {
+    pub fn register_voter_key(&mut self, voter_id: impl Into<String>, public_key: Vec<u8>) {
+        self.voter_keys.insert(voter_id.into(), public_key);
+    }
+
     pub fn verify_consensus(&self, proposal: &ConsensusProposal, threshold: usize) -> bool {
         let mut valid_votes = 0;
         let mut hash_counts: BTreeMap<String, usize> = BTreeMap::new();
+        let mut seen_voters: BTreeSet<String> = BTreeSet::new();
 
         for vote in &proposal.votes {
-            // In a real implementation, we would verify the Ed25519 signature here
-            // using the voter's public key registered in the TrustEngine.
+            if seen_voters.contains(&vote.voter_id) {
+                continue; // Prevent duplicate voting from same voter
+            }
+
+            let Some(voter_pk) = self.voter_keys.get(&vote.voter_id) else {
+                continue; // Reject votes from unregistered voters
+            };
+
+            if !vote.verify(voter_pk) {
+                continue; // Skip invalid vote signature
+            }
+
+            seen_voters.insert(vote.voter_id.clone());
+
             if vote.decision.as_ref().map(|d| d.decision == Decision::Allow).unwrap_or(false) {
                 valid_votes += 1;
                 *hash_counts.entry(vote.outcome_hash.clone()).or_insert(0) += 1;
@@ -183,14 +219,27 @@ pub struct AuditBatch {
     pub prev_batch_hash: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrustEngineState {
+    pub capabilities: BTreeMap<String, BTreeSet<String>>,
+    pub expected_code_hashes: BTreeMap<String, String>,
+    pub voter_keys: BTreeMap<String, Vec<u8>>,
+    pub revocation_list: BTreeSet<String>,
+    pub events: Vec<AuditEvent>,
+    pub batches: Vec<AuditBatch>,
+    pub last_batch_hash: String,
+}
+
 #[derive(Debug, Default)]
 pub struct TrustEngine {
-    capabilities: BTreeMap<String, BTreeSet<String>>,
-    expected_code_hashes: BTreeMap<String, String>,
-    revocation_list: BTreeSet<String>,
-    events: Vec<AuditEvent>,
-    batches: Vec<AuditBatch>,
-    last_batch_hash: String,
+    pub capabilities: BTreeMap<String, BTreeSet<String>>,
+    pub expected_code_hashes: BTreeMap<String, String>,
+    pub voter_keys: BTreeMap<String, Vec<u8>>,
+    pub revocation_list: BTreeSet<String>,
+    pub events: Vec<AuditEvent>,
+    pub batches: Vec<AuditBatch>,
+    pub last_batch_hash: String,
+    pub persistence_path: Option<std::path::PathBuf>,
 }
 
 pub struct CaveatInterpreter;
@@ -239,11 +288,62 @@ impl TrustEngine {
         Self {
             capabilities: BTreeMap::new(),
             expected_code_hashes: BTreeMap::new(),
+            voter_keys: BTreeMap::new(),
             revocation_list: BTreeSet::new(),
             events: Vec::new(),
             batches: Vec::new(),
             last_batch_hash: "".into(),
+            persistence_path: None,
         }
+    }
+
+    pub fn with_persistence(mut self, path: impl Into<std::path::PathBuf>) -> Self {
+        self.persistence_path = Some(path.into());
+        self
+    }
+
+    pub fn export_state(&self) -> TrustEngineState {
+        TrustEngineState {
+            capabilities: self.capabilities.clone(),
+            expected_code_hashes: self.expected_code_hashes.clone(),
+            voter_keys: self.voter_keys.clone(),
+            revocation_list: self.revocation_list.clone(),
+            events: self.events.clone(),
+            batches: self.batches.clone(),
+            last_batch_hash: self.last_batch_hash.clone(),
+        }
+    }
+
+    pub fn save_to_file(&self, path: impl AsRef<std::path::Path>) -> Result<(), String> {
+        let state = self.export_state();
+        let bytes = serde_json::to_vec_pretty(&state).map_err(|e| format!("Serialization error: {}", e))?;
+        std::fs::write(path, bytes).map_err(|e| format!("File write error: {}", e))
+    }
+
+    pub fn load_from_file(path: impl AsRef<std::path::Path>) -> Result<Self, String> {
+        let bytes = std::fs::read(path).map_err(|e| format!("File read error: {}", e))?;
+        let state: TrustEngineState = serde_json::from_slice(&bytes).map_err(|e| format!("Deserialization error: {}", e))?;
+        let engine = Self {
+            capabilities: state.capabilities,
+            expected_code_hashes: state.expected_code_hashes,
+            voter_keys: state.voter_keys,
+            revocation_list: state.revocation_list,
+            events: state.events,
+            batches: state.batches,
+            last_batch_hash: state.last_batch_hash,
+            persistence_path: None,
+        };
+        if !engine.verify_history() {
+            return Err("Persisted trust engine history integrity verification failed".into());
+        }
+        Ok(engine)
+    }
+
+    pub fn auto_save(&self) -> Result<(), String> {
+        if let Some(path) = &self.persistence_path {
+            self.save_to_file(path)?;
+        }
+        Ok(())
     }
     pub fn revoke_token(&mut self, token_id: impl Into<String>) {
         self.revocation_list.insert(token_id.into());
@@ -292,12 +392,20 @@ impl TrustEngine {
     pub fn evaluate(&self, request: &ActionRequest) -> PolicyDecision {
         // PQC Verification (Post-Quantum Durability)
         if let Some(pqc_sig) = &request.pqc_signature {
-            if let Some(_pqc_pk) = &request.pqc_public_key {
-                 // Placeholder for actual Dilithium/Kyber verification logic
-                 // This proves the structural readiness for Global Trust
-                 if pqc_sig.algorithm != "Dilithium5" {
-                     return PolicyDecision { decision: Decision::Deny, reason: "unsupported pqc algorithm".into() };
-                 }
+            if let Some(pqc_pk_bytes) = &request.pqc_public_key {
+                if pqc_sig.algorithm != "Dilithium5" && pqc_sig.algorithm != "ML-DSA-87" {
+                    return PolicyDecision { decision: Decision::Deny, reason: "unsupported pqc algorithm".into() };
+                }
+                let pqc_pk = PqcPublicKey {
+                    algorithm: pqc_sig.algorithm.clone(),
+                    key_bytes: pqc_pk_bytes.clone(),
+                    kyber_public_key_bytes: vec![],
+                };
+                if !pqc_pk.verify(&request.message_to_sign(), pqc_sig) {
+                    return PolicyDecision { decision: Decision::Deny, reason: "pqc sig mismatch".into() };
+                }
+            } else {
+                return PolicyDecision { decision: Decision::Deny, reason: "missing pqc public key".into() };
             }
         }
 
@@ -356,6 +464,7 @@ impl TrustEngine {
         let hash = hex::encode(Sha256::digest(body));
         self.events.push(AuditEvent { sequence, request, decision: decision.clone(), previous_hash, hash });
         if self.events.len() >= 10 { self.commit_batch(); }
+        let _ = self.auto_save();
         decision
     }
 
@@ -950,6 +1059,8 @@ pub struct AgentMeshNode {
     pub id: String,
     pub signing_key: SigningKey,
     pub verifying_key: VerifyingKey,
+    pub previous_verifying_keys: Vec<VerifyingKey>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
     pub peers: BTreeMap<String, VerifyingKey>,
 }
 
@@ -963,8 +1074,23 @@ impl AgentMeshNode {
             id,
             signing_key,
             verifying_key,
+            previous_verifying_keys: Vec::new(),
+            created_at: chrono::Utc::now(),
             peers: BTreeMap::new(),
         }
+    }
+
+    pub fn rotate_key(&mut self) {
+        self.previous_verifying_keys.push(self.verifying_key);
+        let mut bytes = [0u8; 32];
+        rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut bytes);
+        self.signing_key = SigningKey::from_bytes(&bytes);
+        self.verifying_key = self.signing_key.verifying_key();
+        self.created_at = chrono::Utc::now();
+    }
+
+    pub fn is_current_key(&self, public_key_bytes: &[u8]) -> bool {
+        self.verifying_key.to_bytes().as_slice() == public_key_bytes
     }
 
     pub fn register_peer(&mut self, id: String, key: VerifyingKey) {
@@ -1007,22 +1133,208 @@ pub struct PqcSignature {
     pub algorithm: String,
     pub signature: Vec<u8>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PqcPublicKey {
+    pub algorithm: String,
+    pub key_bytes: Vec<u8>,
+    pub kyber_public_key_bytes: Vec<u8>,
+}
+
+impl PqcPublicKey {
+    pub fn verify(&self, message: &[u8], pqc_signature: &PqcSignature) -> bool {
+        if self.algorithm != pqc_signature.algorithm {
+            return false;
+        }
+        if self.algorithm != "Dilithium5" && self.algorithm != "ML-DSA-87" {
+            return false;
+        }
+
+        let Ok(pk) = dilithium5::PublicKey::from_bytes(&self.key_bytes) else {
+            return false;
+        };
+        let Ok(sig) = dilithium5::DetachedSignature::from_bytes(&pqc_signature.signature) else {
+            return false;
+        };
+
+        dilithium5::verify_detached_signature(&sig, message, &pk).is_ok()
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PqcKeyPair {
+    pub algorithm: String,
+    pub public_key: PqcPublicKey,
+    pub secret_key_bytes: Vec<u8>,
+    pub kyber_public_key_bytes: Vec<u8>,
+    pub kyber_secret_key_bytes: Vec<u8>,
+}
+
+impl PqcKeyPair {
+    pub fn generate() -> Self {
+        Self::generate_with_algorithm("Dilithium5")
+    }
+
+    pub fn rotate(&mut self) -> PqcPublicKey {
+        let new_pair = Self::generate_with_algorithm(&self.algorithm);
+        *self = new_pair;
+        self.public_key.clone()
+    }
+
+    pub fn generate_with_algorithm(algo: &str) -> Self {
+        let (dilithium_pk, dilithium_sk) = dilithium5::keypair();
+        let (kyber_pk, kyber_sk) = kyber1024::keypair();
+
+        let public_key = PqcPublicKey {
+            algorithm: algo.to_string(),
+            key_bytes: dilithium_pk.as_bytes().to_vec(),
+            kyber_public_key_bytes: kyber_pk.as_bytes().to_vec(),
+        };
+
+        Self {
+            algorithm: algo.to_string(),
+            public_key,
+            secret_key_bytes: dilithium_sk.as_bytes().to_vec(),
+            kyber_public_key_bytes: kyber_pk.as_bytes().to_vec(),
+            kyber_secret_key_bytes: kyber_sk.as_bytes().to_vec(),
+        }
+    }
+
+    pub fn sign(&self, message: &[u8]) -> PqcSignature {
+        let Ok(sk) = dilithium5::SecretKey::from_bytes(&self.secret_key_bytes) else {
+            panic!("Invalid Dilithium5 secret key material");
+        };
+
+        let sig = dilithium5::detached_sign(message, &sk);
+
+        PqcSignature {
+            algorithm: self.algorithm.clone(),
+            signature: sig.as_bytes().to_vec(),
+        }
+    }
+
+    pub fn encrypt(&self, recipient_pk: &PqcPublicKey, plaintext: &[u8]) -> Result<PqcEncryptedContainer, String> {
+        let Ok(kyber_pk) = kyber1024::PublicKey::from_bytes(&recipient_pk.kyber_public_key_bytes) else {
+            return Err("Invalid Kyber1024 recipient public key".to_string());
+        };
+
+        let (shared_secret, kem_ciphertext) = kyber1024::encapsulate(&kyber_pk);
+
+        let mut kdf = Sha256::new();
+        kdf.update(b"NTI-CRYSTALS-KYBER1024-KEM-V1");
+        kdf.update(shared_secret.as_bytes());
+        let sym_key_bytes = kdf.finalize();
+
+        let key = Key::from_slice(&sym_key_bytes);
+        let cipher = ChaCha20Poly1305::new(key);
+
+        let mut nonce_bytes = [0u8; 12];
+        rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut nonce_bytes);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+
+        let ciphertext = cipher
+            .encrypt(nonce, plaintext)
+            .map_err(|e| format!("PQC Encryption failed: {}", e))?;
+
+        Ok(PqcEncryptedContainer {
+            algorithm: format!("{}-Kyber1024-ChaCha20Poly1305", recipient_pk.algorithm),
+            ephemeral_pqc_pk: kem_ciphertext.as_bytes().to_vec(),
+            nonce: nonce_bytes.to_vec(),
+            ciphertext,
+        })
+    }
+
+    pub fn decrypt(&self, container: &PqcEncryptedContainer) -> Result<Vec<u8>, String> {
+        let Ok(kyber_sk) = kyber1024::SecretKey::from_bytes(&self.kyber_secret_key_bytes) else {
+            return Err("Invalid Kyber1024 secret key".to_string());
+        };
+
+        let Ok(kem_ct) = kyber1024::Ciphertext::from_bytes(&container.ephemeral_pqc_pk) else {
+            return Err("Invalid Kyber1024 KEM ciphertext in container".to_string());
+        };
+
+        let shared_secret = kyber1024::decapsulate(&kem_ct, &kyber_sk);
+
+        let mut kdf = Sha256::new();
+        kdf.update(b"NTI-CRYSTALS-KYBER1024-KEM-V1");
+        kdf.update(shared_secret.as_bytes());
+        let sym_key_bytes = kdf.finalize();
+
+        let key = Key::from_slice(&sym_key_bytes);
+        let cipher = ChaCha20Poly1305::new(key);
+
+        if container.nonce.len() != 12 {
+            return Err("Invalid nonce length".to_string());
+        }
+        let nonce = Nonce::from_slice(&container.nonce);
+
+        cipher
+            .decrypt(nonce, container.ciphertext.as_slice())
+            .map_err(|e| format!("PQC Decryption failed: {}", e))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PqcEncryptedContainer {
+    pub algorithm: String,
+    pub ephemeral_pqc_pk: Vec<u8>,
+    pub nonce: Vec<u8>,
+    pub ciphertext: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AirGapBundle {
     pub state_merkle_root: String,
     pub batch: AuditBatch,
+    pub signer_public_key: Vec<u8>,
     pub signature: Vec<u8>,
 }
 
+impl AirGapBundle {
+    pub fn message_to_sign(&self) -> Vec<u8> {
+        let data = (&self.state_merkle_root, &self.batch);
+        serde_json::to_vec(&data).expect("serialization for airgap bundle")
+    }
+
+    pub fn verify(&self) -> bool {
+        if TrustEngine::compute_merkle_root(&self.batch.events) != self.batch.merkle_root {
+            return false;
+        }
+
+        if self.signer_public_key.is_empty() || self.signature.is_empty() {
+            return false;
+        }
+
+        let Ok(pk_bytes) = self.signer_public_key.as_slice().try_into() else {
+            return false;
+        };
+        let Ok(public_key) = VerifyingKey::from_bytes(pk_bytes) else {
+            return false;
+        };
+        let Ok(sig) = Signature::from_slice(&self.signature) else {
+            return false;
+        };
+
+        public_key.verify(&self.message_to_sign(), &sig).is_ok()
+    }
+}
+
 impl TrustEngine {
-    pub fn export_airgap_bundle(&self) -> Option<AirGapBundle> {
+    pub fn export_airgap_bundle(&self, signing_key: Option<&SigningKey>) -> Option<AirGapBundle> {
         self.batches.last().map(|batch| {
-            let _body = serde_json::to_vec(&batch).expect("batch serialization");
-            let signature = vec![]; // Placeholder for signing
-            AirGapBundle {
+            let mut bundle = AirGapBundle {
                 state_merkle_root: self.last_batch_hash.clone(),
                 batch: batch.clone(),
-                signature,
+                signer_public_key: signing_key.map(|sk| sk.verifying_key().to_bytes().to_vec()).unwrap_or_default(),
+                signature: vec![],
+            };
+
+            if let Some(sk) = signing_key {
+                let sig = sk.sign(&bundle.message_to_sign());
+                bundle.signature = sig.to_bytes().to_vec();
             }
+
+            bundle
         })
     }
 }
@@ -1038,11 +1350,25 @@ pub struct DistributedRegistry {
     pub state_root: String,
 }
 
+#[cfg(test)]
+mod pqc_internal_tests {
+    use super::*;
+
+    #[test]
+    fn test_pqc_keypair_encrypt_decrypt() {
+        let alice = PqcKeyPair::generate();
+        let bob = PqcKeyPair::generate();
+        let msg = b"hello world";
+        let container = alice.encrypt(&bob.public_key, msg).unwrap();
+        let decrypted = bob.decrypt(&container).unwrap();
+        assert_eq!(decrypted, msg);
+    }
+}
+
 impl DistributedRegistry {
     pub fn sync_state(&mut self, bundle: AirGapBundle) -> Result<(), String> {
-        // Formal verification check placeholder
-        if bundle.state_merkle_root != bundle.batch.merkle_root {
-            return Err("State mismatch during sync".into());
+        if !bundle.verify() {
+            return Err("Air-gap bundle integrity or signature verification failed".into());
         }
         self.state_root = bundle.state_merkle_root;
         Ok(())

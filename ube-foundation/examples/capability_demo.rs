@@ -1,8 +1,7 @@
 use ube_foundation::{
     ActionRequest, AutonomousAgent, CapabilityToken, Caveat, Orchestrator, TrustEngine,
 };
-use ed25519_dalek::{Signer, SigningKey, VerifyingKey};
-use rand::rngs::OsRng;
+use ed25519_dalek::{Signer, SigningKey};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -54,7 +53,7 @@ async fn main() -> Result<(), String> {
         caveats: vec![
             Caveat {
                 location: None,
-                condition: ube_foundation::CaveatType::Expires("2026-12-31".into()),
+                condition: ube_foundation::CaveatType::Expires("2026-12-31T23:59:59Z".into()),
             }
         ],
         signature: Vec::new(),

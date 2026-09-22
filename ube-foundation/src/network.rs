@@ -42,9 +42,12 @@ impl DistributedNode {
                 }
             });
 
+        let body_limit = warp::body::content_length_limit(1024 * 1024 * 2); // 2MB Max Payload Limit
+
         // POST /execute - Execute an action request
         let execute = warp::post()
             .and(warp::path("execute"))
+            .and(body_limit)
             .and(warp::body::json())
             .and_then(move |req: ActionRequest| {
                 let node = node.clone();
@@ -52,7 +55,7 @@ impl DistributedNode {
                     let mut orch = node.orchestrator.lock().await;
                     match orch.run_task(req).await {
                         Ok(res) => Ok::<_, warp::Rejection>(warp::reply::json(&res)),
-                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": e}))),
+                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": "Action execution denied or failed", "details": e}))),
                     }
                 }
             });
@@ -61,13 +64,14 @@ impl DistributedNode {
         let node = self.clone();
         let handshake = warp::post()
             .and(warp::path("handshake"))
+            .and(body_limit)
             .and(warp::body::json())
             .and_then(move |req: HandshakeRequest| {
                 let node = node.clone();
                 async move {
                     match node.mesh_node.respond_to_handshake(&req) {
                         Ok((resp, _shared_secret)) => Ok::<_, warp::Rejection>(warp::reply::json(&resp)),
-                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": e}))),
+                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": "Handshake rejected", "details": e}))),
                     }
                 }
             });
@@ -76,6 +80,7 @@ impl DistributedNode {
         let node_vote = self.clone();
         let vote = warp::post()
             .and(warp::path("vote"))
+            .and(body_limit)
             .and(warp::body::json())
             .and_then(move |proposal: RemoteProposal| {
                 let node = node_vote.clone();
@@ -92,18 +97,142 @@ impl DistributedNode {
                         }
                     );
 
-                    let vote = RemoteVote {
+                    let mut vote = RemoteVote {
                         proposal_id: proposal.id,
                         voter_id: node.mesh_node.id.clone(),
                         verdict,
-                        signature: vec![], // TODO: Sign the vote using identity keys
+                        signature: vec![],
                     };
+
+                    let consensus_vote = ConsensusVote {
+                        voter_id: vote.voter_id.clone(),
+                        request_id: vote.proposal_id.clone(),
+                        decision: match &vote.verdict {
+                            OutcomeVerdict::Valid => Some(PolicyDecision {
+                                decision: Decision::Allow,
+                                reason: "Network Vote Allow".into(),
+                            }),
+                            _ => Some(PolicyDecision {
+                                decision: Decision::Deny,
+                                reason: "Network Vote Deny".into(),
+                            }),
+                        },
+                        outcome_hash: proposal.request.id.clone(),
+                        signature: vec![],
+                    };
+
+                    let sig = node.mesh_node.signing_key.sign(&consensus_vote.message_to_sign());
+                    vote.signature = sig.to_bytes().to_vec();
                     Ok::<_, warp::Rejection>(warp::reply::json(&vote))
                 }
             });
 
         let routes = execute.or(handshake).or(get_peers).or(vote);
         warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+    }
+
+    pub async fn start_api_tls(self: Arc<Self>, port: u16, cert_path: impl AsRef<std::path::Path>, key_path: impl AsRef<std::path::Path>) {
+        let node = self.clone();
+
+        let get_peers = warp::get()
+            .and(warp::path("peers"))
+            .and_then(move || {
+                let node = node.clone();
+                async move {
+                    let peers = node.known_peers.lock().await;
+                    Ok::<_, warp::Rejection>(warp::reply::json(&*peers))
+                }
+            });
+
+        let body_limit = warp::body::content_length_limit(1024 * 1024 * 2);
+
+        let node_exec = self.clone();
+        let execute = warp::post()
+            .and(warp::path("execute"))
+            .and(body_limit)
+            .and(warp::body::json())
+            .and_then(move |req: ActionRequest| {
+                let node = node_exec.clone();
+                async move {
+                    let mut orch = node.orchestrator.lock().await;
+                    match orch.run_task(req).await {
+                        Ok(res) => Ok::<_, warp::Rejection>(warp::reply::json(&res)),
+                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": "Action execution denied or failed", "details": e}))),
+                    }
+                }
+            });
+
+        let node_hs = self.clone();
+        let handshake = warp::post()
+            .and(warp::path("handshake"))
+            .and(body_limit)
+            .and(warp::body::json())
+            .and_then(move |req: HandshakeRequest| {
+                let node = node_hs.clone();
+                async move {
+                    match node.mesh_node.respond_to_handshake(&req) {
+                        Ok((resp, _shared_secret)) => Ok::<_, warp::Rejection>(warp::reply::json(&resp)),
+                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": "Handshake rejected", "details": e}))),
+                    }
+                }
+            });
+
+        let node_vote = self.clone();
+        let vote = warp::post()
+            .and(warp::path("vote"))
+            .and(body_limit)
+            .and(warp::body::json())
+            .and_then(move |proposal: RemoteProposal| {
+                let node = node_vote.clone();
+                async move {
+                    let _orch = node.orchestrator.lock().await;
+                    let verdict = IntentVerifier::verify(
+                        &proposal.request,
+                        &serde_json::Value::Null,
+                        &IntentPolicy {
+                            name: "Network Vote".into(),
+                            capability: proposal.request.capability.clone(),
+                            constraints: serde_json::Value::Object(serde_json::Map::new()),
+                        }
+                    );
+
+                    let mut vote = RemoteVote {
+                        proposal_id: proposal.id,
+                        voter_id: node.mesh_node.id.clone(),
+                        verdict,
+                        signature: vec![],
+                    };
+
+                    let consensus_vote = ConsensusVote {
+                        voter_id: vote.voter_id.clone(),
+                        request_id: vote.proposal_id.clone(),
+                        decision: match &vote.verdict {
+                            OutcomeVerdict::Valid => Some(PolicyDecision {
+                                decision: Decision::Allow,
+                                reason: "Network Vote Allow".into(),
+                            }),
+                            _ => Some(PolicyDecision {
+                                decision: Decision::Deny,
+                                reason: "Network Vote Deny".into(),
+                            }),
+                        },
+                        outcome_hash: proposal.request.id.clone(),
+                        signature: vec![],
+                    };
+
+                    let sig = node.mesh_node.signing_key.sign(&consensus_vote.message_to_sign());
+                    vote.signature = sig.to_bytes().to_vec();
+                    Ok::<_, warp::Rejection>(warp::reply::json(&vote))
+                }
+            });
+
+        let routes = execute.or(handshake).or(get_peers).or(vote);
+        warp::serve(routes)
+            .tls()
+            .cert_path(cert_path)
+            .key_path(key_path)
+            .run(([0, 0, 0, 0], port))
+            .await;
     }
 
     pub async fn discover_peer(&self, endpoint: String) -> Result<(), String> {
@@ -119,7 +248,25 @@ impl DistributedNode {
         if resp.status().is_success() {
             let handshake_resp: HandshakeResponse = resp.json().await.map_err(|e| e.to_string())?;
 
-            // In a real implementation, verify signature here
+            // Cryptographic signature verification of handshake response
+            let Ok(pk_bytes) = handshake_resp.responder_public_key.as_slice().try_into() else {
+                return Err("Invalid responder public key length".into());
+            };
+            let Ok(responder_pk) = VerifyingKey::from_bytes(pk_bytes) else {
+                return Err("Invalid responder public key format".into());
+            };
+            let Ok(sig) = Signature::from_slice(&handshake_resp.signature) else {
+                return Err("Invalid handshake response signature format".into());
+            };
+
+            let mut msg = Vec::new();
+            msg.extend_from_slice(&req.ephemeral_public_key);
+            msg.extend_from_slice(&handshake_resp.ephemeral_public_key);
+
+            if responder_pk.verify(&msg, &sig).is_err() {
+                return Err("Peer handshake signature verification failed".into());
+            }
+
             let mut peers = self.known_peers.lock().await;
             peers.insert(handshake_resp.responder_id.clone(), PeerInfo {
                 id: handshake_resp.responder_id,
