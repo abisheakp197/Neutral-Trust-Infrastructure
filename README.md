@@ -1,112 +1,147 @@
 # Neutral Trust Infrastructure (NTI)
+### Post-Quantum Cryptographic Trust & Governance Layer for Autonomous Agent Ecosystems
 
-[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/License-PolyForm_Shield_1.0.0-6A5ACD.svg)](LICENSE.md)
-[![Language: Rust](https://img.shields.io/badge/Language-Rust-orange.svg)](https://www.rust-lang.org/)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#getting-started)
-
-**A cryptographic trust and accountability layer for autonomous agents—built for the machine-to-machine world we are actually entering.**
-
----
-
-### Commercial & Source-Available Notice
-Neutral Trust Infrastructure is published under the **PolyForm Shield License 1.0.0** (Source-Available / Non-Compete).
-
-* **Open Access:** Free for personal, academic, research, and non-competing internal operational use.
-* **Commercial Protection:** Managed SaaS offerings, commercial cloud hosting, or competing commercial implementations require an enterprise license.
-* **Contributions:** All external contributors must sign the Contributor License Agreement (CLA) in `CONTRIBUTING.md` prior to merging pull requests.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
+[![PQC Standard](https://img.shields.io/badge/PQC-NIST%20Dilithium5%20%26%20Kyber1024-purple.svg)]()
+[![SDKs](https://img.shields.io/badge/SDK-Rust%20%26%20Python-orange.svg)]()
 
 ---
 
-## Why This Exists
+## What is Neutral Trust Infrastructure?
 
-We are entering a decade where software doesn't just run—it acts. Autonomous agents will negotiate on our behalf, move money, write and deploy code, execute physical actions, and coordinate with third-party agents running on infrastructure we do not control.
+**Neutral Trust Infrastructure (NTI)** (built in `ube-foundation`) is a production-grade, zero-trust cryptographic governance runtime engineered for enterprise autonomous AI agents. As enterprise organizations deploy AI agents to execute financial transactions, access healthcare records, manage cloud infrastructure, and orchestrate multi-agent workflows, NTI provides the cryptographically verifiable security boundary required to prevent unauthorized execution, identity spoofing, and prompt injection attacks.
 
-Right now, the tools securing that world are the same ones built for humans clicking buttons: API keys, OAuth tokens, and firewalls. None of them answer the actual question that matters when a machine acts autonomously: 
-
-> **"How do I mathematically prove an autonomous agent executed its precise authorization policy—and nothing more?"**
-
-That is the problem NTI exists to solve. Not "AI safety" in the abstract—that is not a claim any single codebase can make. The specific, buildable, provable problem: **give any two agents, or an agent and a human, a way to verify identity, verify authority, and verify outcome cryptographically rather than on promises.**
+NTI secures all agent capability checks, state transitions, inter-agent mesh handshakes, and BFT consensus votes with **NIST-standardized Post-Quantum Cryptography (PQC)**: Level 5 **CRYSTALS-Dilithium5** digital signatures and Level 4 **CRYSTALS-Kyber1024** Key Encapsulation Mechanisms (KEM).
 
 ---
 
-## What This Is Not
+## Enterprise Key Features
 
-To be completely direct up front:
-
-* **This is not a claim that any system can constrain a superintelligence.** Nobody can honestly claim that today, and any project that does is selling a story, not software.
-* **This is not "AI safety" in the philosophical sense.** It is applied cryptography and distributed systems, aimed at a narrow, solvable problem: authority delegation and outcome verification between autonomous actors.
-* **This is not finished.** Every component below is explicitly labeled by what it actually does right now versus what is structurally incomplete.
-
----
-
-## What Is Real, Right Now (Verified by Code)
-
-These features are implemented, tested, and functionally working in the current codebase:
-
-* **Capability Tokens with Scoped Caveats:** Every action an agent takes can be gated by an expiring, cryptographically signed token declaring exactly what it is allowed to do (expiry time, max executions, value limits, path restrictions). This is a real Macaroon-style delegation model.
-* **Ed25519 Cryptography:** Built-in public-key signature verification on tokens, identity claims, and network requests.
-* **Tamper-Evident Audit Chains:** Sequential decision logging backed by Merkle trees, featuring a functional `verify_history()` routine that dynamically recomputes and verifies hash chains to catch history tampering.
-* **Cold-Start Reputation Engine:** A non-calcifying network selection algorithm ensuring new, unproven providers get a randomized chance to be selected alongside established high-reputation nodes.
-* **Cross-Verifier Revocation Protection:** One verifier cannot revoke another verifier's credential; the codebase checks signature authority on revocation notices before honoring them.
-* **X25519 Key Exchange:** Diffie-Hellman handshakes between agents for real key exchange with signed mutual responses.
-* **Working HTTP API Engine:** Built using `warp`, exposing live `/execute`, `/handshake`, `/peers`, and `/vote` endpoints wired directly into core orchestration logic.
+* **🛡️ NIST Post-Quantum Cryptography (PQC):** Native support for CRYSTALS-Dilithium5 detached digital signatures and CRYSTALS-Kyber1024 hybrid envelope encryption paired with ChaCha20Poly1305.
+* **⚡ Zero-Trust Capability Tokens & Caveats:** Dynamic, verifiable token evaluation with contextual constraints (`Expires`, `MaxExecutions`, `ValueLimit`, `PathRestricted`).
+* **🤝 Byzantine Fault Tolerant (BFT) Multi-Agent Consensus:** Threshold-based consensus vote signature checks with voter identity binding and outcome determinism verification.
+* **📜 Merkle-Chained State Audit Trails & Recovery:** Full audit log history chaining with SHA-256 Merkle tree batching, automatic persistence, and crash recovery history integrity checks (`verify_history()`).
+* **🔄 Key Rotation Lifecycle:** Built-in key rotation routines (`AgentMeshNode::rotate_key` / `PqcKeyPair::rotate`) for archived verifying key retention.
+* **🔒 Hardened Network API:** Default 2MB payload body limits to defend against resource exhaustion DoS attacks, accompanied by TLS API endpoint support.
+* **🐍 Polyglot SDK Support:** Native Rust engine (`ube-foundation`) and PyO3 Python bindings (`pip install ube-foundation`).
 
 ---
 
-## Structurally Present but Incomplete (Where You Come In)
+## Architecture Overview
 
-This is the highest-leverage place for a systems engineer or cryptographer to contribute:
-
-1. **BFT-Style Consensus Verification:** Consensus logic counts votes and checks outcome hashes, but does not yet verify the cryptographic signature of each voter key. The Byzantine fault tolerance structure is present; signature verification needs wiring.
-2. **Signed `/vote` Endpoints:** The network `/vote` route constructs and transmits vote objects with an unpopulated signature field. It requires active signing against the voter's identity key.
-3. **Handshake Peer Verification:** Peer discovery via handshake accepts identity claims but does not yet enforce signature validation on the initial response receipt.
-4. **Air-Gap Bundle Signing:** State export bundles contain Merkle roots and batch structures, but digital signature generation on the exported bundle is currently a placeholder.
-
----
-
-## Strategic Roadmap: Post-Quantum Cryptography (PQC)
-
-The codebase currently evaluates `"Dilithium5"` as a string identifier—this is a structural placeholder, not post-quantum verification. 
-
-Actual PQC integration (CRYSTALS-Dilithium, Kyber) is a core goal of this project. If you are an experienced applied cryptographer who wants to implement production PQC in Rust, this crate is ready for your contribution.
-
----
-
-## Who This Is For
-
-* **Systems & Distributed Engineers:** Who want to solve consensus, networking, and fault-tolerance problems with real adversarial stakes.
-* **Applied Cryptographers:** Who want to transition a project from "structurally ready" to "cryptographically sound"—signing, PQC, zero-knowledge proofs, and threshold schemes.
-* **AI Agent Builders:** Who need verifiable proof of what external agents executed versus what they claimed to execute.
-* **Core Contributors:** Who want ground-floor ownership on an infrastructure protocol from the start.
-
----
-
-## Why I'm Building This (Founder's Vision)
-
-Agent-to-agent trust will be one of the foundational infrastructure layers of the next decade—the way TCP/IP and HTTPS were foundational to the early web.
-
-Here is the straightforward plan:
-
-1. **Contributor License Agreement:** Contributions are submitted under the CLA in `CONTRIBUTING.md`.
-2. **Commercial Direction:** NTI is run as a commercially protected, source-available project under the founding team.
-3. **Real Ownership:** Meaningful, early contributions—code, architecture, cryptography, testing—lead directly to conversations regarding equity, founding roles, and ownership as NTI scales into an enterprise company.
+```
+                      ┌──────────────────────────────────────┐
+                      │    Enterprise AI Agent Application   │
+                      └──────────────────┬───────────────────┘
+                                         │ Action Request
+                                         ▼
+                      ┌──────────────────────────────────────┐
+                      │    NTI Trust Engine Runtime          │
+                      ├──────────────────────────────────────┤
+                      │  • Dilithium5 Signature Verification │
+                      │  • Ed25519 Identity Validation       │
+                      │  • Dynamic Caveat Interpreter        │
+                      │  • Token Revocation & Expiry Check   │
+                      └──────────────────┬───────────────────┘
+                                         │ Policy Decision
+                                         ▼
+                 ┌───────────────────────┴──────────────────────┐
+                 │                                              │
+                 ▼ Allow                                        ▼ Deny
+      ┌─────────────────────┐                       ┌─────────────────────┐
+      │  Execute Capability │                       │  Block Execution &  │
+      │  & Record Audit Log │                       │  Log Security Event │
+      └─────────────────────┘                       └─────────────────────┘
+```
 
 ---
 
-## Getting Started
+## Quickstart
+
+### Python SDK (`pip`)
 
 ```bash
-# Clone the repository
-git clone [https://github.com/abisheakp197/Neutral-Trust-Infrastructure.git](https://github.com/abisheakp197/Neutral-Trust-Infrastructure.git)
-cd Neutral-Trust-Infrastructure/ube-foundation
+cd ube-foundation
+pip install .
+```
 
-# Build project and run test suite
-cargo build
+```python
+import json
+from ube_foundation import TrustEngine, PqcKeyPair
+
+engine = TrustEngine()
+engine.grant("agent_finance", "transfer_funds")
+
+request = {
+    "id": "tx-1",
+    "actor": "agent_finance",
+    "capability": "transfer_funds",
+    "action": "execute",
+    "input": {"amount": 500},
+    "signature": None, "pqc_signature": None, "public_key": None,
+    "pqc_public_key": None, "token": None, "identity_claim": None
+}
+
+decision = json.loads(engine.evaluate(json.dumps(request)))
+print("Policy Decision:", decision["decision"]) # Output: Allow
+
+pqc = PqcKeyPair.generate()
+sig = pqc.sign(b"Authorize Trade")
+print("PQC Dilithium5 Signature Valid:", pqc.verify(b"Authorize Trade", sig))
+```
+
+### Rust Crate (`Cargo.toml`)
+
+```rust
+use ube_foundation::{TrustEngine, ActionRequest, Decision};
+use serde_json::json;
+
+let mut engine = TrustEngine::new();
+engine.grant("agent_alpha", "data_read");
+
+let req = ActionRequest {
+    id: "req-1".into(),
+    actor: "agent_alpha".into(),
+    capability: "data_read".into(),
+    action: "read".into(),
+    input: json!({}),
+    signature: None, pqc_signature: None, public_key: None,
+    pqc_public_key: None, token: None, identity_claim: None,
+};
+
+let decision = engine.evaluate(&req);
+assert_eq!(decision.decision, Decision::Allow);
+```
+
+For complete integration details, see [QUICKSTART.md](QUICKSTART.md) and [WHITEPAPER.md](WHITEPAPER.md).
+
+---
+
+## Verification & Testing
+
+Run all test suites across unit tests, adversarial fuzzing, and Python SDK bindings:
+
+```bash
+cd ube-foundation
+
+# Run Rust unit, integration, and fuzz tests
 cargo test
 
-# Run local demonstration suites
-cargo run --example capability_demo
-cargo run --example agent_demo
-cargo run --example mesh_demo
-cargo run --example trust_marketplace_demo
-cargo run --example planning_demo
+# Run Python SDK unit tests
+python3 python_tests/test_python_sdk.py
+```
+
+---
+
+## Documentation Links
+
+* [Technical Whitepaper & Architecture Specification](WHITEPAPER.md)
+* [Developer Quickstart Guide](QUICKSTART.md)
+* [Implementation Status & Audit Log](IMPLEMENTATION_STATUS.md)
+
+---
+
+## License
+
+Distributed under the MIT License. See [LICENSE.md](LICENSE.md) for details.
