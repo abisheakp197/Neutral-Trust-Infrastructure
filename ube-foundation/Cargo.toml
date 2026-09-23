@@ -3,7 +3,12 @@ name = "ube-foundation"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "ube_foundation"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
+pyo3 = { version = "0.21.2", features = ["abi3-py310"], optional = true }
 hex = "0.4.3"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
@@ -22,6 +27,10 @@ arbitrary = { version = "1.3", features = ["derive"] }
 pqcrypto-dilithium = "0.5.0"
 pqcrypto-kyber = "0.8.1"
 pqcrypto-traits = "0.3.5"
+
+[features]
+default = []
+python = ["dep:pyo3"]
 
 [dev-dependencies]
 proptest = "1.4"

@@ -1,4 +1,6 @@
 pub mod network;
+#[cfg(feature = "python")]
+pub mod python_bindings;
 
 use chacha20poly1305::{aead::{Aead, KeyInit}, ChaCha20Poly1305, Key, Nonce};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey, SigningKey, Signer};
