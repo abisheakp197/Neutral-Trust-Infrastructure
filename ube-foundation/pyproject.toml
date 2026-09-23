@@ -1,0 +1,17 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "ube-foundation"
+version = "0.1.0"
+description = "Neutral Trust Infrastructure (NTI) Python SDK for Post-Quantum Agent Security and Cryptographic Evaluation"
+authors = [{ name = "NTI Team" }]
+readme = "../README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.maturin]
+features = ["python"]
+manifest-path = "Cargo.toml"
+module-name = "ube_foundation.ube_foundation"
