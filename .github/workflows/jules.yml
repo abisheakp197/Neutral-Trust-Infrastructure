@@ -1,0 +1,45 @@
+name: Jules AI Automation Workflow
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  jules-agent:
+    name: Run Jules AI Agent
+    if: contains(github.event.comment.body, '/jules')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install maturin twine
+          npm install -g @google/jules
+
+      - name: Execute Jules Task
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Executing Jules task based on comment..."
+          jules --prompt "${{ github.event.comment.body }}"
