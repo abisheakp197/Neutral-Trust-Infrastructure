@@ -2,6 +2,13 @@
 name = "ube-foundation"
 version = "0.1.0"
 edition = "2024"
+description = "Universal Behavioral Engine Foundation: A Post-Quantum Cryptographic Trust Engine for Autonomous AI Agents."
+license-file = "LICENSE.md"
+repository = "https://github.com/aiprotocol/Neutral-Trust-Infrastructure"
+homepage = "https://github.com/aiprotocol/Neutral-Trust-Infrastructure"
+readme = "README.md"
+keywords = ["pqc", "trust-engine", "post-quantum", "ai-agents", "cryptography"]
+categories = ["cryptography", "science"]
 
 [lib]
 name = "ube_foundation"
