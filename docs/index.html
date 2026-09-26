@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neutral Trust Infrastructure (NTI) | Post-Quantum AI Agent Governance</title>
+    <meta name="description" content="Production-grade, zero-trust cryptographic governance runtime for enterprise autonomous AI agents powered by NIST CRYSTALS-Dilithium5 and Kyber1024.">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card-bg: #161b22;
+            --border: #30363d;
+            --accent: #58a6ff;
+            --accent-purple: #bc8cff;
+            --text: #c9d1d9;
+            --text-heading: #f0f6fc;
+            --code-bg: #010409;
+            --green: #3fb950;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); line-height: 1.6; padding: 0; }
+        header { background: linear-gradient(135deg, #1f242d 0%, #0d1117 100%); border-bottom: 1px solid var(--border); padding: 40px 20px; text-align: center; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+        h1 { color: var(--text-heading); font-size: 2.5rem; margin-bottom: 10px; }
+        h2 { color: var(--text-heading); font-size: 1.8rem; margin: 30px 0 15px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .tagline { font-size: 1.2rem; color: var(--accent); margin-bottom: 25px; }
+        .badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+        .badge { background: var(--card-bg); border: 1px solid var(--border); padding: 6px 14px; borderRadius: 20px; font-size: 0.85rem; font-weight: 600; color: var(--text-heading); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 30px 0; }
+        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 25px; }
+        .card h3 { color: var(--accent-purple); margin-bottom: 10px; }
+        pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 15px; overflow-x: auto; color: var(--green); font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9rem; margin: 15px 0; }
+        .cta-btn { display: inline-block; background: var(--accent); color: #000; font-weight: bold; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 10px 5px; }
+        .cta-btn-alt { display: inline-block; background: transparent; color: var(--accent); border: 1px solid var(--accent); font-weight: bold; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 10px 5px; }
+        footer { border-top: 1px solid var(--border); padding: 30px 20px; text-align: center; color: #8b949e; font-size: 0.9rem; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <h1>Neutral Trust Infrastructure (NTI)</h1>
+        <p class="tagline">Post-Quantum Cryptographic Trust & Governance Layer for Autonomous AI Agents</p>
+        <div class="badges">
+            <span class="badge" style="border-color: var(--accent-purple); color: var(--accent-purple);">PQC: NIST Dilithium5 & Kyber1024</span>
+            <span class="badge" style="border-color: var(--accent); color: var(--accent);">Crates.io: ube-foundation v0.1.0</span>
+            <span class="badge" style="border-color: var(--green); color: var(--green);">PyPI: pip install ube-foundation</span>
+            <span class="badge">PolyForm Shield License 1.0.0</span>
+        </div>
+        <div>
+            <a href="https://crates.io/crates/ube-foundation" class="cta-btn" target="_blank">View on Crates.io</a>
+            <a href="https://pypi.org/project/ube-foundation/" class="cta-btn-alt" target="_blank">View on PyPI</a>
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    <h2>⚡ Quickstart Installation</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>Python SDK</h3>
+            <pre>pip install ube-foundation</pre>
+            <p>Run full PQC financial agent security demo:</p>
+            <pre>python3 examples/enterprise_financial_agent_demo.py</pre>
+        </div>
+        <div class="card">
+            <h3>Rust Crate</h3>
+            <pre>cargo add ube-foundation</pre>
+            <p>Add to your <code>Cargo.toml</code>:</p>
+            <pre>ube-foundation = "0.1.0"</pre>
+        </div>
+    </div>
+
+    <h2>🛡️ Core Architecture & Capabilities</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>Post-Quantum Security</h3>
+            <p>NIST Level 5 <b>CRYSTALS-Dilithium5</b> detached signatures for identity & action validation, paired with Level 4 <b>CRYSTALS-Kyber1024</b> KEM envelope encryption for inter-agent state security.</p>
+        </div>
+        <div class="card">
+            <h3>Zero-Trust Capability Tokens</h3>
+            <p>Dynamic caveat evaluation with contextual constraints including expiration limits, execution counts, financial threshold limits, and path restrictions.</p>
+        </div>
+        <div class="card">
+            <h3>BFT Multi-Agent Consensus</h3>
+            <p>Threshold-based consensus vote verification with voter identity binding, deduplication defense, and deterministic execution checking.</p>
+        </div>
+        <div class="card">
+            <h3>Merkle Audit Chain Persistence</h3>
+            <p>SHA-256 Merkle chain history verification, automated JSON file persistence, and tamper-resistant crash recovery.</p>
+        </div>
+    </div>
+
+    <h2>💻 Python Quick Example</h2>
+    <pre><code>import json
+from ube_foundation import TrustEngine, PqcKeyPair
+
+# Initialize Engine & PQC Keys
+engine = TrustEngine()
+engine.grant("agent_alpha", "wire_transfer")
+pqc = PqcKeyPair()
+
+# Sign Payload with Dilithium5
+msg = b"TRANSFER $5000 USD"
+sig_hex = pqc.sign(msg)
+pub_hex = pqc.public_key_hex()
+
+# Evaluate Action Request
+req = {
+    "id": "req-1",
+    "actor": "agent_alpha",
+    "capability": "wire_transfer",
+    "action": "execute",
+    "input": {"amount": 5000},
+    "signature": None,
+    "pqc_signature": {"algorithm": "Dilithium5", "signature": list(bytes.fromhex(sig_hex))},
+    "public_key": None,
+    "pqc_public_key": {"algorithm": "Dilithium5", "key_bytes": list(bytes.fromhex(pub_hex)), "kyber_public_key_bytes": []},
+    "token": None,
+    "identity_claim": None
+}
+
+decision = json.loads(engine.evaluate(json.dumps(req)))
+print("Policy Decision:", decision["decision"]) # Output: Allow</code></pre>
+
+    <h2>📜 Commercial & Licensing</h2>
+    <div class="card">
+        <h3>PolyForm Shield License 1.0.0</h3>
+        <p><code>ube-foundation</code> is released under the <b>PolyForm Shield License 1.0.0</b>. Permitted non-competing use and development are completely free. Enterprise organizations requiring custom commercial licensing, competing product rights, or SLA support can contact the licensor for commercial licensing terms.</p>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 Neutral Trust Infrastructure (NTI). Built with Rust & PyO3. Licensed under PolyForm Shield 1.0.0.</p>
+</footer>
+
+</body>
+</html>

@@ -95,10 +95,10 @@ impl PyPqcKeyPair {
         let nonce = hex::decode(&nonce_hex)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e)))?;
         let container = crate::PqcEncryptedContainer {
-            algorithm: self.inner.algorithm.clone(),
-            encrypted_kem_key: vec![],
-            ciphertext,
+            algorithm: format!("{}-Kyber1024-ChaCha20Poly1305", self.inner.algorithm),
+            ephemeral_pqc_pk: vec![],
             nonce,
+            ciphertext,
         };
         self.inner.decrypt(&container)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Decryption error: {}", e)))
