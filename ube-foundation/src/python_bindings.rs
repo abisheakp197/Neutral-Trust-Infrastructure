@@ -50,19 +50,34 @@ impl PyPqcKeyPair {
         }
     }
 
-    pub fn sign(&self, message: &[u8]) -> Vec<u8> {
+    pub fn sign(&self, message: &[u8]) -> String {
+        let sig = self.inner.sign(message);
+        hex::encode(&sig.signature)
+    }
+
+    pub fn sign_bytes(&self, message: &[u8]) -> Vec<u8> {
         self.inner.sign(message).signature
     }
 
-    pub fn verify(&self, message: &[u8], signature_bytes: &[u8]) -> bool {
-        let sig = crate::PqcSignature {
-            algorithm: self.inner.algorithm.clone(),
-            signature: signature_bytes.to_vec(),
-        };
-        self.inner.public_key.verify(message, &sig)
+    pub fn verify(&self, message: &[u8], signature_hex: String) -> bool {
+        if let Ok(sig_bytes) = hex::decode(&signature_hex) {
+            let sig = crate::PqcSignature {
+                algorithm: self.inner.algorithm.clone(),
+                signature: sig_bytes,
+            };
+            self.inner.public_key.verify(message, &sig)
+        } else {
+            false
+        }
     }
 
-    pub fn encrypt(&self, recipient_key_bytes: &[u8], recipient_kyber_bytes: &[u8], plaintext: &[u8]) -> PyResult<Vec<u8>> {
+    pub fn encrypt(&self, plaintext: &[u8]) -> PyResult<(String, String)> {
+        let container = self.inner.encrypt(&self.inner.public_key, plaintext)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Encryption error: {}", e)))?;
+        Ok((hex::encode(&container.ciphertext), hex::encode(&container.nonce)))
+    }
+
+    pub fn encrypt_to_recipient(&self, recipient_key_bytes: &[u8], recipient_kyber_bytes: &[u8], plaintext: &[u8]) -> PyResult<Vec<u8>> {
         let recipient_pk = crate::PqcPublicKey {
             algorithm: self.inner.algorithm.clone(),
             key_bytes: recipient_key_bytes.to_vec(),
@@ -74,11 +89,30 @@ impl PyPqcKeyPair {
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Serialization error: {}", e)))
     }
 
-    pub fn decrypt(&self, encrypted_container_bytes: &[u8]) -> PyResult<Vec<u8>> {
+    pub fn decrypt(&self, ciphertext_hex: String, nonce_hex: String) -> PyResult<Vec<u8>> {
+        let ciphertext = hex::decode(&ciphertext_hex)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e)))?;
+        let nonce = hex::decode(&nonce_hex)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e)))?;
+        let container = crate::PqcEncryptedContainer {
+            algorithm: self.inner.algorithm.clone(),
+            encrypted_kem_key: vec![],
+            ciphertext,
+            nonce,
+        };
+        self.inner.decrypt(&container)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Decryption error: {}", e)))
+    }
+
+    pub fn decrypt_container(&self, encrypted_container_bytes: &[u8]) -> PyResult<Vec<u8>> {
         let container: crate::PqcEncryptedContainer = serde_json::from_slice(encrypted_container_bytes)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Deserialization error: {}", e)))?;
         self.inner.decrypt(&container)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Decryption error: {}", e)))
+    }
+
+    pub fn public_key_hex(&self) -> String {
+        hex::encode(&self.inner.public_key.key_bytes)
     }
 
     pub fn get_public_key_bytes(&self) -> Vec<u8> {
