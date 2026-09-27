@@ -7,7 +7,7 @@ on:
 jobs:
   jules-agent:
     name: Run Jules AI Agent
-    if: contains(github.event.comment.body, '/jules')
+    if: contains(github.event.comment.body, '/jules') && (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -43,4 +43,5 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           echo "Executing Jules task based on comment..."
-          jules --prompt "$COMMENT_BODY"
+          printf '%s' "$COMMENT_BODY" > /tmp/comment_body.txt
+          jules --prompt-file /tmp/comment_body.txt

@@ -4,22 +4,35 @@ This document contains ready-to-publish launch announcements for developer commu
 
 ---
 
+## The Vision: The Trust & Security Boundary for the Autonomous AI & Machine Economy
+
+In a world rapidly filling with autonomous AI agents, robots, automated financial algorithms, and smart machines operating across healthcare, finance, cloud DevOps, and physical logistics, **the fundamental unsolved problem is TRUST**:
+
+- *How do we verify an AI agent's true identity before it acts?*
+- *How do we ensure an autonomous machine never exceeds its assigned power or financial budget?*
+- *How do multi-agent systems reach consensus without being hijacked by rogue actors?*
+- *How do we guarantee an immutable audit trail when an AI makes a critical decision?*
+
+**Neutral Trust Infrastructure (NTI)** (`ube-foundation`) solves this by providing the **Universal Cryptographic Trust, Identity, Governance, and Accountability Layer** between AI intent and real-world execution, backed by quantum-resistant Post-Quantum Cryptography (PQC).
+
+---
+
 ## 1. Hacker News (`Show HN`)
 
-**Title:** Show HN: Neutral Trust Infrastructure – Post-Quantum Cryptography for AI Agents
+**Title:** Show HN: Neutral Trust Infrastructure – Trust & Governance Layer for Autonomous AI Agents
 
 **Body:**
-Hi HN! We built Neutral Trust Infrastructure (`ube-foundation`), an open-source Rust engine & Python SDK designed to provide Post-Quantum Cryptographic (PQC) zero-trust governance for autonomous AI agents.
+Hi HN! We built Neutral Trust Infrastructure (`ube-foundation`), an open-source Rust engine & Python SDK designed to provide the universal Trust, Identity, and Governance layer for autonomous AI agents, robots, and machines.
 
-**Problem:**
-As enterprises deploy autonomous AI agents to handle financial trades, healthcare records, and cloud DevOps, standard API tokens are vulnerable to prompt injection, identity spoofing, and quantum decryption attacks.
+**The Problem:**
+As AI agents and machines are given autonomy to execute financial transfers, access medical data, deploy code, and control physical systems, traditional API keys and permissions break down. There is no cryptographic trust boundary between an AI's intent and its real-world impact.
 
-**Solution:**
-`ube-foundation` secures AI agent execution with:
-- **NIST Post-Quantum Cryptography:** CRYSTALS-Dilithium5 digital signatures & CRYSTALS-Kyber1024 hybrid envelope encryption.
-- **Zero-Trust Capability Tokens:** Dynamic constraints (expiration, execution limits, value thresholds).
-- **BFT Consensus:** Threshold vote verification across multi-agent networks.
-- **Merkle Audit Chains:** Tamper-evident persistent audit logs with SHA-256 history verification.
+**The Solution:**
+`ube-foundation` provides a neutral cryptographic trust runtime:
+- **Identity & Capability Governance:** Fine-grained zero-trust token constraints (execution limits, spending caps, time limits, path restrictions).
+- **Multi-Agent BFT Consensus:** Cryptographic consensus verification for collaborative multi-agent decision-making.
+- **Immutable Merkle Audit Logs:** Cryptographically chained, tamper-evident record of every decision made by an AI agent.
+- **Quantum-Resistant Security:** Built from the ground up with NIST Level 5 CRYSTALS-Dilithium5 signatures & CRYSTALS-Kyber1024 hybrid envelope encryption.
 
 **Quickstart:**
 - Python: `pip install ube-foundation`
@@ -27,64 +40,64 @@ As enterprises deploy autonomous AI agents to handle financial trades, healthcar
 
 Links:
 - Crates.io: https://crates.io/crates/ube-foundation
-- PyPI: https://pypi.org/project/ube-foundation/
-- GitHub: https://github.com/aiprotocol/Neutral-Trust-Infrastructure
+- GitHub: https://github.com/abisheakp197/Neutral-Trust-Infrastructure
 
-We'd love your feedback on our PQC integration and architecture!
+We'd love your thoughts on building trust and security boundaries for autonomous systems!
 
 ---
 
-## 2. Reddit (`r/rust`, `r/MachineLearning`, `r/LocalLLaMA`)
+## 2. Reddit (`r/rust`, `r/MachineLearning`, `r/LocalLLaMA`, `r/ArtificialInteligence`)
 
-**Title:** Launching `ube-foundation`: A Post-Quantum Cryptographic Trust Engine for Autonomous AI Agents (Rust + Python SDK)
+**Title:** Launching `ube-foundation`: The Cryptographic Trust & Capability Governance Engine for Autonomous AI Agents & Robots
 
 **Body:**
 Hey everyone!
 
-As multi-agent AI frameworks (LangChain, CrewAI, AutoGen) become mainstream in enterprise workflows, security is shifting from perimeter firewalls to cryptographic policy enforcement.
+As autonomous AI agents and robots move from simple text chats to real-world operations (executing trades, modifying cloud infrastructure, managing supply chains), the central challenge is **Trust & Accountability**.
 
-Today we published `ube-foundation` v0.1.0 on Crates.io and PyPI under the PolyForm Shield 1.0.0 license.
+Today we published `ube-foundation` v0.1.0 on Crates.io under the PolyForm Shield 1.0.0 license to provide the cryptographic trust framework for autonomous agent systems.
 
-### Key Features:
-1. **NIST Level 5 Dilithium5 & Level 4 Kyber1024 PQC:** Full detached digital signature generation & hybrid symmetric encryption.
-2. **Zero-Trust Capability Engine:** Enforces dynamic caveats on action requests in real-time.
-3. **BFT Consensus:** Cryptographically verifies Ed25519/Dilithium5 votes across peer agent nodes.
-4. **Polyglot PyO3 Bindings:** Native C-extensions for zero-overhead Python evaluation.
+### Core Architecture:
+1. **Zero-Trust Capability Engine:** Microsecond evaluation of AI agent action requests against strict constraints (e.g. max spend $5,000, 10 executions/hr).
+2. **Multi-Agent Consensus:** Byzantine Fault Tolerant (BFT) vote verification when teams of AI agents must agree before acting.
+3. **Immutable Forensic Audit Chain:** Merkle-chained history checks to track and audit every action an AI agent performs.
+4. **Post-Quantum Cryptography (PQC):** Built on NIST-standardized Dilithium5 signatures & Kyber1024 envelope encryption to ensure un-hackable, future-proof identity.
 
-Check out the code and run the enterprise demo:
+Try it out:
 ```bash
 pip install ube-foundation
-python3 examples/enterprise_financial_agent_demo.py
+python3 ube-foundation/examples/enterprise_financial_agent_demo.py
 ```
 
-GitHub: https://github.com/aiprotocol/Neutral-Trust-Infrastructure
+GitHub: https://github.com/abisheakp197/Neutral-Trust-Infrastructure
+Crates.io: https://crates.io/crates/ube-foundation
 
-Let us know what you think!
+Let us know your feedback!
 
 ---
 
 ## 3. Twitter / X Thread
 
 **Tweet 1:**
-🚀 Introducing Neutral Trust Infrastructure (`ube-foundation`) v0.1.0!
+🤖 In a world powered by millions of autonomous AI agents, robots, and machines, how do we enforce TRUST?
 
-A production-grade, zero-trust cryptographic governance runtime engineered for enterprise autonomous AI agents.
+Introducing Neutral Trust Infrastructure (`ube-foundation`) v0.1.0:
+The universal Trust, Identity & Governance layer for AI agents.
 
-Now live on Crates.io & PyPI! 🧵👇
+Live on Crates.io & PyPI! 🧵👇
 
 **Tweet 2:**
-🛡️ Powered by NIST Post-Quantum Cryptography:
-• Level 5 CRYSTALS-Dilithium5 Digital Signatures
-• Level 4 CRYSTALS-Kyber1024 KEM Envelope Encryption
-• BFT Multi-Agent Consensus Verification
-• SHA-256 Merkle Audit Log Chaining
+🛡️ What NTI Solves for Autonomous AI:
+• Real-time zero-trust capability limits (spending caps, rate limits)
+• Multi-agent BFT consensus governance
+• Immutable Merkle audit logs for full AI accountability
+• NIST Level 5 Dilithium5 PQC quantum-resistant signatures
 
 **Tweet 3:**
-📦 Install in seconds:
-Python: `pip install ube-foundation`
-Rust: `cargo add ube-foundation`
+📦 Get started in 1 command:
+`pip install ube-foundation`
 
-Run the enterprise financial AI agent demo in 1 line:
-`python3 examples/enterprise_financial_agent_demo.py`
+Run the enterprise financial AI agent trust demo:
+`python3 ube-foundation/examples/enterprise_financial_agent_demo.py`
 
 🔗 https://crates.io/crates/ube-foundation
