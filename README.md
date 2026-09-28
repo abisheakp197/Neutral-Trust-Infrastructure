@@ -6,6 +6,8 @@
 [![PQC Standard](https://img.shields.io/badge/PQC-NIST%20Dilithium5%20%26%20Kyber1024-purple.svg)]()
 [![SDKs](https://img.shields.io/badge/SDK-Rust%20%26%20Python-orange.svg)]()
 
+> **TL;DR:** NTI is a zero-trust, post-quantum cryptographic security runtime for autonomous AI agents built in Rust with Python bindings (`pip install ube-foundation`). It enforces real-time capability guardrails, BFT multi-agent consensus, and NIST Dilithium5 + Kyber1024 encryption in under 1 millisecond.
+
 ---
 
 ## What is Neutral Trust Infrastructure?
