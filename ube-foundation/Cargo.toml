@@ -2,12 +2,13 @@
 name = "ube-foundation"
 version = "0.1.0"
 edition = "2024"
-description = "Universal Behavioral Engine Foundation: A Post-Quantum Cryptographic Trust Engine for Autonomous AI Agents."
+description = "Neutral Trust Infrastructure (NTI) - Zero-trust post-quantum security engine for autonomous AI agents with NIST Dilithium5 + Kyber1024 cryptography."
 license-file = "LICENSE.md"
-repository = "https://github.com/aiprotocol/Neutral-Trust-Infrastructure"
-homepage = "https://github.com/aiprotocol/Neutral-Trust-Infrastructure"
+repository = "https://github.com/abisheakp197/ube"
+homepage = "https://abisheakp197.github.io/ube/"
+documentation = "https://github.com/abisheakp197/ube#readme"
 readme = "README.md"
-keywords = ["pqc", "trust-engine", "post-quantum", "ai-agents", "cryptography"]
+keywords = ["pqc", "trust-engine", "post-quantum", "ai-agents", "cryptography", "zero-trust", "bft-consensus"]
 categories = ["cryptography", "science"]
 
 [lib]

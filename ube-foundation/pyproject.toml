@@ -5,11 +5,17 @@ build-backend = "maturin"
 [project]
 name = "ube-foundation"
 version = "0.1.0"
-description = "Neutral Trust Infrastructure (NTI) Python SDK for Post-Quantum Agent Security and Cryptographic Evaluation"
+description = "Neutral Trust Infrastructure (NTI) - Zero-trust post-quantum security runtime & governance for AI agents"
 authors = [{ name = "NTI Team" }]
 readme = "README.md"
+keywords = ["pqc", "post-quantum", "ai-agents", "zero-trust", "cryptography", "security", "governance"]
 requires-python = ">=3.10"
 dependencies = []
+
+[project.urls]
+Homepage = "https://abisheakp197.github.io/ube/"
+Documentation = "https://github.com/abisheakp197/ube#readme"
+Repository = "https://github.com/abisheakp197/ube"
 
 [tool.maturin]
 features = ["python"]
