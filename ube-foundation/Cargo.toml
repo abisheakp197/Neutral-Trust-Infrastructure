@@ -1,6 +1,6 @@
 [package]
 name = "ube-foundation"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 description = "Neutral Trust Infrastructure (NTI) - Zero-trust post-quantum security engine for autonomous AI agents with NIST Dilithium5 + Kyber1024 cryptography."
 license-file = "LICENSE.md"
