@@ -16,40 +16,39 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             artifact-name: wheels-x86_64-linux-gnu
-            maturin-args: "--release --out dist --manylinux 2_28"
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             artifact-name: wheels-aarch64-linux-gnu
-            maturin-args: "--release --out dist --manylinux 2_28"
           - target: universal2-apple-darwin
             os: macos-14
             artifact-name: wheels-universal2-apple-darwin
-            maturin-args: "--release --out dist"
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             artifact-name: wheels-x86_64-pc-windows-msvc
-            maturin-args: "--release --out dist"
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust target
-        run: rustup target add ${{ matrix.target }}
+      - name: Install Rust targets for macOS universal2
+        if: matrix.target == 'universal2-apple-darwin'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
-      - name: Install aarch64 cross-toolchain
+      - name: Set up QEMU for aarch64 cross-compilation
         if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: ${{ matrix.maturin-args }}
+          args: --release --out dist
           working-directory: ube-foundation
-          container: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && 'off' || 'auto' }}
+          manylinux: "2_28"
+        env:
+          CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
+          ASFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
