@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-wheels:
-    name: Build wheels on ${{ matrix.os }} (${{ matrix.target }})
+    name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -17,8 +17,14 @@ jobs:
             os: ubuntu-latest
             artifact-name: wheels-x86_64-linux-gnu
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             artifact-name: wheels-aarch64-linux-gnu
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            artifact-name: wheels-x86_64-linux-musl
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-24.04-arm
+            artifact-name: wheels-aarch64-linux-musl
           - target: universal2-apple-darwin
             os: macos-14
             artifact-name: wheels-universal2-apple-darwin
@@ -29,26 +35,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust targets for macOS universal2
-        if: matrix.target == 'universal2-apple-darwin'
-        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-
-      - name: Set up QEMU for aarch64 cross-compilation
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
           args: --release --out dist
           working-directory: ube-foundation
-          manylinux: "2_28"
-        env:
-          CFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
-          ASFLAGS_aarch64_unknown_linux_gnu: "-D__ARM_ARCH=8"
+          manylinux: auto
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
