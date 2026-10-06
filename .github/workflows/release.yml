@@ -15,16 +15,13 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact-name: wheels-x86_64-unknown-linux-gnu
+            artifact-name: wheels-x86_64-linux-gnu
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            artifact-name: wheels-aarch64-unknown-linux-gnu
-          - target: x86_64-apple-darwin
-            os: macos-13
-            artifact-name: wheels-x86_64-apple-darwin
-          - target: aarch64-apple-darwin
+            artifact-name: wheels-aarch64-linux-gnu
+          - target: universal2-apple-darwin
             os: macos-14
-            artifact-name: wheels-aarch64-apple-darwin
+            artifact-name: wheels-universal2-apple-darwin
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             artifact-name: wheels-x86_64-pc-windows-msvc
