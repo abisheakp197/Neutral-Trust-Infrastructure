@@ -1,7 +1,7 @@
 # Neutral Trust Infrastructure (NTI)
 ### Post-Quantum Cryptographic Trust & Governance Layer for Autonomous Agent Ecosystems
 
-[![License: PolyForm Shield 1.0.0](https://img.shields.io/badge/License-PolyForm%20Shield%201.0.0-purple.svg)](LICENSE.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
 [![PQC Standard](https://img.shields.io/badge/PQC-NIST%20Dilithium5%20%26%20Kyber1024-purple.svg)]()
 [![SDKs](https://img.shields.io/badge/SDK-Rust%20%26%20Python-orange.svg)]()
@@ -146,4 +146,4 @@ python3 python_tests/test_python_sdk.py
 
 ## License
 
-Distributed under the PolyForm Shield License 1.0.0. See [LICENSE.md](LICENSE.md) for full terms and conditions.
+Apache License 2.0. See LICENSE.

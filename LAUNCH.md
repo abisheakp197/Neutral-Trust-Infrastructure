@@ -55,7 +55,7 @@ Hey everyone!
 
 As autonomous AI agents and robots move from simple text chats to real-world operations (executing trades, modifying cloud infrastructure, managing supply chains), the central challenge is **Trust & Accountability**.
 
-Today we published `ube-foundation` v0.1.0 on Crates.io under the PolyForm Shield 1.0.0 license to provide the cryptographic trust framework for autonomous agent systems.
+Today we published `ube-foundation` v0.1.0 on Crates.io under the Apache License 2.0 to provide the cryptographic trust framework for autonomous agent systems.
 
 ### Core Architecture:
 1. **Zero-Trust Capability Engine:** Microsecond evaluation of AI agent action requests against strict constraints (e.g. max spend $5,000, 10 executions/hr).
