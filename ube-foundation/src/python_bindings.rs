@@ -6,6 +6,12 @@ pub struct PyTrustEngine {
     pub inner: TrustEngine,
 }
 
+impl Default for PyTrustEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[pymethods]
 impl PyTrustEngine {
     #[new]
@@ -39,6 +45,12 @@ impl PyTrustEngine {
 #[pyclass(name = "PqcKeyPair")]
 pub struct PyPqcKeyPair {
     pub inner: PqcKeyPair,
+}
+
+impl Default for PyPqcKeyPair {
+    fn default() -> Self {
+        Self::generate()
+    }
 }
 
 #[pymethods]

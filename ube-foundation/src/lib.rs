@@ -1352,6 +1352,16 @@ pub struct DistributedRegistry {
     pub state_root: String,
 }
 
+impl DistributedRegistry {
+    pub fn sync_state(&mut self, bundle: AirGapBundle) -> Result<(), String> {
+        if !bundle.verify() {
+            return Err("Air-gap bundle integrity or signature verification failed".into());
+        }
+        self.state_root = bundle.state_merkle_root;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod pqc_internal_tests {
     use super::*;
@@ -1364,15 +1374,5 @@ mod pqc_internal_tests {
         let container = alice.encrypt(&bob.public_key, msg).unwrap();
         let decrypted = bob.decrypt(&container).unwrap();
         assert_eq!(decrypted, msg);
-    }
-}
-
-impl DistributedRegistry {
-    pub fn sync_state(&mut self, bundle: AirGapBundle) -> Result<(), String> {
-        if !bundle.verify() {
-            return Err("Air-gap bundle integrity or signature verification failed".into());
-        }
-        self.state_root = bundle.state_merkle_root;
-        Ok(())
     }
 }
