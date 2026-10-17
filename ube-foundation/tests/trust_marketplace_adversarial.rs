@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod trust_marketplace_tests {
+    use chrono::{Duration, Utc};
+    use ed25519_dalek::{Signer, SigningKey};
     use ube_foundation::*;
-    use chrono::{Utc, Duration};
-    use ed25519_dalek::{SigningKey, Signer};
 
     fn setup_verifier(id: &str) -> (SigningKey, VerifierProfile) {
         let mut bytes = [0u8; 32];
@@ -54,7 +54,10 @@ mod trust_marketplace_tests {
             timestamp: Utc::now(),
         });
 
-        let logic = SelectionLogic { required_standards: vec![], min_reputation: 0.0 };
+        let logic = SelectionLogic {
+            required_standards: vec![],
+            min_reputation: 0.0,
+        };
         let (selected, _) = layer.select_provider("test", &logic);
 
         // Protocol Invariant: High rep MUST win despite B's payment
@@ -92,9 +95,18 @@ mod trust_marketplace_tests {
             "reason": notice.reason,
             "timestamp": notice.timestamp,
         });
-        let sig = v_b_key.sign(&serde_json::to_vec(&msg).unwrap()).to_bytes().to_vec();
+        let sig = v_b_key
+            .sign(&serde_json::to_vec(&msg).unwrap())
+            .to_bytes()
+            .to_vec();
 
-        layer.revocations.insert(evidence_hash.into(), RevocationNotice { signature: sig, ..notice });
+        layer.revocations.insert(
+            evidence_hash.into(),
+            RevocationNotice {
+                signature: sig,
+                ..notice
+            },
+        );
 
         // Logic check: verify_credential should still return true (revocation ignored because it's from wrong signer)
         // Note: For this test, we assume the signature on 'cred' itself is validly checked elsewhere
@@ -109,9 +121,15 @@ mod trust_marketplace_tests {
             "issued_at": cred.issued_at,
             "expires_at": cred.expires_at,
         });
-        cred.signature = v_a_key.sign(&serde_json::to_vec(&cred_msg).unwrap()).to_bytes().to_vec();
+        cred.signature = v_a_key
+            .sign(&serde_json::to_vec(&cred_msg).unwrap())
+            .to_bytes()
+            .to_vec();
 
-        assert!(layer.verify_credential(&cred), "Revocation from Verifier B should have been rejected");
+        assert!(
+            layer.verify_credential(&cred),
+            "Revocation from Verifier B should have been rejected"
+        );
     }
 
     #[test]
@@ -121,25 +139,34 @@ mod trust_marketplace_tests {
         // 9 Established Providers
         for i in 0..9 {
             let id = format!("old_{}", i);
-            layer.providers.insert(id.clone(), ProviderProfile {
-                provider_id: id,
-                service_metadata: serde_json::json!({}),
-                credentials: vec![],
-                reputation_score: 0.99,
-                total_outcomes: 100,
-            });
+            layer.providers.insert(
+                id.clone(),
+                ProviderProfile {
+                    provider_id: id,
+                    service_metadata: serde_json::json!({}),
+                    credentials: vec![],
+                    reputation_score: 0.99,
+                    total_outcomes: 100,
+                },
+            );
         }
 
         // 1 New Provider
-        layer.providers.insert("newbie".into(), ProviderProfile {
-            provider_id: "newbie".into(),
-            service_metadata: serde_json::json!({}),
-            credentials: vec![],
-            reputation_score: 0.50, // lower rep
-            total_outcomes: 0,      // < 10
-        });
+        layer.providers.insert(
+            "newbie".into(),
+            ProviderProfile {
+                provider_id: "newbie".into(),
+                service_metadata: serde_json::json!({}),
+                credentials: vec![],
+                reputation_score: 0.50, // lower rep
+                total_outcomes: 0,      // < 10
+            },
+        );
 
-        let logic = SelectionLogic { required_standards: vec![], min_reputation: 0.0 };
+        let logic = SelectionLogic {
+            required_standards: vec![],
+            min_reputation: 0.0,
+        };
 
         let mut newbie_picked = false;
         // Run 200 times - with 10% chance, the newbie should eventually be picked
@@ -150,7 +177,10 @@ mod trust_marketplace_tests {
                 break;
             }
         }
-        assert!(newbie_picked, "New provider should have been picked in probation slot");
+        assert!(
+            newbie_picked,
+            "New provider should have been picked in probation slot"
+        );
     }
 
     #[test]
@@ -163,21 +193,22 @@ mod trust_marketplace_tests {
             total_outcomes: 9, // One outcome away from 10
         };
 
-        let _logic = SelectionLogic { required_standards: vec![], min_reputation: 0.0 };
-        let eligible = vec![&profile];
+        let _logic = SelectionLogic {
+            required_standards: vec![],
+            min_reputation: 0.0,
+        };
+        let eligible = [&profile];
 
         // This is tricky to test purely because of randomness,
         // but we can check the filter logic used in tie_break
-        let unproven: Vec<&&ProviderProfile> = eligible.iter()
-            .filter(|p| p.total_outcomes < 10)
-            .collect();
+        let unproven: Vec<&&ProviderProfile> =
+            eligible.iter().filter(|p| p.total_outcomes < 10).collect();
         assert_eq!(unproven.len(), 1);
 
         profile.total_outcomes = 10;
-        let eligible2 = vec![&profile];
-        let unproven2: Vec<&&ProviderProfile> = eligible2.iter()
-            .filter(|p| p.total_outcomes < 10)
-            .collect();
+        let eligible2 = [&profile];
+        let unproven2: Vec<&&ProviderProfile> =
+            eligible2.iter().filter(|p| p.total_outcomes < 10).collect();
         assert_eq!(unproven2.len(), 0); // Graduated
     }
 }

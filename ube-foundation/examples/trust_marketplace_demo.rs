@@ -1,6 +1,6 @@
+use chrono::{Duration, Utc};
+use ed25519_dalek::{Signer, SigningKey};
 use ube_foundation::*;
-use chrono::{Utc, Duration};
-use ed25519_dalek::{SigningKey, Signer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,12 +15,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 2. Setup UBE Recommendation Layer
     let mut rec_layer = RecommendationLayer::new();
-    rec_layer.verifiers.insert(verifier_id.to_string(), VerifierProfile {
-        id: verifier_id.to_string(),
-        tier: VerifierTier::Foundational,
-        public_key: verifier_pub_key.to_bytes().to_vec(),
-        reputation: 1.0,
-    });
+    rec_layer.verifiers.insert(
+        verifier_id.to_string(),
+        VerifierProfile {
+            id: verifier_id.to_string(),
+            tier: VerifierTier::Foundational,
+            public_key: verifier_pub_key.to_bytes().to_vec(),
+            reputation: 1.0,
+        },
+    );
 
     // 3. Create a Provider (CloudService-X)
     let provider_id = "cloud-service-x";
@@ -82,7 +85,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         user_feedback: Some(5.0),
     };
     rec_layer.update_reputation(outcome);
-    println!("Updated Reputation for {}: {:.4}", provider_id, rec_layer.providers[provider_id].reputation_score);
+    println!(
+        "Updated Reputation for {}: {:.4}",
+        provider_id, rec_layer.providers[provider_id].reputation_score
+    );
 
     // 7. Revocation Test
     println!("\nStep 3: Auditor revokes SOC2 credential (security breach detected)");
@@ -101,7 +107,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut notice = notice;
     notice.signature = verifier_signing_key.sign(&notice_bytes).to_bytes().to_vec();
 
-    rec_layer.revocations.insert(soc2_evidence.to_string(), notice);
+    rec_layer
+        .revocations
+        .insert(soc2_evidence.to_string(), notice);
 
     let (selected_after, audit_after) = rec_layer.select_provider("task-002", &user_logic);
     if selected_after.is_none() {

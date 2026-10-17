@@ -1,10 +1,10 @@
-use ube_foundation::*;
-use ed25519_dalek::{SigningKey, Signer};
-use rand::{RngCore, SeedableRng};
+use ed25519_dalek::{Signer, SigningKey};
 use rand::rngs::StdRng;
+use rand::{RngCore, SeedableRng};
 use serde_json::json;
 use std::sync::{Arc, Mutex};
 use std::thread;
+use ube_foundation::*;
 
 /// 1. High-Throughput Concurrent Multi-Threaded Stress Test
 #[test]
@@ -172,7 +172,10 @@ fn test_byzantine_sybil_and_divergent_hash_attacks() {
             outcome_hash: outcome_hash.into(),
             signature: vec![],
         };
-        vote.signature = signing_key.sign(&vote.message_to_sign()).to_bytes().to_vec();
+        vote.signature = signing_key
+            .sign(&vote.message_to_sign())
+            .to_bytes()
+            .to_vec();
         split_votes.push(vote);
     }
 

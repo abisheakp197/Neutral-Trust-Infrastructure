@@ -1,7 +1,7 @@
-use ube_foundation::*;
-use ed25519_dalek::{SigningKey, Signer};
+use ed25519_dalek::{Signer, SigningKey};
 use rand::rngs::OsRng;
 use serde_json::json;
+use ube_foundation::*;
 
 #[tokio::test]
 async fn test_adversarial_replay_attack() {
@@ -47,7 +47,9 @@ async fn test_pqc_signature_and_encryption_flow() {
 
     // 2. PQC Encryption/Decryption test
     let plaintext = b"Top secret post-quantum payload";
-    let encrypted = keypair_alice.encrypt(&keypair_bob.public_key, plaintext).unwrap();
+    let encrypted = keypair_alice
+        .encrypt(&keypair_bob.public_key, plaintext)
+        .unwrap();
     let decrypted = keypair_bob.decrypt(&encrypted).unwrap();
     assert_eq!(decrypted, plaintext);
 }
@@ -102,7 +104,10 @@ async fn test_adversarial_consensus_threshold_bypass() {
         outcome_hash: "hash-1".into(),
         signature: vec![],
     };
-    vote.signature = signing_key.sign(&vote.message_to_sign()).to_bytes().to_vec();
+    vote.signature = signing_key
+        .sign(&vote.message_to_sign())
+        .to_bytes()
+        .to_vec();
 
     let proposal = ConsensusProposal {
         request_id: "prop-1".into(),
@@ -118,18 +123,16 @@ async fn test_adversarial_consensus_threshold_bypass() {
     // Unregistered voter with empty signature should fail even at threshold 1
     let unauth_proposal = ConsensusProposal {
         request_id: "prop-1".into(),
-        votes: vec![
-            ConsensusVote {
-                voter_id: "unregistered-attacker".into(),
-                request_id: "prop-1".into(),
-                decision: Some(PolicyDecision {
-                    decision: Decision::Allow,
-                    reason: "ok".into(),
-                }),
-                outcome_hash: "hash-1".into(),
-                signature: vec![],
-            }
-        ],
+        votes: vec![ConsensusVote {
+            voter_id: "unregistered-attacker".into(),
+            request_id: "prop-1".into(),
+            decision: Some(PolicyDecision {
+                decision: Decision::Allow,
+                reason: "ok".into(),
+            }),
+            outcome_hash: "hash-1".into(),
+            signature: vec![],
+        }],
     };
     assert!(!engine.verify_consensus(&unauth_proposal, 1));
 }
@@ -170,5 +173,8 @@ async fn test_adversarial_identity_spoofing() {
     // The engine should deny the request because of code hash mismatch
     let result = engine.evaluate(&req);
     assert_eq!(result.decision, Decision::Deny);
-    assert!(result.reason.contains("identity sig mismatch") || result.reason.contains("code hash mismatch"));
+    assert!(
+        result.reason.contains("identity sig mismatch")
+            || result.reason.contains("code hash mismatch")
+    );
 }

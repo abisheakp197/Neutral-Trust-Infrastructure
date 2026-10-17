@@ -25,7 +25,10 @@ fn main() {
     let shared_a = secret_a.diffie_hellman(&x25519_dalek::PublicKey::from(peer_ephemeral_bytes));
 
     println!("Handshake Complete!");
-    println!("Shared Secret (A side): {}", hex::encode(shared_a.as_bytes()));
+    println!(
+        "Shared Secret (A side): {}",
+        hex::encode(shared_a.as_bytes())
+    );
     println!("Shared Secret (B side): {}", hex::encode(shared_b));
     assert_eq!(shared_a.as_bytes(), &shared_b);
 
@@ -54,8 +57,16 @@ fn main() {
         signature: vec![],
     };
 
-    let sig_a = node_a.signing_key.sign(&vote_a.message_to_sign()).to_bytes().to_vec();
-    let sig_b = node_b.signing_key.sign(&vote_b.message_to_sign()).to_bytes().to_vec();
+    let sig_a = node_a
+        .signing_key
+        .sign(&vote_a.message_to_sign())
+        .to_bytes()
+        .to_vec();
+    let sig_b = node_b
+        .signing_key
+        .sign(&vote_b.message_to_sign())
+        .to_bytes()
+        .to_vec();
 
     let mut trust = TrustEngine::default();
     trust.register_voter_key("agent-a", node_a.verifying_key.to_bytes().to_vec());
@@ -95,7 +106,15 @@ fn main() {
     let threshold = 2;
     let verified = trust.verify_consensus(&proposal, threshold);
 
-    println!("Consensus Result (Threshold {}/3): {}", threshold, if verified { "PASS (Majority Reached)" } else { "FAIL" });
+    println!(
+        "Consensus Result (Threshold {}/3): {}",
+        threshold,
+        if verified {
+            "PASS (Majority Reached)"
+        } else {
+            "FAIL"
+        }
+    );
     assert!(verified);
 
     println!("\n--- Multi-Agent Mesh Demo Complete ---");

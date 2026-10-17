@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use chrono::{Duration, Utc};
     use ube_foundation::*;
-    use chrono::{Utc, Duration};
 
     #[tokio::test]
     async fn test_capability_token_expiry() {
@@ -13,7 +13,10 @@ mod tests {
             id: "valid".into(),
             root_actor: "alice".into(),
             capability: "test".into(),
-            caveats: vec![Caveat { location: None, condition: CaveatType::Expires(future_date) }],
+            caveats: vec![Caveat {
+                location: None,
+                condition: CaveatType::Expires(future_date),
+            }],
             signature: vec![],
         };
 
@@ -21,7 +24,10 @@ mod tests {
             id: "expired".into(),
             root_actor: "alice".into(),
             capability: "test".into(),
-            caveats: vec![Caveat { location: None, condition: CaveatType::Expires(past_date) }],
+            caveats: vec![Caveat {
+                location: None,
+                condition: CaveatType::Expires(past_date),
+            }],
             signature: vec![],
         };
 
@@ -97,9 +103,17 @@ mod tests {
         struct TestModule(&'static str);
         #[async_trait::async_trait]
         impl Module for TestModule {
-            fn name(&self) -> &str { self.0 }
-            fn capabilities(&self) -> Vec<String> { vec!["compute".into()] }
-            async fn execute(&self, _a: &str, _i: serde_json::Value) -> Result<serde_json::Value, String> {
+            fn name(&self) -> &str {
+                self.0
+            }
+            fn capabilities(&self) -> Vec<String> {
+                vec!["compute".into()]
+            }
+            async fn execute(
+                &self,
+                _a: &str,
+                _i: serde_json::Value,
+            ) -> Result<serde_json::Value, String> {
                 Ok(serde_json::json!({"result": 42}))
             }
         }
@@ -157,9 +171,18 @@ mod tests {
         // Recover engine from file
         let recovered_engine = TrustEngine::load_from_file(&file_path).unwrap();
 
-        assert_eq!(recovered_engine.capabilities.get("alice").unwrap().contains("admin_access"), true);
-        assert!(recovered_engine.revocation_list.contains("token-revoked-99"));
-        assert_eq!(recovered_engine.voter_keys.get("voter-alice").unwrap(), &vec![1, 2, 3, 4]);
+        assert!(recovered_engine
+            .capabilities
+            .get("alice")
+            .unwrap()
+            .contains("admin_access"));
+        assert!(recovered_engine
+            .revocation_list
+            .contains("token-revoked-99"));
+        assert_eq!(
+            recovered_engine.voter_keys.get("voter-alice").unwrap(),
+            &vec![1, 2, 3, 4]
+        );
         assert_eq!(recovered_engine.events.len(), 1);
         assert!(recovered_engine.verify_history());
 

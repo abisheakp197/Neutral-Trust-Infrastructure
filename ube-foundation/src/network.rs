@@ -1,7 +1,7 @@
 use crate::*;
-use warp::Filter;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use warp::Filter;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PeerInfo {
@@ -32,15 +32,13 @@ impl DistributedNode {
 
         // GET /peers - List known peers
         let node_peers = self.clone();
-        let get_peers = warp::get()
-            .and(warp::path("peers"))
-            .and_then(move || {
-                let node = node_peers.clone();
-                async move {
-                    let peers = node.known_peers.lock().await;
-                    Ok::<_, warp::Rejection>(warp::reply::json(&*peers))
-                }
-            });
+        let get_peers = warp::get().and(warp::path("peers")).and_then(move || {
+            let node = node_peers.clone();
+            async move {
+                let peers = node.known_peers.lock().await;
+                Ok::<_, warp::Rejection>(warp::reply::json(&*peers))
+            }
+        });
 
         let body_limit = warp::body::content_length_limit(1024 * 1024 * 2); // 2MB Max Payload Limit
 
@@ -70,8 +68,12 @@ impl DistributedNode {
                 let node = node.clone();
                 async move {
                     match node.mesh_node.respond_to_handshake(&req) {
-                        Ok((resp, _shared_secret)) => Ok::<_, warp::Rejection>(warp::reply::json(&resp)),
-                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": "Handshake rejected", "details": e}))),
+                        Ok((resp, _shared_secret)) => {
+                            Ok::<_, warp::Rejection>(warp::reply::json(&resp))
+                        }
+                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(
+                            &serde_json::json!({"error": "Handshake rejected", "details": e}),
+                        )),
                     }
                 }
             });
@@ -94,7 +96,7 @@ impl DistributedNode {
                             name: "Network Vote".into(),
                             capability: proposal.request.capability.clone(),
                             constraints: serde_json::Value::Object(serde_json::Map::new()),
-                        }
+                        },
                     );
 
                     let mut vote = RemoteVote {
@@ -121,7 +123,10 @@ impl DistributedNode {
                         signature: vec![],
                     };
 
-                    let sig = node.mesh_node.signing_key.sign(&consensus_vote.message_to_sign());
+                    let sig = node
+                        .mesh_node
+                        .signing_key
+                        .sign(&consensus_vote.message_to_sign());
                     vote.signature = sig.to_bytes().to_vec();
                     Ok::<_, warp::Rejection>(warp::reply::json(&vote))
                 }
@@ -131,18 +136,21 @@ impl DistributedNode {
         warp::serve(routes).run(([127, 0, 0, 1], port)).await;
     }
 
-    pub async fn start_api_tls(self: Arc<Self>, port: u16, cert_path: impl AsRef<std::path::Path>, key_path: impl AsRef<std::path::Path>) {
+    pub async fn start_api_tls(
+        self: Arc<Self>,
+        port: u16,
+        cert_path: impl AsRef<std::path::Path>,
+        key_path: impl AsRef<std::path::Path>,
+    ) {
         let node = self.clone();
 
-        let get_peers = warp::get()
-            .and(warp::path("peers"))
-            .and_then(move || {
-                let node = node.clone();
-                async move {
-                    let peers = node.known_peers.lock().await;
-                    Ok::<_, warp::Rejection>(warp::reply::json(&*peers))
-                }
-            });
+        let get_peers = warp::get().and(warp::path("peers")).and_then(move || {
+            let node = node.clone();
+            async move {
+                let peers = node.known_peers.lock().await;
+                Ok::<_, warp::Rejection>(warp::reply::json(&*peers))
+            }
+        });
 
         let body_limit = warp::body::content_length_limit(1024 * 1024 * 2);
 
@@ -171,8 +179,12 @@ impl DistributedNode {
                 let node = node_hs.clone();
                 async move {
                     match node.mesh_node.respond_to_handshake(&req) {
-                        Ok((resp, _shared_secret)) => Ok::<_, warp::Rejection>(warp::reply::json(&resp)),
-                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": "Handshake rejected", "details": e}))),
+                        Ok((resp, _shared_secret)) => {
+                            Ok::<_, warp::Rejection>(warp::reply::json(&resp))
+                        }
+                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(
+                            &serde_json::json!({"error": "Handshake rejected", "details": e}),
+                        )),
                     }
                 }
             });
@@ -193,7 +205,7 @@ impl DistributedNode {
                             name: "Network Vote".into(),
                             capability: proposal.request.capability.clone(),
                             constraints: serde_json::Value::Object(serde_json::Map::new()),
-                        }
+                        },
                     );
 
                     let mut vote = RemoteVote {
@@ -220,7 +232,10 @@ impl DistributedNode {
                         signature: vec![],
                     };
 
-                    let sig = node.mesh_node.signing_key.sign(&consensus_vote.message_to_sign());
+                    let sig = node
+                        .mesh_node
+                        .signing_key
+                        .sign(&consensus_vote.message_to_sign());
                     vote.signature = sig.to_bytes().to_vec();
                     Ok::<_, warp::Rejection>(warp::reply::json(&vote))
                 }
@@ -239,7 +254,8 @@ impl DistributedNode {
         let (req, _secret) = self.mesh_node.initiate_handshake();
         let client = reqwest::Client::new();
 
-        let resp = client.post(format!("{}/handshake", endpoint))
+        let resp = client
+            .post(format!("{}/handshake", endpoint))
             .json(&req)
             .send()
             .await
@@ -268,13 +284,16 @@ impl DistributedNode {
             }
 
             let mut peers = self.known_peers.lock().await;
-            peers.insert(handshake_resp.responder_id.clone(), PeerInfo {
-                id: handshake_resp.responder_id,
-                endpoint,
-                public_key: handshake_resp.responder_public_key,
-                capabilities: vec![], // Would be populated via a follow-up info request
-                last_seen: chrono::Utc::now(),
-            });
+            peers.insert(
+                handshake_resp.responder_id.clone(),
+                PeerInfo {
+                    id: handshake_resp.responder_id,
+                    endpoint,
+                    public_key: handshake_resp.responder_public_key,
+                    capabilities: vec![], // Would be populated via a follow-up info request
+                    last_seen: chrono::Utc::now(),
+                },
+            );
             Ok(())
         } else {
             Err("Handshake failed".into())
@@ -289,9 +308,17 @@ pub struct NetworkModule {
 
 #[async_trait::async_trait]
 impl Module for NetworkModule {
-    fn name(&self) -> &str { &self.endpoint }
-    fn capabilities(&self) -> Vec<String> { vec![self.capability.clone()] }
-    async fn execute(&self, action: &str, input: serde_json::Value) -> Result<serde_json::Value, String> {
+    fn name(&self) -> &str {
+        &self.endpoint
+    }
+    fn capabilities(&self) -> Vec<String> {
+        vec![self.capability.clone()]
+    }
+    async fn execute(
+        &self,
+        action: &str,
+        input: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         let client = reqwest::Client::new();
         // In a real network, this request would be signed by the MeshNode
         let req = ActionRequest {
@@ -308,7 +335,8 @@ impl Module for NetworkModule {
             identity_claim: None,
         };
 
-        let resp = client.post(format!("{}/execute", self.endpoint))
+        let resp = client
+            .post(format!("{}/execute", self.endpoint))
             .json(&req)
             .send()
             .await

@@ -1,9 +1,17 @@
+#![allow(unsafe_op_in_unsafe_fn)]
+
+use crate::{ActionRequest, PqcKeyPair, TrustEngine};
 use pyo3::prelude::*;
-use crate::{TrustEngine, ActionRequest, PqcKeyPair};
 
 #[pyclass(name = "TrustEngine")]
 pub struct PyTrustEngine {
     pub inner: TrustEngine,
+}
+
+impl Default for PyTrustEngine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[pymethods]
@@ -28,17 +36,25 @@ impl PyTrustEngine {
     }
 
     pub fn evaluate(&self, req_json: String) -> PyResult<String> {
-        let req: ActionRequest = serde_json::from_str(&req_json)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Invalid ActionRequest JSON: {}", e)))?;
+        let req: ActionRequest = serde_json::from_str(&req_json).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Invalid ActionRequest JSON: {}", e))
+        })?;
         let decision = self.inner.evaluate(&req);
-        serde_json::to_string(&decision)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Failed to serialize decision: {}", e)))
+        serde_json::to_string(&decision).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Failed to serialize decision: {}", e))
+        })
     }
 }
 
 #[pyclass(name = "PqcKeyPair")]
 pub struct PyPqcKeyPair {
     pub inner: PqcKeyPair,
+}
+
+impl Default for PyPqcKeyPair {
+    fn default() -> Self {
+        Self::generate()
+    }
 }
 
 #[pymethods]
@@ -72,8 +88,12 @@ impl PyPqcKeyPair {
     }
 
     pub fn encrypt(&self, plaintext: &[u8]) -> PyResult<(String, String, String)> {
-        let container = self.inner.encrypt(&self.inner.public_key, plaintext)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Encryption error: {}", e)))?;
+        let container = self
+            .inner
+            .encrypt(&self.inner.public_key, plaintext)
+            .map_err(|e| {
+                pyo3::exceptions::PyValueError::new_err(format!("Encryption error: {}", e))
+            })?;
         Ok((
             hex::encode(&container.ciphertext),
             hex::encode(&container.nonce),
@@ -81,40 +101,59 @@ impl PyPqcKeyPair {
         ))
     }
 
-    pub fn encrypt_to_recipient(&self, recipient_key_bytes: &[u8], recipient_kyber_bytes: &[u8], plaintext: &[u8]) -> PyResult<Vec<u8>> {
+    pub fn encrypt_to_recipient(
+        &self,
+        recipient_key_bytes: &[u8],
+        recipient_kyber_bytes: &[u8],
+        plaintext: &[u8],
+    ) -> PyResult<Vec<u8>> {
         let recipient_pk = crate::PqcPublicKey {
             algorithm: self.inner.algorithm.clone(),
             key_bytes: recipient_key_bytes.to_vec(),
             kyber_public_key_bytes: recipient_kyber_bytes.to_vec(),
         };
-        let container = self.inner.encrypt(&recipient_pk, plaintext)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Encryption error: {}", e)))?;
-        serde_json::to_vec(&container)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Serialization error: {}", e)))
+        let container = self.inner.encrypt(&recipient_pk, plaintext).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Encryption error: {}", e))
+        })?;
+        serde_json::to_vec(&container).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Serialization error: {}", e))
+        })
     }
 
-    pub fn decrypt(&self, ciphertext_hex: String, nonce_hex: String, ephemeral_pqc_pk_hex: String) -> PyResult<Vec<u8>> {
-        let ciphertext = hex::decode(&ciphertext_hex)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e)))?;
-        let nonce = hex::decode(&nonce_hex)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e)))?;
-        let ephemeral_pqc_pk = hex::decode(&ephemeral_pqc_pk_hex)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e)))?;
+    pub fn decrypt(
+        &self,
+        ciphertext_hex: String,
+        nonce_hex: String,
+        ephemeral_pqc_pk_hex: String,
+    ) -> PyResult<Vec<u8>> {
+        let ciphertext = hex::decode(&ciphertext_hex).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e))
+        })?;
+        let nonce = hex::decode(&nonce_hex).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e))
+        })?;
+        let ephemeral_pqc_pk = hex::decode(&ephemeral_pqc_pk_hex).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Hex decode error: {}", e))
+        })?;
         let container = crate::PqcEncryptedContainer {
             algorithm: format!("{}-Kyber1024-ChaCha20Poly1305", self.inner.algorithm),
             ephemeral_pqc_pk,
             nonce,
             ciphertext,
         };
-        self.inner.decrypt(&container)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Decryption error: {}", e)))
+        self.inner.decrypt(&container).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Decryption error: {}", e))
+        })
     }
 
     pub fn decrypt_container(&self, encrypted_container_bytes: &[u8]) -> PyResult<Vec<u8>> {
-        let container: crate::PqcEncryptedContainer = serde_json::from_slice(encrypted_container_bytes)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Deserialization error: {}", e)))?;
-        self.inner.decrypt(&container)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("Decryption error: {}", e)))
+        let container: crate::PqcEncryptedContainer =
+            serde_json::from_slice(encrypted_container_bytes).map_err(|e| {
+                pyo3::exceptions::PyValueError::new_err(format!("Deserialization error: {}", e))
+            })?;
+        self.inner.decrypt(&container).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Decryption error: {}", e))
+        })
     }
 
     pub fn public_key_hex(&self) -> String {
