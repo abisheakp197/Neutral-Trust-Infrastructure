@@ -1,7 +1,7 @@
+use ed25519_dalek::{Signer, SigningKey};
 use ube_foundation::{
     ActionRequest, AutonomousAgent, CapabilityToken, Caveat, Orchestrator, TrustEngine,
 };
-use ed25519_dalek::{Signer, SigningKey};
 
 #[tokio::main]
 async fn main() -> Result<(), String> {
@@ -50,12 +50,10 @@ async fn main() -> Result<(), String> {
         id: "token-123".into(),
         root_actor: "user-alice".into(),
         capability: "file_management".into(),
-        caveats: vec![
-            Caveat {
-                location: None,
-                condition: ube_foundation::CaveatType::Expires("2026-12-31T23:59:59Z".into()),
-            }
-        ],
+        caveats: vec![Caveat {
+            location: None,
+            condition: ube_foundation::CaveatType::Expires("2026-12-31T23:59:59Z".into()),
+        }],
         signature: Vec::new(),
     };
 

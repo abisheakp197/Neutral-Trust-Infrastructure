@@ -1,10 +1,10 @@
-use ube_foundation::*;
 use serde_json::Value;
+use ube_foundation::*;
 
 #[test]
 fn test_capability_token_garbage_verification() {
     let dummy_key = [0u8; 32];
-    
+
     // Test with empty signature
     let token = CapabilityToken {
         id: "test".to_string(),
@@ -55,7 +55,7 @@ fn test_caveat_interpreter_edge_cases() {
         condition: CaveatType::Expires("not-a-date".to_string()),
     };
     let _ = CaveatInterpreter::verify_all(&[caveat], &request, &engine);
-    
+
     // Test with empty string
     let caveat = Caveat {
         location: None,

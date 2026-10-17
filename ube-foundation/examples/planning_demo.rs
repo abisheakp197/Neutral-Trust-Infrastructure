@@ -1,6 +1,6 @@
 use ube_foundation::{
     ActionRequest, AutonomousAgent, AutonomousPlan, IntentPolicy, Orchestrator, PlanStep,
-    SystemModule, TrustEngine, TaskStatus,
+    SystemModule, TaskStatus, TrustEngine,
 };
 
 #[tokio::main]
@@ -77,7 +77,8 @@ async fn main() -> Result<(), String> {
         }),
     });
 
-    let mut failing_plan = AutonomousPlan::new("fail-project".into(), "Attempt restricted write".into());
+    let mut failing_plan =
+        AutonomousPlan::new("fail-project".into(), "Attempt restricted write".into());
     failing_plan.add_step(PlanStep {
         id: "fail-step".into(),
         description: "Write to restricted file".into(),
