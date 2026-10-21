@@ -147,3 +147,51 @@ python3 python_tests/test_python_sdk.py
 ## License
 
 Apache License 2.0. See LICENSE.
+
+---
+
+## Architecture
+
+```mermaid
+graph TD
+    subgraph Python_SDK["Python SDK Layer"]
+        PyApp["Python Application"]
+        PyEngine["PyTrustEngine"]
+        PyKeyPair["PyPqcKeyPair"]
+        PyApp -->|"evaluates requests & signs"| PyEngine
+        PyApp -->|"manages PQC keys"| PyKeyPair
+    end
+
+    subgraph PyO3_Layer["PyO3 Binding Layer (python_bindings.rs)"]
+        PyModule["ube_foundation PyO3 Module"]
+        PyEngine -->|"delegates to inner Rust struct"| PyModule
+        PyKeyPair -->|"delegates to inner Rust struct"| PyModule
+    end
+
+    subgraph Rust_Core["Rust Core Engine (lib.rs)"]
+        TrustEngine["TrustEngine"]
+        CaveatInterp["CaveatInterpreter"]
+        Orchestrator["Orchestrator & AutonomousAgent"]
+        AuditTrail["Merkle Audit Trail"]
+
+        PyModule --> TrustEngine
+        TrustEngine -->|"evaluates policy & caveats"| CaveatInterp
+        TrustEngine -->|"appends immutable events"| AuditTrail
+        Orchestrator -->|"verifies policy before execution"| TrustEngine
+    end
+
+    subgraph Crypto_Engine["Post-Quantum Cryptographic Engine"]
+        Dilithium["Dilithium5 / ML-DSA-87 (Digital Signatures)"]
+        Kyber["Kyber1024 / ML-KEM-1024 (Key Encapsulation)"]
+        ChaCha["ChaCha20Poly1305 (AEAD Encryption)"]
+        Ed25519["Ed25519 (Identity & Capability Tokens)"]
+        Sha256["Sha256 (Merkle Tree Root Hashes)"]
+
+        TrustEngine -->|"verifies signatures"| Dilithium
+        TrustEngine -->|"verifies token signatures"| Ed25519
+        TrustEngine -->|"computes event hashes"| Sha256
+        PyKeyPair -->|"signs & verifies"| Dilithium
+        PyKeyPair -->|"hybrid key encapsulation"| Kyber
+        Kyber -->|"symmetric encryption"| ChaCha
+    end
+```
