@@ -1,3 +1,5 @@
+[![NTI Verified](https://img.shields.io/badge/NTI_Score-100%2F100-brightgreen)](https://nti-registry.vercel.app)
+
 # Neutral Trust Infrastructure (NTI)
 ### Post-Quantum Cryptographic Trust & Governance Layer for Autonomous Agent Ecosystems
 
