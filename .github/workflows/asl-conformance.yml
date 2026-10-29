@@ -1,0 +1,41 @@
+name: ASL Conformance Suite
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  asl-conformance:
+    name: Run ASL Conformance Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout NTI Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install NTI Local Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install maturin
+          pip install -e ./ube-foundation
+
+      - name: Clone ASL Conformance Kit
+        run: |
+          git clone https://github.com/Raja549h/asl-conformance-kit.git
+
+      - name: Execute ASL Conformance Suite
+        run: |
+          python asl-conformance-kit/conformance/verify_vectors.py
