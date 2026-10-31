@@ -1,0 +1,102 @@
+name: Issuer and quorum regression harness
+
+on:
+  push:
+    branches: ["fix/issuer-quorum-security"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  patched-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.90.0 --profile minimal
+      - name: Test core library and all integration suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p harness-results
+          rustc +1.90.0 -Vv > harness-results/toolchain.txt
+          sha256sum ube-foundation/Cargo.lock ube-foundation/tests/nti_conformance_regressions.rs > harness-results/SHA256SUMS.txt
+          cargo +1.90.0 test --locked --manifest-path ube-foundation/Cargo.toml --lib --tests -- --nocapture 2>&1 | tee harness-results/rust-tests.log
+          cargo +1.90.0 build --locked --manifest-path ube-foundation/Cargo.toml 2>&1 | tee harness-results/rust-build.log
+          cargo +1.90.0 check --locked --manifest-path ube-foundation/Cargo.toml --features python 2>&1 | tee harness-results/python-check.log
+      - name: Build and install native Python wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "maturin==1.9.6"
+          RUSTUP_TOOLCHAIN=1.90.0 maturin build --locked --manifest-path ube-foundation/Cargo.toml --features python --interpreter python --out dist 2>&1 | tee harness-results/python-wheel.log
+          python -m pip install dist/*.whl
+          python -c "import ube_foundation; assert hasattr(ube_foundation.TrustEngine(), 'register_issuer_key')"
+      - name: Run Python SDK tests with native bindings required
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' 2>&1 | tee harness-results/python-tests.log
+          import importlib.util
+          import unittest
+          spec = importlib.util.spec_from_file_location("sdk_tests", "ube-foundation/python_tests/test_python_sdk.py")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          assert module.HAS_NATIVE_BINDINGS, "Native bindings must load; fallback tests are not acceptable"
+          result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromModule(module))
+          assert result.testsRun > 0 and result.wasSuccessful()
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: core-security-harness-results
+          path: harness-results/
+          if-no-files-found: error
+
+  baseline-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: candidate
+      - uses: actions/checkout@v4
+        with:
+          repository: abisheakp197/Neutral-Trust-Infrastructure
+          ref: 308fd1c95f2c2f975e8b6b6c5e7ccba0e4d7b203
+          path: baseline
+          persist-credentials: false
+      - run: rustup toolchain install 1.90.0 --profile minimal
+      - name: Reproduce original assertion failures without changing baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C baseline rev-parse HEAD)" = "308fd1c95f2c2f975e8b6b6c5e7ccba0e4d7b203"
+          cp candidate/ube-foundation/tests/nti_conformance_regressions.rs baseline/ube-foundation/tests/nti_conformance_regressions.rs
+          mkdir -p baseline-results
+          set +e
+          cargo +1.90.0 test --locked --manifest-path baseline/ube-foundation/Cargo.toml --test nti_conformance_regressions -- --nocapture 2>&1 | tee baseline-results/cargo.log
+          cargo_status=${PIPESTATUS[0]}
+          set -e
+          test "$cargo_status" = 101
+          python3 - <<'PY'
+          from pathlib import Path
+          log = Path("baseline-results/cargo.log").read_text()
+          assert "test result: FAILED. 0 passed; 2 failed;" in log
+          for case in ("unsigned_capability_cannot_grant_authority", "required_quorum_blocks_dispatch_when_one_module_is_available"):
+              assert f"test {case} ... FAILED" in log
+          print("Both baseline assertion failures reproduced after compilation.")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: original-baseline-control
+          path: baseline-results/
+          if-no-files-found: error
+

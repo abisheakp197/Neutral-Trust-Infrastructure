@@ -1,15 +1,21 @@
 #[cfg(test)]
 mod tests {
     use chrono::{Duration, Utc};
+    use ed25519_dalek::{Signer, SigningKey};
     use ube_foundation::*;
 
     #[tokio::test]
     async fn test_capability_token_expiry() {
-        let engine = TrustEngine::default();
+        let mut engine = TrustEngine::default();
+        let issuer = SigningKey::from_bytes(&[42; 32]);
+        engine
+            .register_issuer_key("alice", issuer.verifying_key().to_bytes().to_vec())
+            .unwrap();
+        engine.grant("alice", "test");
         let future_date = (Utc::now() + Duration::days(1)).to_rfc3339();
         let past_date = (Utc::now() - Duration::days(1)).to_rfc3339();
 
-        let valid_token = CapabilityToken {
+        let mut valid_token = CapabilityToken {
             id: "valid".into(),
             root_actor: "alice".into(),
             capability: "test".into(),
@@ -20,7 +26,7 @@ mod tests {
             signature: vec![],
         };
 
-        let expired_token = CapabilityToken {
+        let mut expired_token = CapabilityToken {
             id: "expired".into(),
             root_actor: "alice".into(),
             capability: "test".into(),
@@ -31,6 +37,14 @@ mod tests {
             signature: vec![],
         };
 
+        valid_token.signature = issuer
+            .sign(&valid_token.message_to_sign())
+            .to_bytes()
+            .to_vec();
+        expired_token.signature = issuer
+            .sign(&expired_token.message_to_sign())
+            .to_bytes()
+            .to_vec();
         let req_valid = ActionRequest {
             id: "1".into(),
             actor: "bob".into(),
@@ -66,8 +80,13 @@ mod tests {
     #[test]
     fn test_token_revocation() {
         let mut engine = TrustEngine::default();
+        let issuer = SigningKey::from_bytes(&[42; 32]);
+        engine
+            .register_issuer_key("alice", issuer.verifying_key().to_bytes().to_vec())
+            .unwrap();
+        engine.grant("alice", "test");
         let token_id = "token-123";
-        let token = CapabilityToken {
+        let mut token = CapabilityToken {
             id: token_id.into(),
             root_actor: "alice".into(),
             capability: "test".into(),
@@ -75,6 +94,7 @@ mod tests {
             signature: vec![],
         };
 
+        token.signature = issuer.sign(&token.message_to_sign()).to_bytes().to_vec();
         let req = ActionRequest {
             id: "1".into(),
             actor: "bob".into(),

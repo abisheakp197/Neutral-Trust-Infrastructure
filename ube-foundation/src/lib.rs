@@ -92,7 +92,7 @@ impl CapabilityToken {
             return false;
         };
         public_key
-            .verify(&self.message_to_sign(), &signature)
+            .verify_strict(&self.message_to_sign(), &signature)
             .is_ok()
     }
 }
@@ -343,6 +343,9 @@ pub struct TrustEngineState {
     pub capabilities: BTreeMap<String, BTreeSet<String>>,
     /// Registered expected code identity hashes per agent.
     pub expected_code_hashes: BTreeMap<String, String>,
+    /// Trusted capability issuer keys, configured locally rather than supplied by requests.
+    #[serde(default)]
+    pub issuer_keys: BTreeMap<String, Vec<u8>>,
     /// Registered validator voter Ed25519 public keys.
     pub voter_keys: BTreeMap<String, Vec<u8>>,
     /// Revocation list of invalidated capability token IDs.
@@ -362,6 +365,8 @@ pub struct TrustEngine {
     pub capabilities: BTreeMap<String, BTreeSet<String>>,
     /// Expected agent code source hashes.
     pub expected_code_hashes: BTreeMap<String, String>,
+    /// Trusted capability issuer keys. Issuers also need a local capability grant.
+    pub issuer_keys: BTreeMap<String, Vec<u8>>,
     /// Registered validator public keys.
     pub voter_keys: BTreeMap<String, Vec<u8>>,
     /// Token revocation set.
@@ -456,6 +461,7 @@ impl TrustEngine {
         Self {
             capabilities: BTreeMap::new(),
             expected_code_hashes: BTreeMap::new(),
+            issuer_keys: BTreeMap::new(),
             voter_keys: BTreeMap::new(),
             revocation_list: BTreeSet::new(),
             events: Vec::new(),
@@ -476,6 +482,7 @@ impl TrustEngine {
         TrustEngineState {
             capabilities: self.capabilities.clone(),
             expected_code_hashes: self.expected_code_hashes.clone(),
+            issuer_keys: self.issuer_keys.clone(),
             voter_keys: self.voter_keys.clone(),
             revocation_list: self.revocation_list.clone(),
             events: self.events.clone(),
@@ -500,6 +507,7 @@ impl TrustEngine {
         let engine = Self {
             capabilities: state.capabilities,
             expected_code_hashes: state.expected_code_hashes,
+            issuer_keys: state.issuer_keys,
             voter_keys: state.voter_keys,
             revocation_list: state.revocation_list,
             events: state.events,
@@ -530,6 +538,26 @@ impl TrustEngine {
     pub fn register_expected_hash(&mut self, agent_id: impl Into<String>, hash: impl Into<String>) {
         self.expected_code_hashes
             .insert(agent_id.into(), hash.into());
+    }
+
+    /// Configures an issuer key through the trusted administrative API.
+    /// This does not grant authority: grant the issuer each capability it may issue.
+    pub fn register_issuer_key(
+        &mut self,
+        issuer: impl Into<String>,
+        public_key_bytes: Vec<u8>,
+    ) -> Result<(), String> {
+        let bytes: &[u8; 32] = public_key_bytes
+            .as_slice()
+            .try_into()
+            .map_err(|_| "Issuer key must contain 32 bytes".to_string())?;
+        let key =
+            VerifyingKey::from_bytes(bytes).map_err(|_| "Invalid issuer public key".to_string())?;
+        if key.is_weak() {
+            return Err("Weak issuer public key".into());
+        }
+        self.issuer_keys.insert(issuer.into(), public_key_bytes);
+        Ok(())
     }
 
     /// Explicitly grants a capability permission to an actor.
@@ -682,6 +710,28 @@ impl TrustEngine {
         }
 
         if let Some(token) = &request.token {
+            let Some(issuer_key) = self.issuer_keys.get(&token.root_actor) else {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "untrusted token issuer".into(),
+                };
+            };
+            if !token.verify(issuer_key) {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "invalid token signature".into(),
+                };
+            }
+            if !self
+                .capabilities
+                .get(&token.root_actor)
+                .is_some_and(|caps| caps.contains(&token.capability))
+            {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "issuer lacks capability".into(),
+                };
+            }
             if self.revocation_list.contains(&token.id) {
                 return PolicyDecision {
                     decision: Decision::Deny,
@@ -1291,49 +1341,43 @@ impl Orchestrator {
             return Err(format!("Denied: {}", decision.reason));
         }
 
-        // If local consensus is required, use local modules
-        if self.consensus_threshold > 1 && self.modules.len() >= self.consensus_threshold {
+        // A required threshold is mandatory; never fall back to single dispatch.
+        if self.consensus_threshold > 1 {
             use futures::future::join_all;
             let matching_modules: Vec<&Box<dyn Module>> = self
                 .modules
                 .values()
                 .filter(|m| m.capabilities().contains(&request.capability))
                 .collect();
-
-            if matching_modules.len() >= self.consensus_threshold {
-                let mut futures = Vec::new();
-                for module in matching_modules.iter().take(self.consensus_threshold) {
-                    futures.push(module.execute(&request.action, request.input.clone()));
-                }
-
-                let results = join_all(futures).await;
-                let mut valid_results = Vec::new();
-                for val in results.into_iter().flatten() {
-                    valid_results.push(val);
-                }
-
-                if valid_results.len() >= self.consensus_threshold {
-                    let Ok(first_bytes) = serde_json::to_vec(&valid_results[0]) else {
-                        return Err("Consensus failed: serialization error".into());
-                    };
-                    let first_hash = hex::encode(Sha256::digest(first_bytes));
-                    for res in &valid_results[1..] {
-                        let Ok(current_bytes) = serde_json::to_vec(res) else {
-                            return Err("Consensus failed: serialization error".into());
-                        };
-                        let current_hash = hex::encode(Sha256::digest(current_bytes));
-                        if !bool::from(current_hash.as_bytes().ct_eq(first_hash.as_bytes())) {
-                            return Err(
-                                "Consensus failed: modules returned diverging results".into()
-                            );
-                        }
-                    }
-                    return Ok(valid_results[0].clone());
+            if matching_modules.len() < self.consensus_threshold {
+                return Err("Consensus failed: insufficient eligible modules".into());
+            }
+            let results = join_all(
+                matching_modules
+                    .iter()
+                    .take(self.consensus_threshold)
+                    .map(|module| module.execute(&request.action, request.input.clone())),
+            )
+            .await;
+            let valid_results: Vec<serde_json::Value> = results
+                .into_iter()
+                .collect::<Result<_, _>>()
+                .map_err(|e| format!("Consensus failed: module error: {}", e))?;
+            let first_bytes = serde_json::to_vec(&valid_results[0])
+                .map_err(|_| "Consensus failed: serialization error".to_string())?;
+            let first_hash = Sha256::digest(first_bytes);
+            for result in &valid_results[1..] {
+                let bytes = serde_json::to_vec(result)
+                    .map_err(|_| "Consensus failed: serialization error".to_string())?;
+                let hash = Sha256::digest(bytes);
+                if !bool::from(hash.as_slice().ct_eq(first_hash.as_slice())) {
+                    return Err("Consensus failed: modules returned diverging results".into());
                 }
             }
+            return Ok(valid_results[0].clone());
         }
 
-        // Default to first matching module if no threshold/local consensus failed
+        // Single-module execution is permitted only when no higher threshold is required.
         let module = self
             .modules
             .values()
