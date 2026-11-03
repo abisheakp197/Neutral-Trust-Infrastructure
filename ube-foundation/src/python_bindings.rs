@@ -27,6 +27,16 @@ impl PyTrustEngine {
         self.inner.grant(&actor, &capability);
     }
 
+    pub fn register_issuer_key(
+        &mut self,
+        issuer: String,
+        public_key_bytes: Vec<u8>,
+    ) -> PyResult<()> {
+        self.inner
+            .register_issuer_key(issuer, public_key_bytes)
+            .map_err(pyo3::exceptions::PyValueError::new_err)
+    }
+
     pub fn revoke_token(&mut self, token_id: String) {
         self.inner.revoke_token(&token_id);
     }
