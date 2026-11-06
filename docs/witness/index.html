@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NTI Witness Evidence Package</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --border:#30363d; --accent:#58a6ff; --text:#c9d1d9; --head:#f0f6fc; --green:#3fb950; --amber:#d29922; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); line-height:1.6;
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:900px; margin:0 auto; padding:40px 20px 80px; }
+  h1 { color:var(--head); font-size:2rem; margin:0 0 6px; }
+  h2 { color:var(--head); font-size:1.25rem; margin:34px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  .sub { color:var(--accent); margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:18px 20px; margin:14px 0; }
+  code, a.mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  code { background:#010409; padding:2px 6px; border-radius:4px; font-size:.9em; }
+  ul { padding-left:20px; }
+  li { margin:6px 0; }
+  .ok { color:var(--green); font-weight:600; }
+  .warn { color:var(--amber); font-weight:600; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:.95rem; }
+  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--head); }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NTI Witness Evidence Package</h1>
+  <div class="sub">Fixed verification location for external witnesses</div>
+
+  <div class="card">
+    <p>This directory is the stable location where external witnesses (such as
+    <strong>HORIZON SHIELD</strong>) recompute and verify the cryptographic state of
+    Neutral Trust Infrastructure. Every artifact is an input to be re-derived, not a
+    claim to be accepted.</p>
+  </div>
+
+  <h2>Artifacts</h2>
+  <ul>
+    <li><a href="MANIFEST.json">MANIFEST.json</a> — SHA-256 of the NTI test scripts and the external ASL conformance vectors, pinned to exact commits.</li>
+    <li><a href="RESULTS.json">RESULTS.json</a> — recorded suite outcomes (scope below).</li>
+    <li><a href="PUBLIC_KEY.pem">PUBLIC_KEY.pem</a> — Ed25519 public key.</li>
+    <li><a href="SIGNATURE.sig">SIGNATURE.sig</a> — 64-byte Ed25519 signature over <code>RESULTS.json || MANIFEST.json</code>.</li>
+    <li><a href="verify.sh">verify.sh</a> — self-contained verifier.</li>
+    <li><a href="README.md">README.md</a> — full documentation.</li>
+    <li><a href="vendor/S4_S5_S6_PROVENANCE.md">vendor/S4_S5_S6_PROVENANCE.md</a> — S4/S5/S6 provenance.</li>
+  </ul>
+
+  <h2>How to verify</h2>
+  <div class="card">
+    <p><code>cd conformance/witness &amp;&amp; ./verify.sh /path/to/Neutral-Trust-Infrastructure</code></p>
+    <p>By hand:</p>
+    <p><code>cat RESULTS.json MANIFEST.json &gt; /tmp/to_sign.bin</code><br>
+       <code>openssl pkeyutl -verify -pubin -inkey PUBLIC_KEY.pem -rawin -in /tmp/to_sign.bin -sigfile SIGNATURE.sig</code></p>
+  </div>
+
+  <h2>Results scope</h2>
+  <table>
+    <tr><th>Suite</th><th>Result</th></tr>
+    <tr><td>NTI Rust tests (rustc 1.90.0)</td><td class="ok">33 passed, 0 failed</td></tr>
+    <tr><td>NTI Python SDK tests (native bindings)</td><td class="ok">2 passed, 0 failed</td></tr>
+    <tr><td>ASL conformance vectors (external kit)</td><td class="ok">45 cases, 0 failures</td></tr>
+    <tr><td>S4 / S5 / S6</td><td class="warn">NOT RUN — scripts not obtainable</td></tr>
+  </table>
+
+  <div class="card">
+    <p><strong>Limits you must not overlook.</strong></p>
+    <ul>
+      <li><strong>S4/S5/S6 were not run.</strong> They are invariants of the separate Agent Safety
+      Layer (ASL) project; their scripts live only in the private, non-Apache-2.0 repository
+      <code>Raja549h/helper</code> (HTTP 404), so they could not be vendored. No result here covers them.</li>
+      <li><strong>The ASL vector run tests ASL fixtures, not NTI code.</strong></li>
+      <li><strong>The public key has no external trust anchor.</strong> A valid signature proves the two
+      JSON files are intact, not who produced them.</li>
+    </ul>
+  </div>
+
+  <p style="margin-top:28px;color:#8b949e;font-size:.9rem;">
+    This page was created by an AI agent (OpenHands) on behalf of the repository owner.
+  </p>
+</div>
+</body>
+</html>

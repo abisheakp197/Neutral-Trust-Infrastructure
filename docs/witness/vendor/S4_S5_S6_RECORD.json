@@ -1,0 +1,28 @@
+{
+  "record_version": 1,
+  "subject": "S4/S5/S6 test scripts",
+  "vendoring_decision": "vendor into NTI under Apache-2.0",
+  "vendoring_outcome": "BLOCKED",
+  "reason": "No S4/S5/S6 script is reachable from this environment; the only holding repository is private and is not Apache-2.0 licensed.",
+  "evidence": {
+    "nti_repo_contains_scripts": false,
+    "public_asl_kit_contains_scripts": false,
+    "public_asl_kit_test_files_found": 0,
+    "asl_source_repo": "Raja549h/helper",
+    "asl_source_repo_http_status": 404,
+    "asl_source_commit": "8e8961b733e49cc0ce814132a89b399aa982b097",
+    "github_code_search_for_test_tripwire_detects_scan": 0,
+    "public_asl_kit_license": "Copyright (c) 2026 The ASL Project. All rights reserved.",
+    "public_asl_kit_is_apache_2_0": false
+  },
+  "invariants": {
+    "S4": "Thresholds are quiet on ordinary traffic, but the tripwire still fires.",
+    "S5": "Every kill path still fires the complete cascade.",
+    "S6": "Not defined in the public ASL conformance kit revision."
+  },
+  "sha256": null,
+  "unblock_conditions": [
+    "Copyright holder grants Apache-2.0 relicensing for the S4/S5/S6 test scripts.",
+    "Read access to Raja549h/helper is provided, or a public permissive ASL release including the test suite appears."
+  ]
+}

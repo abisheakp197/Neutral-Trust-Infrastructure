@@ -1,0 +1,108 @@
+{
+  "results_version": 2,
+  "generated_at_utc": "2026-11-06T16:57:13Z",
+  "repository": "abisheakp197/Neutral-Trust-Infrastructure",
+  "commit": "d343be979a0607031860d74b3cd604842f74a97a",
+  "overall_status": "PASSED",
+  "environment": {
+    "toolchain": "rustc 1.90.0 (1159e78c4 2025-09-14), cargo 1.90.0",
+    "native_python_bindings": "built and loaded (maturin 1.9.6)"
+  },
+  "suites": [
+    {
+      "id": "NTI-rust-tests",
+      "status": "PASSED",
+      "total_passed": 33,
+      "total_failed": 0,
+      "detail": [
+        {
+          "binary": "unittests src/lib.rs",
+          "passed": 1,
+          "failed": 0
+        },
+        {
+          "binary": "tests/adversarial_fuzz.rs",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "binary": "tests/adversarial_suite.rs",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "binary": "tests/core_tests.rs",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "binary": "tests/enterprise_adversarial_stress_suite.rs",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "binary": "tests/nti_conformance_regressions.rs",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "binary": "tests/robustness_fuzz.rs",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "binary": "tests/security_patch_tests.rs",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "binary": "tests/trust_marketplace_adversarial.rs",
+          "passed": 4,
+          "failed": 0
+        }
+      ]
+    },
+    {
+      "id": "NTI-python-tests",
+      "status": "PASSED",
+      "module": "ube-foundation/python_tests/test_python_sdk.py",
+      "ran": 2,
+      "failures": 0,
+      "errors": 0,
+      "native_bindings": true
+    },
+    {
+      "id": "NTI-rust-build",
+      "status": "PASSED",
+      "detail": "ok"
+    },
+    {
+      "id": "NTI-rust-check-python-feature",
+      "status": "PASSED",
+      "detail": "ok"
+    },
+    {
+      "id": "ASL-vectors",
+      "status": "PASSED_EXTERNALLY",
+      "cases_checked": 45,
+      "failures": 0,
+      "note": "Run against the public ASL kit; tests ASL fixtures, not NTI code."
+    },
+    {
+      "id": "S4",
+      "status": "NOT_RUN",
+      "reason": "Script is in the private repository Raja549h/helper; not obtainable."
+    },
+    {
+      "id": "S5",
+      "status": "NOT_RUN",
+      "reason": "Script is in the private repository Raja549h/helper; not obtainable."
+    },
+    {
+      "id": "S6",
+      "status": "NOT_RUN",
+      "reason": "No S6 definition exists in the public ASL conformance kit."
+    }
+  ],
+  "statement": "The NTI Rust and Python suites passed under rustc 1.90.0 with native bindings. S4/S5/S6 were NOT run and are not covered by any result here. The ASL vector run tests ASL fixtures, not NTI code."
+}
