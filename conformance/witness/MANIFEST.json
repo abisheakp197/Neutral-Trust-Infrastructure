@@ -1,0 +1,134 @@
+{
+  "manifest_version": 1,
+  "generated_at_utc": "2026-11-06T16:32:12Z",
+  "repository": "abisheakp197/Neutral-Trust-Infrastructure",
+  "commit": "d343be979a0607031860d74b3cd604842f74a97a",
+  "branch": "conformance/witness-package",
+  "purpose": "Cryptographic evidence package for independent external witnesses to recompute and verify NTI's conformance state.",
+  "signature": {
+    "algorithm": "Ed25519",
+    "signed_artifacts": [
+      "MANIFEST.json",
+      "RESULTS.json"
+    ],
+    "signature_file": "SIGNATURE.sig",
+    "public_key_file": "PUBLIC_KEY.pem",
+    "signing_script": "verify.sh",
+    "note": "The signature is produced over the raw bytes of RESULTS.json followed by the raw bytes of MANIFEST.json, in that order, concatenated with no separator."
+  },
+  "nti_test_scripts": [
+    {
+      "path": "ube-foundation/tests/nti_conformance_regressions.rs",
+      "sha256": "ff6b3e8bdf88d750f186f4e6a57afd7ec0da891cb002c5dccab197fc51becb7e",
+      "description": "NTI conformance regression suite (issuer authority + quorum enforcement)"
+    },
+    {
+      "path": "ube-foundation/tests/core_tests.rs",
+      "sha256": "e13a23e324262fcb65429767dbb519e833714d62a4509d5523d9e2f72e66ab61",
+      "description": "NTI core engine tests"
+    },
+    {
+      "path": "ube-foundation/tests/adversarial_suite.rs",
+      "sha256": "d4536b2c7c00313b67c219e2ce92c80a87c035c51da91cf557e360012231ebdd",
+      "description": "NTI adversarial suite"
+    },
+    {
+      "path": "ube-foundation/tests/adversarial_fuzz.rs",
+      "sha256": "325f4aca981b2c93f3c3d974add6953736be2313d95495da9e20c2758ccd14e8",
+      "description": "NTI adversarial fuzz harness"
+    },
+    {
+      "path": "ube-foundation/tests/robustness_fuzz.rs",
+      "sha256": "184c6847fbd418bd9f172231d7124ccc67cdcf2cb52e037b6314db95b1e5438d",
+      "description": "NTI robustness fuzz harness"
+    },
+    {
+      "path": "ube-foundation/tests/security_patch_tests.rs",
+      "sha256": "52df5a6bc84aa34c0df7036c6a418987f7a61a23d17656c9d302d1fb4967284e",
+      "description": "NTI security patch regression tests"
+    },
+    {
+      "path": "ube-foundation/tests/trust_marketplace_adversarial.rs",
+      "sha256": "846b51a6ff8645f30e6ff6df3075304e95dd9afd34f831a4711d19351907e03d",
+      "description": "NTI trust-marketplace adversarial suite"
+    },
+    {
+      "path": "ube-foundation/tests/enterprise_adversarial_stress_suite.rs",
+      "sha256": "c107e7fa629f630663ff20b8d0aeb60c41cc56c8ad05648cc7db3eaefd6cb584",
+      "description": "NTI enterprise adversarial stress suite"
+    },
+    {
+      "path": "ube-foundation/python_tests/test_python_sdk.py",
+      "sha256": "0c88b846b62cd69de2ab3c6c382ca2c7cdb6f5cdab3a2cbe2d622330b0495093",
+      "description": "NTI Python SDK tests (native bindings required)"
+    },
+    {
+      "path": "ube-foundation/Cargo.toml",
+      "sha256": "11a42eba316fa3e9a8a85e66dff3cdc492c4a6bb2cc3d947b7d36ec34f87fc28",
+      "description": "NTI Rust crate manifest (pins ed25519-dalek, pqcrypto-dilithium)"
+    },
+    {
+      "path": "ube-foundation/Cargo.lock",
+      "sha256": "3fe85cec7e96773c65a3d37c7640e8a69a5202dc2e0f95fe532661f12613833e",
+      "description": "NTI locked dependency graph"
+    },
+    {
+      "path": ".github/workflows/asl-conformance.yml",
+      "sha256": "5c8575d16c031873d84c28c0c29b518df570056d85b96b0979ec7b9b2d3429a2",
+      "description": "CI job that runs the external ASL vector verifier"
+    },
+    {
+      "path": ".github/workflows/issuer-quorum-regressions.yml",
+      "sha256": "87975c4ad9a0fa4b753b419a25c3a3d49c4e723d328ff4e014fb0f147b827730",
+      "description": "CI job that runs the conformance regression suite"
+    }
+  ],
+  "external_conformance_vectors": {
+    "source_repository": "Raja549h/asl-conformance-kit",
+    "source_commit": "dfd37c920b0dcd36d1bef5b46a917b731ab811e3",
+    "note": "These are the only public conformance test vectors referenced by NTI's CI. They are not vendored into NTI; hashes are pinned here so a witness can detect drift.",
+    "files": [
+      {
+        "path": "conformance/vectors/canonical.json",
+        "sha256": "f78ebb1bbeebaceaec56de7ef0992d15a7ec05ea1a0e1cb75443bcb45278147d"
+      },
+      {
+        "path": "conformance/vectors/hashing.json",
+        "sha256": "a9a9bde40c0a39152556a77d237b8f8959eca60f8a1838ed08cf9148635ee6b8"
+      },
+      {
+        "path": "conformance/vectors/tokens.json",
+        "sha256": "87edda9bce2ce3d500adaf5845298cb8911acb7f75904455da0da580adf781f1"
+      },
+      {
+        "path": "conformance/vectors/audit.json",
+        "sha256": "7a4ea9252c4f9552a3b32f1f247365236c537fa1625bb84aa9c55497ba71b1e3"
+      },
+      {
+        "path": "conformance/vectors/attestation_v1.json",
+        "sha256": "9268d295cbf511c737763b4222a8dac1339e88c4c00792a53b212efc95b246ff"
+      },
+      {
+        "path": "conformance/vectors/boundary_v1.json",
+        "sha256": "79f8099d510d4b776ce196a2c07e1998ce6ad417bf5111574aa6ef2362439c4f"
+      },
+      {
+        "path": "conformance/verify_vectors.py",
+        "sha256": "3390536cbe1ddfacfc812268985606e87716c130da345cffd810d761d68697b9"
+      },
+      {
+        "path": "conformance/verifier_public_key.json",
+        "sha256": "126c43607f8b539805c65f421aee72794b407d009d97141b9fd9806a9c70ea76"
+      }
+    ]
+  },
+  "s4_s5_s6_test_scripts": {
+    "status": "UNAVAILABLE",
+    "note": "S4, S5 and S6 are named invariants in the Agent Safety Layer (ASL) project, not in this repository. Their test scripts live in the private ASL source repository (Raja549h/helper at commit 8e8961b733e49cc0ce814132a89b399aa982b097), which is not publicly readable. No hashes can be computed for them here.",
+    "references": {
+      "S4": "Thresholds are quiet on ordinary traffic, but the tripwire still fires.",
+      "S5": "Every kill path still fires the complete cascade.",
+      "S6": "Not defined in the public ASL conformance kit revision."
+    }
+  }
+}

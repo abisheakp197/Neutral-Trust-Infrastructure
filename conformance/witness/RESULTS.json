@@ -1,0 +1,46 @@
+{
+  "results_version": 1,
+  "generated_at_utc": "2026-11-06T16:32:12Z",
+  "repository": "abisheakp197/Neutral-Trust-Infrastructure",
+  "commit": "d343be979a0607031860d74b3cd604842f74a97a",
+  "overall_status": "NOT_RUN",
+  "environment": {
+    "rust_toolchain": "ABSENT (cargo/rustup not installed)",
+    "python": "3.x present",
+    "native_python_bindings": "NOT_LOADABLE (ube_foundation module absent; requires maturin build)",
+    "network_to_crates_io": "BLOCKED"
+  },
+  "suites": [
+    {
+      "id": "S4",
+      "status": "NOT_RUN",
+      "reason": "Test script resides in private repository Raja549h/helper; not obtainable from this environment."
+    },
+    {
+      "id": "S5",
+      "status": "NOT_RUN",
+      "reason": "Test script resides in private repository Raja549h/helper; not obtainable from this environment."
+    },
+    {
+      "id": "S6",
+      "status": "NOT_RUN",
+      "reason": "No S6 definition found in the public ASL conformance kit revision."
+    },
+    {
+      "id": "ASL-vectors",
+      "status": "PASSED_EXTERNALLY",
+      "detail": "checked 45 vector cases, 0 failures (run on the public kit at commit dfd37c920b0dcd36d1bef5b46a917b731ab811e3; not a test of NTI code)."
+    },
+    {
+      "id": "NTI-rust-tests",
+      "status": "NOT_RUN",
+      "reason": "No Rust toolchain available and crates.io is unreachable."
+    },
+    {
+      "id": "NTI-python-tests",
+      "status": "NOT_RUN",
+      "reason": "Native bindings cannot be built without a Rust toolchain."
+    }
+  ],
+  "statement": "No NTI conformance test was executed in the environment that produced this file. These results are NOT evidence of NTI conformance and MUST NOT be presented as such. A witness must re-run the suites in a provisioned environment before relying on any claim."
+}
