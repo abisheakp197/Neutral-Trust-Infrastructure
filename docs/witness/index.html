@@ -37,11 +37,11 @@
 
   <h2>Artifacts</h2>
   <ul>
-    <li><a href="MANIFEST.json">MANIFEST.json</a> — SHA-256 of NTI's native test scripts and build manifests, pinned to an exact commit.</li>
-    <li><a href="RESULTS.json">RESULTS.json</a> — recorded outcomes of NTI's native Rust and Python suites.</li>
+    <li><a href="MANIFEST.json">MANIFEST.json</a> — SHA-256 of the witness generator, the sample evidence fixture, and NTI's native test scripts.</li>
+    <li><a href="RESULTS.json">RESULTS.json</a> — NTI's native suite outcomes plus the S4/S5/S6 seal values.</li>
     <li><a href="PUBLIC_KEY.pem">PUBLIC_KEY.pem</a> — Ed25519 public key.</li>
     <li><a href="SIGNATURE.sig">SIGNATURE.sig</a> — 64-byte Ed25519 signature over RESULTS.json || MANIFEST.json.</li>
-    <li><a href="verify.sh">verify.sh</a> — self-contained verifier.</li>
+    <li><a href="verify.sh">verify.sh</a> — self-contained verifier: package signature, S4/S5/S6 seals, and all manifest hashes.</li>
     <li><a href="README.md">README.md</a> — full documentation.</li>
   </ul>
 
@@ -51,6 +51,21 @@
     <p>By hand:</p>
     <p><code>cat RESULTS.json MANIFEST.json &gt; /tmp/to_sign.bin</code><br>
        <code>openssl pkeyutl -verify -pubin -inkey PUBLIC_KEY.pem -rawin -in /tmp/to_sign.bin -sigfile SIGNATURE.sig</code></p>
+  </div>
+
+  <h2>The S4 / S5 / S6 seals</h2>
+  <div class="card">
+    <p>NTI's own native implementation, Apache-2.0. It shares no code with any external
+    conformance kit. Generator: <code>conformance/witness_generator/generate_seals.py</code>.</p>
+    <table>
+      <tr><th>Seal</th><th>Field</th><th>Construction</th></tr>
+      <tr><td>S4 file integrity</td><td><code>S4_file_integrity</code></td><td>SHA-256 of each evidence artifact</td></tr>
+      <tr><td>S5 evidence root</td><td><code>S5_evidence_root</code></td><td>Merkle root over the S4 digests (RFC-6962-style, domain-separated)</td></tr>
+      <tr><td>S6 seal</td><td><code>S6_hmac_seal</code></td><td>Ed25519 <strong>signature</strong> over the S5 root</td></tr>
+    </table>
+    <p>The S6 field is named <code>S6_hmac_seal</code> to match the witness spec, but the
+    construction is a signature, not an HMAC. An HMAC needs a shared secret, which a witness
+    cannot verify without holding it; a signature verifies with the public key alone.</p>
   </div>
 
   <h2>Results</h2>
@@ -63,8 +78,10 @@
   <div class="card">
     <p><strong>Scope and limits.</strong></p>
     <ul>
-      <li>This package covers <strong>NTI's own test suites only</strong>. No third-party or
-      external conformance suite is included or referenced.</li>
+      <li><strong>The S4/S5/S6 seals are computed over a synthetic fixture</strong>
+      (<code>sample_evidence.json</code>). They prove the mechanism works; they are not seals
+      over production evidence. The suite results below are separate and real.</li>
+      <li>No third-party or external conformance suite is included or referenced.</li>
       <li><strong>The public key has no external trust anchor.</strong> A valid signature proves the two
       JSON files are intact, not who produced them.</li>
     </ul>

@@ -1,10 +1,10 @@
 {
-  "results_version": 3,
-  "generated_at_utc": "2026-11-06T17:13:21Z",
+  "results_version": 4,
+  "generated_at_utc": "2026-11-06T17:37:59Z",
   "repository": "abisheakp197/Neutral-Trust-Infrastructure",
-  "commit": "b2298faae47864bd2656dc0974e540ffc7982c09",
+  "commit": "b55d5995c2f5452fc5bbb39122bd589fd00bd9b0",
   "overall_status": "PASSED",
-  "scope": "NTI native suites only.",
+  "scope": "NTI native suites plus S4/S5/S6 seals over a synthetic fixture.",
   "environment": {
     "toolchain": "rustc 1.90.0 (1159e78c4 2025-09-14), cargo 1.90.0, maturin 1.9.6",
     "native_python_bindings": "built and loaded"
@@ -83,5 +83,59 @@
       "detail": "cargo check --features python: ok"
     }
   ],
-  "statement": "The NTI Rust suite (33 tests) and the NTI Python SDK suite passed under rustc/cargo 1.90.0 with native bindings built by maturin 1.9.6. This package covers NTI's own test suites and nothing else."
+  "statement": "The NTI Rust suite (33 tests) and the NTI Python SDK suite passed under rustc/cargo 1.90.0 with native bindings built by maturin 1.9.6. The S4/S5/S6 seals below are computed over a synthetic evidence fixture.",
+  "S4_file_integrity": [
+    {
+      "name": "evidence_package.json",
+      "sha256": "d988746568821931152a6567d9929b7052abf692a319f340d47688ae5350cc84",
+      "bytes": 733,
+      "description": "the evidence package as delivered (raw bytes)"
+    },
+    {
+      "name": "request.json",
+      "sha256": "ffaa09ef04692b018b69803a04fbb717d71afd7f660b04b1b74fbd9bf81794b1",
+      "bytes": 55
+    },
+    {
+      "name": "policy.txt",
+      "sha256": "d4f67a16d9742b4d9617caabb94ed465d23c5b1e200f0bb43a80539af6fa5bd7",
+      "bytes": 58
+    },
+    {
+      "name": "audit_note.txt",
+      "sha256": "a89d9c515b7f5d21a444153263b1c05a6ed89655dc7b5755cede6e17009d0608",
+      "bytes": 49
+    }
+  ],
+  "S5_evidence_root": {
+    "merkle_root_sha256": "20271a5928932d6362ff566207e20f60cb2a5e387a7178dbf6da028d7c01fe1e",
+    "leaf_count": 4,
+    "algorithm": "SHA-256, RFC-6962-style with domain separation",
+    "levels": [
+      [
+        "9b1f86ec9a8edc1635b0a6df4b1630ca98670a2be1967ba76394aae47e59c633",
+        "f1990a7f9652b6bb5a9b6f708d7dd5d22a62a34e2b8229389cf2973bbef6f6e0",
+        "07ca9b5aa9b9900badb3bad7ff0055e76695b6a3e6f020e084c6c8d2ed30a16c",
+        "b71f313d5b7dcffca09c0838e4e46e90038c4bc85b234b87143bd88e0052cfdc"
+      ],
+      [
+        "96ea1fa6d21ec6bb265d31c7068dbac4c209e53d21511f721971362cafa93a76",
+        "efadb015bc731494a6eb662d7dd8ae3444bc00fc8a4bf0cbfe9f18f08c8f134a"
+      ],
+      [
+        "20271a5928932d6362ff566207e20f60cb2a5e387a7178dbf6da028d7c01fe1e"
+      ]
+    ]
+  },
+  "S6_hmac_seal": {
+    "scheme": "Ed25519",
+    "construction": "signature (not HMAC)",
+    "signed_over": "S5_evidence_root.merkle_root_sha256",
+    "seal_hex": "33f0978bfbb48bdbc571e4553c3454bbce1e8921c1fff079bae43e359a396f400701a0cf46b1f012bf5315ffb36db69c994477fb5b1ffc96784868e387327202"
+  },
+  "seal_scope": {
+    "evidence_file": "conformance/witness_generator/sample_evidence.json",
+    "classification": "SYNTHETIC - test fixture, not production evidence",
+    "note": "Synthetic fixture. These seals demonstrate the mechanism; they are not production evidence."
+  }
 }
