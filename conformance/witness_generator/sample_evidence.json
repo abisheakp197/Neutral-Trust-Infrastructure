@@ -1,0 +1,20 @@
+{
+  "evidence_type": "sample_agent_action",
+  "classification": "SYNTHETIC - test fixture, not production evidence",
+  "schema_version": "1.0",
+  "agent": {
+    "did": "did:nti:sample:0001",
+    "name": "sample-agent"
+  },
+  "action": {
+    "type": "issue_capability_token",
+    "issued_at_utc": "2026-01-01T00:00:00Z",
+    "issuer": "did:nti:issuer:0001",
+    "scope": ["read:ledger"]
+  },
+  "artifacts": [
+    {"name": "request.json", "content_utf8": "{\"subject\":\"did:nti:sample:0001\",\"scope\":\"read:ledger\"}"},
+    {"name": "policy.txt", "content_utf8": "allow if issuer in trusted_set and scope in granted_scopes"},
+    {"name": "audit_note.txt", "content_utf8": "sample audit trail entry for the synthetic action"}
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "generated_at_utc": "2026-11-06T17:13:21Z",
+  "generated_at_utc": "2026-11-06T17:37:59Z",
   "repository": "abisheakp197/Neutral-Trust-Infrastructure",
-  "commit": "b2298faae47864bd2656dc0974e540ffc7982c09",
+  "commit": "b55d5995c2f5452fc5bbb39122bd589fd00bd9b0",
   "purpose": "Cryptographic evidence package for independent external witnesses to recompute and verify NTI's cryptographic state.",
   "scope": "NTI's native Rust and Python test suites only.",
   "signature": {
@@ -75,6 +75,18 @@
       "path": ".github/workflows/issuer-quorum-regressions.yml",
       "sha256": "87975c4ad9a0fa4b753b419a25c3a3d49c4e723d328ff4e014fb0f147b827730",
       "description": "CI job that runs the NTI conformance regression suite"
+    }
+  ],
+  "witness_generator": [
+    {
+      "path": "conformance/witness_generator/generate_seals.py",
+      "sha256": "85b0bef27b0dc3a9c4e80fa3f5030f59be4751bbcc28face8a570a2f2f84f02d",
+      "description": "Native Apache-2.0 S4/S5/S6 seal generator"
+    },
+    {
+      "path": "conformance/witness_generator/sample_evidence.json",
+      "sha256": "d988746568821931152a6567d9929b7052abf692a319f340d47688ae5350cc84",
+      "description": "Synthetic sample evidence package"
     }
   ]
 }
