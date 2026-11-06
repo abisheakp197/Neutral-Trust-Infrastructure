@@ -1,12 +1,13 @@
 {
-  "results_version": 2,
-  "generated_at_utc": "2026-11-06T16:57:13Z",
+  "results_version": 3,
+  "generated_at_utc": "2026-11-06T17:13:21Z",
   "repository": "abisheakp197/Neutral-Trust-Infrastructure",
-  "commit": "d343be979a0607031860d74b3cd604842f74a97a",
+  "commit": "b2298faae47864bd2656dc0974e540ffc7982c09",
   "overall_status": "PASSED",
+  "scope": "NTI native suites only.",
   "environment": {
-    "toolchain": "rustc 1.90.0 (1159e78c4 2025-09-14), cargo 1.90.0",
-    "native_python_bindings": "built and loaded (maturin 1.9.6)"
+    "toolchain": "rustc 1.90.0 (1159e78c4 2025-09-14), cargo 1.90.0, maturin 1.9.6",
+    "native_python_bindings": "built and loaded"
   },
   "suites": [
     {
@@ -74,35 +75,13 @@
     {
       "id": "NTI-rust-build",
       "status": "PASSED",
-      "detail": "ok"
+      "detail": "cargo build --locked: ok"
     },
     {
       "id": "NTI-rust-check-python-feature",
       "status": "PASSED",
-      "detail": "ok"
-    },
-    {
-      "id": "ASL-vectors",
-      "status": "PASSED_EXTERNALLY",
-      "cases_checked": 45,
-      "failures": 0,
-      "note": "Run against the public ASL kit; tests ASL fixtures, not NTI code."
-    },
-    {
-      "id": "S4",
-      "status": "NOT_RUN",
-      "reason": "Script is in the private repository Raja549h/helper; not obtainable."
-    },
-    {
-      "id": "S5",
-      "status": "NOT_RUN",
-      "reason": "Script is in the private repository Raja549h/helper; not obtainable."
-    },
-    {
-      "id": "S6",
-      "status": "NOT_RUN",
-      "reason": "No S6 definition exists in the public ASL conformance kit."
+      "detail": "cargo check --features python: ok"
     }
   ],
-  "statement": "The NTI Rust and Python suites passed under rustc 1.90.0 with native bindings. S4/S5/S6 were NOT run and are not covered by any result here. The ASL vector run tests ASL fixtures, not NTI code."
+  "statement": "The NTI Rust suite (33 tests) and the NTI Python SDK suite passed under rustc/cargo 1.90.0 with native bindings built by maturin 1.9.6. This package covers NTI's own test suites and nothing else."
 }
