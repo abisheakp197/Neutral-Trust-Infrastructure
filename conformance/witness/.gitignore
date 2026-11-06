@@ -1,0 +1,4 @@
+# Never commit private key material.
+*.key
+*_priv.pem
+PRIVATE_KEY*
