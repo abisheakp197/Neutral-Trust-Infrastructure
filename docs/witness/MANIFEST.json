@@ -1,9 +1,10 @@
 {
-  "manifest_version": 2,
-  "generated_at_utc": "2026-11-06T16:57:13Z",
+  "manifest_version": 3,
+  "generated_at_utc": "2026-11-06T17:13:21Z",
   "repository": "abisheakp197/Neutral-Trust-Infrastructure",
-  "commit": "d343be979a0607031860d74b3cd604842f74a97a",
+  "commit": "b2298faae47864bd2656dc0974e540ffc7982c09",
   "purpose": "Cryptographic evidence package for independent external witnesses to recompute and verify NTI's cryptographic state.",
+  "scope": "NTI's native Rust and Python test suites only.",
   "signature": {
     "algorithm": "Ed25519",
     "signed_artifacts": [
@@ -71,68 +72,9 @@
       "description": "NTI locked dependency graph"
     },
     {
-      "path": ".github/workflows/asl-conformance.yml",
-      "sha256": "5c8575d16c031873d84c28c0c29b518df570056d85b96b0979ec7b9b2d3429a2",
-      "description": "CI job that runs the external ASL vector verifier"
-    },
-    {
       "path": ".github/workflows/issuer-quorum-regressions.yml",
       "sha256": "87975c4ad9a0fa4b753b419a25c3a3d49c4e723d328ff4e014fb0f147b827730",
-      "description": "CI job that runs the conformance regression suite"
+      "description": "CI job that runs the NTI conformance regression suite"
     }
-  ],
-  "vendor_records": [
-    {
-      "path": "conformance/witness/vendor/S4_S5_S6_PROVENANCE.md",
-      "sha256": "087e5992679ab905f0d032fcb87676fd69afd26ec67aa8872aa9f3309031eecb"
-    },
-    {
-      "path": "conformance/witness/vendor/S4_S5_S6_RECORD.json",
-      "sha256": "480a0a512839d14fae77b320d9caa06f057e4b63425796b53baabaecb2ee4bf9"
-    }
-  ],
-  "external_conformance_vectors": {
-    "source_repository": "Raja549h/asl-conformance-kit",
-    "source_commit": "dfd37c920b0dcd36d1bef5b46a917b731ab811e3",
-    "note": "Not vendored into NTI. Hashes pinned so a witness can detect drift.",
-    "files": [
-      {
-        "path": "conformance/vectors/canonical.json",
-        "sha256": "f78ebb1bbeebaceaec56de7ef0992d15a7ec05ea1a0e1cb75443bcb45278147d"
-      },
-      {
-        "path": "conformance/vectors/hashing.json",
-        "sha256": "a9a9bde40c0a39152556a77d237b8f8959eca60f8a1838ed08cf9148635ee6b8"
-      },
-      {
-        "path": "conformance/vectors/tokens.json",
-        "sha256": "87edda9bce2ce3d500adaf5845298cb8911acb7f75904455da0da580adf781f1"
-      },
-      {
-        "path": "conformance/vectors/audit.json",
-        "sha256": "7a4ea9252c4f9552a3b32f1f247365236c537fa1625bb84aa9c55497ba71b1e3"
-      },
-      {
-        "path": "conformance/vectors/attestation_v1.json",
-        "sha256": "9268d295cbf511c737763b4222a8dac1339e88c4c00792a53b212efc95b246ff"
-      },
-      {
-        "path": "conformance/vectors/boundary_v1.json",
-        "sha256": "79f8099d510d4b776ce196a2c07e1998ce6ad417bf5111574aa6ef2362439c4f"
-      },
-      {
-        "path": "conformance/verify_vectors.py",
-        "sha256": "3390536cbe1ddfacfc812268985606e87716c130da345cffd810d761d68697b9"
-      },
-      {
-        "path": "conformance/verifier_public_key.json",
-        "sha256": "126c43607f8b539805c65f421aee72794b407d009d97141b9fd9806a9c70ea76"
-      }
-    ]
-  },
-  "s4_s5_s6_test_scripts": {
-    "status": "NOT_VENDORED",
-    "record": "conformance/witness/vendor/S4_S5_S6_PROVENANCE.md",
-    "reason": "Scripts live only in the private, non-Apache-2.0 repository Raja549h/helper; not obtainable for vendoring."
-  }
+  ]
 }

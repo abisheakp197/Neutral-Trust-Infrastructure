@@ -37,12 +37,13 @@ sys.exit(1 if bad else 0)
 PY
 [ $? -ne 0 ] && fail=1
 
-echo "== 3. Recompute hashes of the external ASL conformance vectors =="
-echo "   These live in Raja549h/asl-conformance-kit, not in this repository."
-echo "     git clone https://github.com/Raja549h/asl-conformance-kit && cd asl-conformance-kit"
-echo "     git checkout $(python3 -c "import json;print(json.load(open('$HERE/MANIFEST.json'))['external_conformance_vectors']['source_commit'])")"
-echo "     sha256sum conformance/vectors/*.json conformance/verify_vectors.py"
-echo "     python conformance/verify_vectors.py   # expect: checked 45 vector cases, 0 failures"
+echo "== 3. Confirm the manifest scope =="
+python3 - "$HERE/MANIFEST.json" <<'PY'
+import json, pathlib, sys
+m = json.loads(pathlib.Path(sys.argv[1]).read_text())
+print("   scope:", m.get("scope"))
+print("   hashed NTI files:", len(m.get("nti_test_scripts", [])))
+PY
 
 echo
 if [ "$fail" -eq 0 ]; then echo "RESULT: signature + NTI hashes verified."; else echo "RESULT: VERIFICATION FAILED."; fi
