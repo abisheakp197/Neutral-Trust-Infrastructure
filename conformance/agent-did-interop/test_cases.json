@@ -520,11 +520,12 @@
           ]
         },
         "checks": {
-          "aps_resolver_issuer_key_at_issued_at": "pass",
+          "aps_resolver_issuer_key_at_issued_at": "not_exercised",
           "aps_delegation_integrity": "fail",
           "did_document_authorization": "not_exercised"
         },
-        "rationale": "The tampered body recomputes to delegation_id sha256:bc1d1473ad810f5d6749ebaee16cb8fa169b99e5050e2ead91ba460382b83073, which does not equal the stored delegation_id sha256:32c13399778b912bf8ff8502ee785f76650c4970c35f0472e0015c142fcb12a8. APS reports ID_MISMATCH, so this check is exercised and fails."
+        "note": "Verification stopped at the ID check before resolving the verification key.",
+        "rationale": "The tampered body recomputes to delegation_id sha256:bc1d1473ad810f5d6749ebaee16cb8fa169b99e5050e2ead91ba460382b83073, which does not equal the stored delegation_id sha256:32c13399778b912bf8ff8502ee785f76650c4970c35f0472e0015c142fcb12a8. APS reports ID_MISMATCH, so this check is exercised and fails. The delegation_id content address is checked before the key resolver runs, so the issuer-key-at-issued_at check is never reached and is reported not_exercised."
       }
     },
     {
