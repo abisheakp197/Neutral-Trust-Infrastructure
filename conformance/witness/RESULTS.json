@@ -1,8 +1,8 @@
 {
   "results_version": 4,
-  "generated_at_utc": "2026-11-06T17:37:59Z",
+  "generated_at_utc": "2026-11-07T13:46:27Z",
   "repository": "abisheakp197/Neutral-Trust-Infrastructure",
-  "commit": "b55d5995c2f5452fc5bbb39122bd589fd00bd9b0",
+  "commit": "b5d7d02def3fee7067030658d08c2e7b3156dd93",
   "overall_status": "PASSED",
   "scope": "NTI native suites plus S4/S5/S6 seals over a synthetic fixture.",
   "environment": {
@@ -110,7 +110,8 @@
   "S5_evidence_root": {
     "merkle_root_sha256": "20271a5928932d6362ff566207e20f60cb2a5e387a7178dbf6da028d7c01fe1e",
     "leaf_count": 4,
-    "algorithm": "SHA-256, RFC-6962-style with domain separation",
+    "algorithm": "SHA-256, RFC 6962 Merkle Tree Hash with domain separation",
+    "odd_node_rule": "last node promoted unchanged, never duplicated",
     "levels": [
       [
         "9b1f86ec9a8edc1635b0a6df4b1630ca98670a2be1967ba76394aae47e59c633",
@@ -130,8 +131,15 @@
   "S6_hmac_seal": {
     "scheme": "Ed25519",
     "construction": "signature (not HMAC)",
-    "signed_over": "S5_evidence_root.merkle_root_sha256",
-    "seal_hex": "33f0978bfbb48bdbc571e4553c3454bbce1e8921c1fff079bae43e359a396f400701a0cf46b1f012bf5315ffb36db69c994477fb5b1ffc96784868e387327202"
+    "signed_over": "S5_evidence_root.merkle_root_sha256 || S5_evidence_root.leaf_count || S4 artifact names",
+    "leaf_count": 4,
+    "artifact_names": [
+      "evidence_package.json",
+      "request.json",
+      "policy.txt",
+      "audit_note.txt"
+    ],
+    "seal_hex": "a1431bd22347c241aa03e0bf5b3c3eac4f4fc9f0347c60bcbca78b215a7415d18114a7cfcee883bf9834cee15ba3dc908085d14ae2cffc5250dfdc451c93610f"
   },
   "seal_scope": {
     "evidence_file": "conformance/witness_generator/sample_evidence.json",

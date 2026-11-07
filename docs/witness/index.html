@@ -37,20 +37,20 @@
 
   <h2>Artifacts</h2>
   <ul>
-    <li><a href="MANIFEST.json">MANIFEST.json</a> — SHA-256 of the witness generator, the sample evidence fixture, and NTI's native test scripts.</li>
+    <li><a href="MANIFEST.json">MANIFEST.json</a> — SHA-256 of the witness generator, the sample evidence fixture, and NTI's native test scripts, plus <code>key_url</code> and <code>key_history</code>.</li>
     <li><a href="RESULTS.json">RESULTS.json</a> — NTI's native suite outcomes plus the S4/S5/S6 seal values.</li>
-    <li><a href="PUBLIC_KEY.pem">PUBLIC_KEY.pem</a> — Ed25519 public key.</li>
-    <li><a href="SIGNATURE.sig">SIGNATURE.sig</a> — 64-byte Ed25519 signature over RESULTS.json || MANIFEST.json.</li>
-    <li><a href="verify.sh">verify.sh</a> — self-contained verifier: package signature, S4/S5/S6 seals, and all manifest hashes.</li>
+    <li><a href="PUBLIC_KEY.pem">PUBLIC_KEY.pem</a> — Ed25519 public key (trust anchor: <code>key_url</code>).</li>
+    <li><a href="SIGNATURE.sig">SIGNATURE.sig</a> — 64-byte Ed25519 signature over a domain-separated, length-prefixed encoding of RESULTS.json and MANIFEST.json.</li>
+    <li><a href="verify.sh">verify.sh</a> — self-contained verifier: package signature, S4/S5/S6 seals, all manifest hashes, and the key fingerprint.</li>
     <li><a href="README.md">README.md</a> — full documentation.</li>
   </ul>
 
   <h2>How to verify</h2>
   <div class="card">
-    <p><code>cd conformance/witness &amp;&amp; ./verify.sh /path/to/Neutral-Trust-Infrastructure</code></p>
-    <p>By hand:</p>
-    <p><code>cat RESULTS.json MANIFEST.json &gt; /tmp/to_sign.bin</code><br>
-       <code>openssl pkeyutl -verify -pubin -inkey PUBLIC_KEY.pem -rawin -in /tmp/to_sign.bin -sigfile SIGNATURE.sig</code></p>
+    <p><code>cd docs/witness &amp;&amp; ./verify.sh /path/to/Neutral-Trust-Infrastructure</code></p>
+    <p>The verifier checks the package signature, recomputes the S4/S5/S6 seals, re-hashes every
+    file in MANIFEST.json, and confirms the published key fingerprint. See the README for the
+    exact bytes the package signature covers.</p>
   </div>
 
   <h2>The S4 / S5 / S6 seals</h2>
@@ -60,12 +60,35 @@
     <table>
       <tr><th>Seal</th><th>Field</th><th>Construction</th></tr>
       <tr><td>S4 file integrity</td><td><code>S4_file_integrity</code></td><td>SHA-256 of each evidence artifact</td></tr>
-      <tr><td>S5 evidence root</td><td><code>S5_evidence_root</code></td><td>Merkle root over the S4 digests (RFC-6962-style, domain-separated)</td></tr>
-      <tr><td>S6 seal</td><td><code>S6_hmac_seal</code></td><td>Ed25519 <strong>signature</strong> over the S5 root</td></tr>
+      <tr><td>S5 evidence root</td><td><code>S5_evidence_root</code></td><td>RFC 6962 Merkle Tree Hash over the S4 digests (domain-separated; odd node promoted, never duplicated)</td></tr>
+      <tr><td>S6 seal</td><td><code>S6_hmac_seal</code></td><td>Ed25519 <strong>signature</strong> over the S5 root <strong>plus the leaf count and artifact names</strong></td></tr>
     </table>
     <p>The S6 field is named <code>S6_hmac_seal</code> to match the witness spec, but the
     construction is a signature, not an HMAC. An HMAC needs a shared secret, which a witness
     cannot verify without holding it; a signature verifies with the public key alone.</p>
+  </div>
+
+  <h2>Cryptographic hardening</h2>
+  <div class="card">
+    <p>The packaging logic was hardened against four structural weaknesses:</p>
+    <ul>
+      <li><strong>Package signature:</strong> domain-separated and length-prefixed. Each file is
+      digested on its own, so a byte cannot be moved between RESULTS.json and MANIFEST.json.</li>
+      <li><strong>Merkle tree:</strong> the odd node on a level is promoted unchanged (RFC 6962),
+      not duplicated, so two different leaf sets cannot collapse to the same root.</li>
+      <li><strong>S6:</strong> signs the root <em>and</em> the leaf count and artifact names, so a
+      valid root cannot be shown for a different artifact set.</li>
+      <li><strong>Trust anchor:</strong> <code>MANIFEST.json</code> carries a <code>key_url</code>
+      pointing at the GitHub Pages copy of the public key, fetched out of band.</li>
+    </ul>
+  </div>
+
+  <h2>Key history</h2>
+  <div class="card">
+    <p><code>MANIFEST.json</code> carries a <code>key_history</code> block recording each Ed25519
+    key's fingerprint, status, and validity window. When the signing key changes, the previous key
+    is marked <code>retired</code> and the new key is added, so a rotation is recorded rather than
+    silently replacing the old key.</p>
   </div>
 
   <h2>Results</h2>
@@ -82,8 +105,9 @@
       (<code>sample_evidence.json</code>). They prove the mechanism works; they are not seals
       over production evidence. The suite results below are separate and real.</li>
       <li>No third-party or external conformance suite is included or referenced.</li>
-      <li><strong>The public key has no external trust anchor.</strong> A valid signature proves the two
-      JSON files are intact, not who produced them.</li>
+      <li><strong>Trust anchor.</strong> <code>MANIFEST.json</code> carries a <code>key_url</code>
+      pointing at the GitHub Pages copy of the public key, fetched out of band. The private key is
+      not published, so a valid signature proves the files are intact under that key, not who holds it.</li>
     </ul>
   </div>
 
