@@ -1,0 +1,323 @@
+{
+  "format_version": "nti-agent-did-conformance/1.0",
+  "generated_by": "abisheakp197/Neutral-Trust-Infrastructure",
+  "profile": "NTI x Agent-DID interop (docs/NTI-Agent-DID-INTEROP.md rev 2)",
+  "classification": "SYNTHETIC - conformance fixtures, not production evidence",
+  "sdk_under_test": {
+    "name": "agent-did-sdk",
+    "version": "1.0.0-rc.4",
+    "pinned": true,
+    "note": "All cases MUST be evaluated with agent-did-sdk 1.0.0-rc.4. Results from any other version are out of scope for this conformance set."
+  },
+  "delegation_fixture": "APS_DELEGATION_FORMAT.json",
+  "reference": {
+    "signed_at": "2026-11-06T14:17:02Z",
+    "agent_did": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+    "issuer_did": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com",
+    "verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+    "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
+    "payload_sha256": "eae169e70d619885f382454883c3c95fe344d5f903dade7fe5ee6c90a82bf313",
+    "tampered_delegation_chain_root": "5e2583f3e2f0d60287baec32302bcaf88609adc35b195af9bc52e4db87a4079b"
+  },
+  "harness_contract": {
+    "description": "Each case supplies a DID log (a list of did:webvh log entries) and an APS delegation. The SDK MUST resolve the DID as of signed_at, resolve the ML-DSA-87 verification method, and decide.",
+    "did_log_entry_fields": {
+      "versionId": "monotonic log version id",
+      "valid_from": "RFC 3339 UTC; the entry is active from this instant",
+      "valid_until": "RFC 3339 UTC or null; the entry is active until this instant (exclusive). null means still active.",
+      "verificationMethod": "list of {id, type, controller, publicKeyMultibase}",
+      "assertionMethod": "list of verification method ids",
+      "authentication": "list of verification method ids",
+      "keyAgreement": "list of verification method ids",
+      "deactivated": "true if this entry deactivates the DID"
+    },
+    "expected_fields": {
+      "decision": "accept | reject",
+      "reason_code": "one of the machine-readable codes below",
+      "checks": "which layers were exercised (see docs/NTI-Agent-DID-INTEROP.md section 2)"
+    },
+    "reason_codes": [
+      "OK",
+      "DID_DEACTIVATED",
+      "KEY_NOT_VALID_AT_SIGNING_TIME",
+      "KEY_REVOKED_BEFORE_SIGNING",
+      "WRONG_VERIFICATION_RELATIONSHIP",
+      "DELEGATION_ROOT_MISMATCH",
+      "DELEGATION_TAMPERED_AFTER_SIGNING"
+    ]
+  },
+  "cases": [
+    {
+      "id": "case-1-valid-key",
+      "title": "Valid key",
+      "description": "Baseline positive case. The ML-DSA-87 key is active at signed_at, listed under assertionMethod, not revoked, and the delegation digest matches the signed root.",
+      "exercises": ["layer-0a", "layer-1"],
+      "input": {
+        "signed_at": "2026-11-06T14:17:02Z",
+        "delegation": {
+          "delegation_id": "aps-20261106-4417-a2b1",
+          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
+          "mutations": []
+        },
+        "did_log": [
+          {
+            "versionId": "1-genesis",
+            "valid_from": "2026-11-01T00:00:00Z",
+            "valid_until": null,
+            "deactivated": false,
+            "verificationMethod": [
+              {
+                "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+                "type": "Multikey",
+                "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+              }
+            ],
+            "assertionMethod": [
+              "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1"
+            ],
+            "authentication": [],
+            "keyAgreement": []
+          }
+        ]
+      },
+      "expected": {
+        "decision": "accept",
+        "reason_code": "OK",
+        "checks": {
+          "layer_0a_did_authorization": "pass",
+          "layer_0b_vc_issuer": "pass",
+          "layer_1_nti_proofs": "pass"
+        }
+      }
+    },
+    {
+      "id": "case-2-key-rotated-before-signing",
+      "title": "Key rotated out before signing time",
+      "description": "The ML-DSA-87 key #ml-dsa-87-1 was retired in log version 2 (valid_until 2026-11-06T12:00:00Z) and replaced by #ml-dsa-87-2. The receipt was signed at 14:17:02Z with the OLD key. A verifier that only checks 'currently valid' would wrongly accept, because #ml-dsa-87-2 is valid now. The verifier MUST evaluate the DID log as of signed_at and reject.",
+      "exercises": ["layer-0a"],
+      "input": {
+        "signed_at": "2026-11-06T14:17:02Z",
+        "delegation": {
+          "delegation_id": "aps-20261106-4417-a2b1",
+          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
+          "mutations": []
+        },
+        "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+        "did_log": [
+          {
+            "versionId": "1-genesis",
+            "valid_from": "2026-11-01T00:00:00Z",
+            "valid_until": "2026-11-06T12:00:00Z",
+            "deactivated": false,
+            "verificationMethod": [
+              {
+                "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+                "type": "Multikey",
+                "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY_v1...9k"
+              }
+            ],
+            "assertionMethod": [
+              "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1"
+            ],
+            "authentication": [],
+            "keyAgreement": []
+          },
+          {
+            "versionId": "2-rotate",
+            "valid_from": "2026-11-06T12:00:00Z",
+            "valid_until": null,
+            "deactivated": false,
+            "verificationMethod": [
+              {
+                "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-2",
+                "type": "Multikey",
+                "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY_v2...9k"
+              }
+            ],
+            "assertionMethod": [
+              "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-2"
+            ],
+            "authentication": [],
+            "keyAgreement": []
+          }
+        ]
+      },
+      "expected": {
+        "decision": "reject",
+        "reason_code": "KEY_NOT_VALID_AT_SIGNING_TIME",
+        "checks": {
+          "layer_0a_did_authorization": "fail",
+          "layer_1_nti_proofs": "not_evaluated"
+        },
+        "rationale": "At signed_at (14:17:02Z) the active entry is version 2, which no longer authorises #ml-dsa-87-1. The key used to sign had been rotated out at 12:00:00Z."
+      }
+    },
+    {
+      "id": "case-3-deactivated-did",
+      "title": "Deactivated DID",
+      "description": "The DID log's latest entry is marked deactivated=true at 2026-11-06T13:00:00Z, before signed_at. A DID deactivation is terminal: no key may sign after it, regardless of key material.",
+      "exercises": ["layer-0a"],
+      "input": {
+        "signed_at": "2026-11-06T14:17:02Z",
+        "delegation": {
+          "delegation_id": "aps-20261106-4417-a2b1",
+          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
+          "mutations": []
+        },
+        "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+        "did_log": [
+          {
+            "versionId": "1-genesis",
+            "valid_from": "2026-11-01T00:00:00Z",
+            "valid_until": "2026-11-06T13:00:00Z",
+            "deactivated": false,
+            "verificationMethod": [
+              {
+                "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+                "type": "Multikey",
+                "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+              }
+            ],
+            "assertionMethod": [
+              "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1"
+            ],
+            "authentication": [],
+            "keyAgreement": []
+          },
+          {
+            "versionId": "2-deactivate",
+            "valid_from": "2026-11-06T13:00:00Z",
+            "valid_until": null,
+            "deactivated": true,
+            "verificationMethod": [],
+            "assertionMethod": [],
+            "authentication": [],
+            "keyAgreement": []
+          }
+        ]
+      },
+      "expected": {
+        "decision": "reject",
+        "reason_code": "DID_DEACTIVATED",
+        "checks": {
+          "layer_0a_did_authorization": "fail",
+          "layer_1_nti_proofs": "not_evaluated"
+        },
+        "rationale": "The DID was deactivated at 13:00:00Z, before signed_at. Deactivation is terminal and precedes key-level checks."
+      }
+    },
+    {
+      "id": "case-4-key-only-under-keyAgreement",
+      "title": "Key listed only under keyAgreement",
+      "description": "The ML-DSA-87 key #ml-dsa-87-1 is present and active at signed_at, but it is listed only under keyAgreement (a key-agreement relationship), not under assertionMethod. A key in keyAgreement MUST NOT be used to verify signatures.",
+      "exercises": ["layer-0a"],
+      "input": {
+        "signed_at": "2026-11-06T14:17:02Z",
+        "delegation": {
+          "delegation_id": "aps-20261106-4417-a2b1",
+          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
+          "mutations": []
+        },
+        "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+        "did_log": [
+          {
+            "versionId": "1-genesis",
+            "valid_from": "2026-11-01T00:00:00Z",
+            "valid_until": null,
+            "deactivated": false,
+            "verificationMethod": [
+              {
+                "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+                "type": "Multikey",
+                "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+              }
+            ],
+            "assertionMethod": [],
+            "authentication": [],
+            "keyAgreement": [
+              "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "decision": "reject",
+        "reason_code": "WRONG_VERIFICATION_RELATIONSHIP",
+        "checks": {
+          "layer_0a_did_authorization": "fail",
+          "layer_1_nti_proofs": "not_evaluated"
+        },
+        "rationale": "The key is active and unrevoked but appears only under keyAgreement. Per docs/NTI-Agent-DID-INTEROP.md section 2.1, only assertionMethod keys may verify receipts."
+      }
+    },
+    {
+      "id": "case-5-delegation-modified-after-signing",
+      "title": "Delegation modified after signing",
+      "description": "The key is fully valid (as in case 1), but the delegation scope was modified after signing: the `actions` array gained `ledger.admin`. The delegation now hashes to the tampered root, which does not match the signed delegation_chain_root. The ML-DSA-87 signature over the original payload no longer covers these bytes.",
+      "exercises": ["layer-1"],
+      "input": {
+        "signed_at": "2026-11-06T14:17:02Z",
+        "delegation": {
+          "delegation_id": "aps-20261106-4417-a2b1",
+          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
+          "recomputed_sha256_after_mutation": "5e2583f3e2f0d60287baec32302bcaf88609adc35b195af9bc52e4db87a4079b",
+          "mutations": [
+            {
+              "path": "delegation.scope.actions",
+              "op": "add",
+              "value": "ledger.admin",
+              "note": "privilege escalation added after the signature was produced"
+            }
+          ]
+        },
+        "did_log": [
+          {
+            "versionId": "1-genesis",
+            "valid_from": "2026-11-01T00:00:00Z",
+            "valid_until": null,
+            "deactivated": false,
+            "verificationMethod": [
+              {
+                "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+                "type": "Multikey",
+                "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+              }
+            ],
+            "assertionMethod": [
+              "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1"
+            ],
+            "authentication": [],
+            "keyAgreement": []
+          }
+        ]
+      },
+      "expected": {
+        "decision": "reject",
+        "reason_code": "DELEGATION_TAMPERED_AFTER_SIGNING",
+        "checks": {
+          "layer_0a_did_authorization": "pass",
+          "layer_1_nti_proofs": "fail"
+        },
+        "rationale": "DID authorization passes, but the recomputed delegation digest (5e2583...) does not equal the signed delegation_chain_root (fdc448...)."
+      }
+    }
+  ],
+  "expected_summary": {
+    "total": 5,
+    "accept": 1,
+    "reject": 4,
+    "reason_codes": {
+      "case-1-valid-key": "OK",
+      "case-2-key-rotated-before-signing": "KEY_NOT_VALID_AT_SIGNING_TIME",
+      "case-3-deactivated-did": "DID_DEACTIVATED",
+      "case-4-key-only-under-keyAgreement": "WRONG_VERIFICATION_RELATIONSHIP",
+      "case-5-delegation-modified-after-signing": "DELEGATION_TAMPERED_AFTER_SIGNING"
+    }
+  }
+}

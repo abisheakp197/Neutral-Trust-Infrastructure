@@ -1,0 +1,68 @@
+{
+  "format_version": "aps-delegation/1.0",
+  "profile": "NTI x Agent-DID interop (docs/NTI-Agent-DID-INTEROP.md rev 2)",
+  "classification": "SYNTHETIC - conformance fixture, not production evidence",
+  "description": "Sample Agent Permission Scope (APS) delegation. This is the object whose canonical bytes are signed by the agent's ML-DSA-87 key and whose SHA-256 digest is the receipt's delegation_chain_root. The five test cases in test_cases.json each mutate or re-contextualise this sample.",
+  "canonicalization": {
+    "algorithm": "RFC 8785 JSON Canonicalization Scheme (JCS)",
+    "digest": "SHA-256 over the canonical bytes of the `delegation` object",
+    "digest_field": "delegation_chain_root",
+    "note": "Sign and hash the `delegation` object only. Do NOT include this envelope's `delegation_chain_root` field in the signed bytes; it is derived from them."
+  },
+  "signature": {
+    "algorithm": "ML-DSA-87",
+    "spec": "FIPS 204 (CRYSTALS-Dilithium5, NIST security category 5)",
+    "encoding": "raw bytes, hex-encoded, tagged as ml-dsa-87:{length}:{hex}",
+    "public_key_encoding": "publicKeyMultibase, multicodec 0x1211 (ML-DSA-87), in the DID document",
+    "verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+    "note": "The signature is raw ML-DSA-87 output. It is NOT DER-encoded ECDSA and MUST NOT be parsed as ASN.1."
+  },
+  "delegation": {
+    "aps_version": "1.0",
+    "delegation_id": "aps-20261106-4417-a2b1",
+    "issued_at": "2026-11-06T14:00:00Z",
+    "not_before": "2026-11-06T14:00:00Z",
+    "expires_at": "2026-11-07T14:00:00Z",
+    "subject": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+    "issuer": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com",
+    "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
+    "parent_delegation_id": null,
+    "scope": {
+      "actions": ["ledger.read", "ledger.transfer"],
+      "resources": ["urn:nti:ledger:acct:*"],
+      "caveats": [
+        { "type": "Expires", "value": "2026-11-07T14:00:00Z" },
+        { "type": "MaxExecutions", "value": 1000 },
+        { "type": "ValueLimit", "value": "10000.00", "currency": "USD" }
+      ]
+    },
+    "constraints": {
+      "audience": "did:webvh:z6MkExampleResourceSCID00000000000000000000:resource.example.com",
+      "single_use": false,
+      "not_transferable": true
+    }
+  },
+  "receipt_binding": {
+    "receipt_id": "rcpt-20261106-4417-a2b1",
+    "payload_sha256": "eae169e70d619885f382454883c3c95fe344d5f903dade7fe5ee6c90a82bf313",
+    "signed_at": "2026-11-06T14:17:02Z",
+    "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
+    "verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+    "algorithm": "ML-DSA-87",
+    "signature": "ml-dsa-87:4627:5c1b9e...fixture...0d7a2f"
+  },
+  "did_document_reference": {
+    "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+    "did_log_url": "https://agents.example.com/.well-known/did.jsonl",
+    "scid": "z6MkExampleAgentSCID0000000000000000000000",
+    "domain": "agents.example.com",
+    "expected_verification_method": {
+      "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+      "type": "Multikey",
+      "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+      "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+    },
+    "expected_relationship": "assertionMethod",
+    "note": "The ML-DSA-87 key MUST appear under assertionMethod at the log entry active at signed_at. See docs/NTI-Agent-DID-INTEROP.md sections 1.1 and 2.1."
+  }
+}
