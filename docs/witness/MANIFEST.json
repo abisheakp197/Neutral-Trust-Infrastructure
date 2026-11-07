@@ -1,8 +1,8 @@
 {
-  "manifest_version": 3,
-  "generated_at_utc": "2026-11-06T17:37:59Z",
+  "manifest_version": 4,
+  "generated_at_utc": "2026-11-07T13:46:27Z",
   "repository": "abisheakp197/Neutral-Trust-Infrastructure",
-  "commit": "b55d5995c2f5452fc5bbb39122bd589fd00bd9b0",
+  "commit": "b5d7d02def3fee7067030658d08c2e7b3156dd93",
   "purpose": "Cryptographic evidence package for independent external witnesses to recompute and verify NTI's cryptographic state.",
   "scope": "NTI's native Rust and Python test suites only.",
   "signature": {
@@ -13,7 +13,8 @@
     ],
     "signature_file": "SIGNATURE.sig",
     "public_key_file": "PUBLIC_KEY.pem",
-    "canonical_form": "raw bytes of RESULTS.json concatenated with raw bytes of MANIFEST.json, in that order, no separator"
+    "public_key_fingerprint_sha256": "0ef7c228f6828fa9c5eadc4cf1e472b4f7130e71560cbf1a454c2ca830987673",
+    "canonical_form": "domain-separated, length-prefixed: b\"nti-witness-package-v2:\" || uint32_be(file_count) || for each file: uint32_be(len(name)) || name || SHA-256(file bytes). Each file is digested separately; the two files are never concatenated."
   },
   "nti_test_scripts": [
     {
@@ -80,7 +81,7 @@
   "witness_generator": [
     {
       "path": "conformance/witness_generator/generate_seals.py",
-      "sha256": "85b0bef27b0dc3a9c4e80fa3f5030f59be4751bbcc28face8a570a2f2f84f02d",
+      "sha256": "9bf4bf34ffd46657e41c4fd6b2b787851b5e75f7adc3b3c0248f277cd6d031b7",
       "description": "Native Apache-2.0 S4/S5/S6 seal generator"
     },
     {
@@ -88,5 +89,26 @@
       "sha256": "d988746568821931152a6567d9929b7052abf692a319f340d47688ae5350cc84",
       "description": "Synthetic sample evidence package"
     }
-  ]
+  ],
+  "key_history": [
+    {
+      "fingerprint_sha256": "02c8859c08b7876fbf3739812d4c35dd8e931a089351485fbef194ea72347812",
+      "algorithm": "Ed25519",
+      "public_key_file": "PUBLIC_KEY.pem",
+      "key_url": "https://abisheakp197.github.io/Neutral-Trust-Infrastructure/witness/PUBLIC_KEY.pem",
+      "status": "retired",
+      "valid_from_utc": "2026-11-06T17:37:59Z",
+      "note": "Original witness key (public key only; private key not retained).",
+      "retired_at_utc": "2026-11-07T13:44:49Z"
+    },
+    {
+      "fingerprint_sha256": "0ef7c228f6828fa9c5eadc4cf1e472b4f7130e71560cbf1a454c2ca830987673",
+      "algorithm": "Ed25519",
+      "public_key_file": "PUBLIC_KEY.pem",
+      "key_url": "https://abisheakp197.github.io/Neutral-Trust-Infrastructure/witness/PUBLIC_KEY.pem",
+      "status": "active",
+      "valid_from_utc": "2026-11-07T13:44:49Z"
+    }
+  ],
+  "key_url": "https://abisheakp197.github.io/Neutral-Trust-Infrastructure/witness/PUBLIC_KEY.pem"
 }
