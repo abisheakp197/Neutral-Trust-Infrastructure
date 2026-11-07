@@ -2,7 +2,22 @@
   "format_version": "aps-delegation/1.0",
   "profile": "NTI x Agent-DID interop (docs/NTI-Agent-DID-INTEROP.md rev 2)",
   "classification": "SYNTHETIC - conformance fixture, not production evidence",
-  "description": "Sample Agent Permission Scope (APS) delegation. This is the object whose canonical bytes are signed by the agent's ML-DSA-87 key and whose SHA-256 digest is the receipt's delegation_chain_root. The five test cases in test_cases.json each mutate or re-contextualise this sample.",
+  "description": "Sample Agent Permission Scope (APS) delegation. This is the object whose canonical bytes are signed by the agent's ML-DSA-87 key and whose SHA-256 digest is the receipt's delegation_chain_root. The seven test cases in test_cases.json each mutate or re-contextualise this sample.",
+  "pinned_implementation": {
+    "name": "agent-passport-system",
+    "version": "8.0.1",
+    "spec": "draft-pidlisnyi-aps-04",
+    "spec_sections": ["4.1", "4.2", "4.3"],
+    "pinned": true,
+    "note": "APS chain-verification behavior is pinned to agent-passport-system 8.0.1 implementing draft-pidlisnyi-aps-04 sections 4.1-4.3."
+  },
+  "aps_boundary": {
+    "summary": "The APS chain verifier does NOT inspect the DID document directly. It requires a caller-supplied resolver to check the issuer's key at issued_at.",
+    "issuer_key_check_time": "issued_at",
+    "resolver_required": true,
+    "not_inspected": ["DID document", "did:webvh DID log", "verification relationships", "DID deactivation"],
+    "note": "The `did_document_reference` block below documents the full NTI requirement. It is context for a full NTI verifier; it is outside the APS boundary and is not read by agent-passport-system 8.0.1."
+  },
   "canonicalization": {
     "algorithm": "RFC 8785 JSON Canonicalization Scheme (JCS)",
     "digest": "SHA-256 over the canonical bytes of the `delegation` object",
