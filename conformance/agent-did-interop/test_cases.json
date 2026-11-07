@@ -1,26 +1,54 @@
 {
-  "format_version": "nti-agent-did-conformance/1.1",
+  "format_version": "nti-agent-did-conformance/1.2",
   "generated_by": "abisheakp197/Neutral-Trust-Infrastructure",
   "profile": "NTI x Agent-DID interop (docs/NTI-Agent-DID-INTEROP.md rev 2)",
   "classification": "SYNTHETIC - conformance fixtures, not production evidence",
   "pinned_implementation": {
     "name": "agent-passport-system",
     "version": "8.0.1",
+    "registry": "npm",
     "spec": "draft-pidlisnyi-aps-04",
-    "spec_sections": ["4.1", "4.2", "4.3"],
+    "spec_sections": [
+      "4.1",
+      "4.2",
+      "4.3"
+    ],
     "pinned": true,
-    "note": "All cases MUST be evaluated with agent-passport-system 8.0.1 implementing draft-pidlisnyi-aps-04 sections 4.1-4.3. Results from any other build are out of scope for this conformance set."
+    "note": "All cases MUST be evaluated with agent-passport-system 8.0.1 implementing draft-pidlisnyi-aps-04 sections 4.1-4.3. Results from any other build are out of scope."
+  },
+  "aps_wire_schema": {
+    "source": "agent-passport-system@8.0.1 dist/src/v2/authority-delegation/types.d.ts",
+    "interface": "AuthorityDelegationV1",
+    "entry_point": "parseAuthorityDelegationJson(source: string): AuthorityDelegationV1",
+    "closed": true,
+    "note": "The authority-delegation v1 schema is CLOSED: an exact-key object. record_type and version MUST be strings. A non-string record_type or version is SCHEMA_INVALID.",
+    "record_type": "aps:authority-delegation:v1",
+    "version": "1.0",
+    "field_constraints": {
+      "record_type": "string, exactly \"aps:authority-delegation:v1\"",
+      "version": "string, exactly \"1.0\"",
+      "delegation_id": "string, \"sha256:\" + 64 lowercase hex",
+      "parent_delegation_id": "null, or \"sha256:\" + 64 lowercase hex",
+      "issuer": "non-empty string (did:webvh identifier)",
+      "subject": "non-empty string (did:webvh identifier)",
+      "verification_method": "non-empty string (the ISSUER key id; APS signs with Ed25519)",
+      "issued_at": "canonical UTC millisecond timestamp, e.g. 2026-11-06T14:00:00.000Z",
+      "nonce": "32 lowercase hex characters (16 random bytes)",
+      "signature": "128 lowercase hex characters (raw 64-byte Ed25519 signature)",
+      "authority": "exactly the seven facets: scope, spend, depth, time, reputation, values, reversibility"
+    }
   },
   "implementation_boundary": {
     "summary": "The APS chain verifier (draft-pidlisnyi-aps-04 sections 4.1-4.3) does NOT inspect the DID document directly. It requires a caller-supplied resolver to check the issuer's key at issued_at.",
     "aps_verifier_does": [
-      "Resolve the issuer's key through a caller-supplied resolver at the delegation's issued_at (sections 4.1-4.2).",
-      "Verify the delegation signature and the delegation digest / chain linkage (section 4.3)."
+      "Parse and validate the delegation against the closed v1 schema (SCHEMA_INVALID on failure).",
+      "Resolve the ISSUER key through a caller-supplied resolver at issued_at (sections 4.1-4.2).",
+      "Verify the delegation_id content address and the Ed25519 signature (section 4.3)."
     ],
     "aps_verifier_does_not": [
       "Fetch or parse the DID document.",
       "Resolve a did:webvh DID log or read its time windows.",
-      "Check the verification relationship (assertionMethod / keyAgreement / capabilityDelegation) of the key.",
+      "Check the verification relationship (assertionMethod / keyAgreement / capabilityDelegation).",
       "Check DID deactivation."
     ],
     "consequence": "Checks outside the APS boundary MUST be reported as \"not_exercised\", never as a pass. A case whose target check is outside the boundary is a spec-level vector: it is not exercised by agent-passport-system 8.0.1 and MUST NOT be counted as a passing conformance result."
@@ -28,46 +56,82 @@
   "delegation_fixture": "APS_DELEGATION_FORMAT.json",
   "reference": {
     "signed_at": "2026-11-06T14:17:02Z",
-    "issued_at": "2026-11-06T14:00:00Z",
+    "aps_now": "2026-11-06T14:17:02.000Z",
+    "issued_at": "2026-11-06T14:00:00.000Z",
     "agent_did": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
     "issuer_did": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com",
-    "verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
-    "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
-    "payload_sha256": "eae169e70d619885f382454883c3c95fe344d5f903dade7fe5ee6c90a82bf313",
-    "tampered_delegation_chain_root": "5e2583f3e2f0d60287baec32302bcaf88609adc35b195af9bc52e4db87a4079b"
+    "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
+    "issuer_verification_method": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com#aps-ed25519-1",
+    "delegation_id": "sha256:32c13399778b912bf8ff8502ee785f76650c4970c35f0472e0015c142fcb12a8",
+    "tampered_delegation_id": "sha256:bc1d1473ad810f5d6749ebaee16cb8fa169b99e5050e2ead91ba460382b83073",
+    "issuer_public_key_hex": "d02c829fa8036987205e664b482302d5ff245475268b0c61be5dfb0103f41de1",
+    "issuer_public_key_note": "SYNTHETIC key generated for these fixtures. Supplied to APS through the caller-supplied resolver; it is not published anywhere."
   },
   "harness_contract": {
-    "description": "Each case supplies a DID log (a list of did:webvh log entries) and an APS delegation. A full NTI verifier MUST resolve the DID as of signed_at, resolve the ML-DSA-87 verification method, apply the verification relationship, and decide. The pinned APS implementation exercises only the sub-checks inside its boundary (see implementation_boundary).",
+    "description": "Each case supplies a did:webvh DID log plus a delegation (by reference into the delegations map). A full NTI verifier MUST resolve the DID as of signed_at, resolve the ML-DSA-87 verification method, apply the verification relationship, and decide. The pinned APS implementation exercises only the sub-checks inside its boundary.",
+    "aps_entry_point": "parseAuthorityDelegationJson(JSON.stringify(delegations[delegation_ref])) then verifyAuthorityDelegation(record, options).",
     "aps_required_resolver": {
       "supplied_by": "caller",
-      "contract": "resolve(issuer_did, at=issued_at) -> { verificationMethod: [ {id, type, publicKeyMultibase} ] }",
+      "contract": "resolveVerificationKey(issuer, verificationMethod, issuedAt) -> publicKeyHex | null | { outcome }",
       "note": "APS does not build this resolver. If the caller does not supply one, the issuer-key-at-issued_at check cannot run and MUST be reported as \"not_exercised\"."
     },
     "resolver_scope": {
-      "issued_at": "the APS resolver checks the ISSUER key at issued_at (draft-pidlisnyi-aps-04 sections 4.1-4.3).",
+      "issued_at": "the APS resolver checks the ISSUER key at issued_at (sections 4.1-4.3).",
       "signed_at": "signing-time validity of the AGENT key at signed_at is NOT part of the APS boundary; a full NTI verifier performs it separately (docs/NTI-Agent-DID-INTEROP.md section 2.1)."
     },
     "did_log_entry_fields": {
       "versionId": "monotonic log version id",
       "valid_from": "RFC 3339 UTC; the entry is active from this instant",
-      "valid_until": "RFC 3339 UTC or null; the entry is active until this instant (exclusive). null means still active.",
+      "valid_until": "RFC 3339 UTC or null; active until this instant (exclusive). null means still active.",
       "verificationMethod": "list of {id, type, controller, publicKeyMultibase}",
       "assertionMethod": "list of verification method ids",
       "authentication": "list of verification method ids",
       "keyAgreement": "list of verification method ids",
-      "capabilityDelegation": "list of verification method ids (zcap-style capability delegation; never a receipt-signing relationship)",
+      "capabilityDelegation": "list of verification method ids (zcap-style; never a receipt-signing relationship)",
       "deactivated": "true if this entry deactivates the DID"
     },
     "expected_fields": {
-      "decision": "accept | reject",
+      "decision": "accept | reject (the spec-level decision a full NTI verifier must reach)",
       "reason_code": "one of the machine-readable codes below",
-      "checks": "which layers were exercised. Each value is one of: pass | fail | not_exercised. See docs/NTI-Agent-DID-INTEROP.md section 2."
+      "aps_verifier_result": "the state and failure codes the pinned APS implementation actually returns for this case",
+      "checks": "per-check status: pass | fail | not_exercised. not_exercised means outside the APS boundary and MUST NOT be counted as a pass."
     },
     "check_status_values": {
       "pass": "the pinned implementation performed the check and it succeeded.",
       "fail": "the pinned implementation performed the check and it failed.",
-      "not_exercised": "the pinned implementation does not perform this check (outside the APS boundary). This is NOT a pass and MUST NOT be counted as one."
+      "not_exercised": "the pinned implementation does not perform this check (outside the APS boundary). This is NOT a pass."
     },
+    "aps_failure_codes": [
+      "SCHEMA_INVALID",
+      "UNSUPPORTED_RECORD_TYPE",
+      "UNSUPPORTED_VERSION",
+      "UNSUPPORTED_PROFILE",
+      "NONCANONICAL_VALUE",
+      "ID_MISMATCH",
+      "SIGNATURE_INVALID",
+      "KEY_NOT_FOUND",
+      "KEY_AMBIGUOUS",
+      "KEY_MATERIAL_MALFORMED",
+      "KEY_UNREACHABLE",
+      "KEY_SCHEME_UNSUPPORTED",
+      "ROOT_UNTRUSTED",
+      "CHAIN_DUPLICATE_ID",
+      "PARENT_MISMATCH",
+      "CHAIN_CONTINUITY",
+      "ISSUED_AT_OUTSIDE_PARENT",
+      "SCOPE_WIDENING",
+      "SPEND_WIDENING",
+      "DEPTH_EXHAUSTED",
+      "TIME_WIDENING",
+      "REPUTATION_WIDENING",
+      "VALUES_WEAKENING",
+      "REVERSIBILITY_WIDENING",
+      "NOT_YET_VALID",
+      "EXPIRED",
+      "REVOKED",
+      "REVOCATION_UNKNOWN",
+      "RESOURCE_LIMIT"
+    ],
     "reason_codes": [
       "OK",
       "DID_DEACTIVATED",
@@ -78,20 +142,115 @@
       "DELEGATION_TAMPERED_AFTER_SIGNING"
     ]
   },
+  "delegations": {
+    "aps-delegation-valid-v1": {
+      "record_type": "aps:authority-delegation:v1",
+      "version": "1.0",
+      "parent_delegation_id": null,
+      "issuer": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com",
+      "subject": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+      "verification_method": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com#aps-ed25519-1",
+      "issued_at": "2026-11-06T14:00:00.000Z",
+      "nonce": "77857a3d9352d4d8916cc2b04980de6b",
+      "authority": {
+        "scope": {
+          "profile": "aps-hierarchical-v1",
+          "grants": [
+            "ledger:read",
+            "ledger:transfer"
+          ]
+        },
+        "spend": {
+          "mode": "bounded",
+          "unit": "iso4217:USD:minor",
+          "per_action": "1000000",
+          "cumulative": "100000000"
+        },
+        "depth": {
+          "remaining": 0
+        },
+        "time": {
+          "not_before": "2026-11-06T14:00:00.000Z",
+          "not_after": "2026-11-07T14:00:00.000Z"
+        },
+        "reputation": {
+          "profile": "aps-score-0-100-v1",
+          "ceiling": 80
+        },
+        "values": {
+          "profile": "aps-values-identifiers-v1",
+          "required": []
+        },
+        "reversibility": {
+          "profile": "aps-tci-v1",
+          "ceiling": "compensable"
+        }
+      },
+      "delegation_id": "sha256:32c13399778b912bf8ff8502ee785f76650c4970c35f0472e0015c142fcb12a8",
+      "signature": "4980879442d570854a866bc6795cd5a20a56ec583ffbc2319fc5b81c356ef5ceaa4da8dffb2ed7886805c4a51b2c8872aad7724891866ee10846d9b52a07d60a"
+    },
+    "aps-delegation-tampered-v1": {
+      "record_type": "aps:authority-delegation:v1",
+      "version": "1.0",
+      "parent_delegation_id": null,
+      "issuer": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com",
+      "subject": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+      "verification_method": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com#aps-ed25519-1",
+      "issued_at": "2026-11-06T14:00:00.000Z",
+      "nonce": "77857a3d9352d4d8916cc2b04980de6b",
+      "authority": {
+        "scope": {
+          "profile": "aps-hierarchical-v1",
+          "grants": [
+            "ledger:admin",
+            "ledger:read",
+            "ledger:transfer"
+          ]
+        },
+        "spend": {
+          "mode": "bounded",
+          "unit": "iso4217:USD:minor",
+          "per_action": "1000000",
+          "cumulative": "100000000"
+        },
+        "depth": {
+          "remaining": 0
+        },
+        "time": {
+          "not_before": "2026-11-06T14:00:00.000Z",
+          "not_after": "2026-11-07T14:00:00.000Z"
+        },
+        "reputation": {
+          "profile": "aps-score-0-100-v1",
+          "ceiling": 80
+        },
+        "values": {
+          "profile": "aps-values-identifiers-v1",
+          "required": []
+        },
+        "reversibility": {
+          "profile": "aps-tci-v1",
+          "ceiling": "compensable"
+        }
+      },
+      "delegation_id": "sha256:32c13399778b912bf8ff8502ee785f76650c4970c35f0472e0015c142fcb12a8",
+      "signature": "4980879442d570854a866bc6795cd5a20a56ec583ffbc2319fc5b81c356ef5ceaa4da8dffb2ed7886805c4a51b2c8872aad7724891866ee10846d9b52a07d60a"
+    }
+  },
   "cases": [
     {
       "id": "case-1-valid-key",
       "title": "Valid key",
-      "description": "Baseline positive case. The ML-DSA-87 key is active at signed_at, listed under assertionMethod, not revoked, and the delegation digest matches the signed root.",
-      "exercises": ["layer-0a", "layer-1"],
+      "description": "Baseline positive case. The ML-DSA-87 key is active at signed_at, listed under assertionMethod, not revoked, and the APS delegation parses and verifies.",
+      "exercises": [
+        "layer-0a",
+        "layer-1"
+      ],
       "aps_exercised": true,
       "input": {
         "signed_at": "2026-11-06T14:17:02Z",
-        "delegation": {
-          "delegation_id": "aps-20261106-4417-a2b1",
-          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
-          "mutations": []
-        },
+        "delegation_ref": "aps-delegation-valid-v1",
+        "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
         "did_log": [
           {
             "versionId": "1-genesis",
@@ -118,27 +277,30 @@
       "expected": {
         "decision": "accept",
         "reason_code": "OK",
+        "aps_verifier_result": {
+          "state": "valid",
+          "valid": true,
+          "failure_codes": []
+        },
         "checks": {
           "aps_resolver_issuer_key_at_issued_at": "pass",
-          "did_document_authorization": "not_exercised",
-          "delegation_integrity": "pass"
+          "aps_delegation_integrity": "pass",
+          "did_document_authorization": "not_exercised"
         },
-        "rationale": "APS resolves the issuer key at issued_at (pass) and verifies the delegation digest (pass). The DID-document authorization check is outside the APS boundary and is reported not_exercised."
+        "rationale": "APS parses the record, resolves the issuer key at issued_at (pass), and verifies the delegation id and signature (pass). The DID-document authorization check is outside the APS boundary and is reported not_exercised."
       }
     },
     {
       "id": "case-2-key-rotated-before-signing",
       "title": "Key rotated out before signing time",
-      "description": "The ML-DSA-87 key #ml-dsa-87-1 was retired in log version 2 (valid_until 2026-11-06T12:00:00Z) and replaced by #ml-dsa-87-2. The receipt was signed at 14:17:02Z with the OLD key. A full verifier MUST evaluate the DID log as of signed_at and reject. The APS chain verifier does not inspect the DID document, so it cannot exercise this check.",
-      "exercises": ["layer-0a"],
+      "description": "The ML-DSA-87 key #ml-dsa-87-1 was retired in log version 2 (valid_until 2026-11-06T12:00:00Z) and replaced by #ml-dsa-87-2. The receipt was signed at 14:17:02Z with the OLD key. A full verifier MUST evaluate the DID log as of signed_at and reject. APS never reads the DID log, so it accepts the record and does not exercise this check.",
+      "exercises": [
+        "layer-0a"
+      ],
       "aps_exercised": false,
       "input": {
         "signed_at": "2026-11-06T14:17:02Z",
-        "delegation": {
-          "delegation_id": "aps-20261106-4417-a2b1",
-          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
-          "mutations": []
-        },
+        "delegation_ref": "aps-delegation-valid-v1",
         "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
         "did_log": [
           {
@@ -151,7 +313,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY_v1...9k"
+                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
               }
             ],
             "assertionMethod": [
@@ -171,7 +333,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-2",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY_v2...9k"
+                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
               }
             ],
             "assertionMethod": [
@@ -186,27 +348,30 @@
       "expected": {
         "decision": "reject",
         "reason_code": "KEY_NOT_VALID_AT_SIGNING_TIME",
-        "checks": {
-          "aps_resolver_issuer_key_at_issued_at": "not_exercised",
-          "did_document_authorization": "not_exercised",
-          "delegation_integrity": "pass"
+        "aps_verifier_result": {
+          "state": "valid",
+          "valid": true,
+          "failure_codes": []
         },
-        "rationale": "At signed_at (14:17:02Z) the active entry is version 2, which no longer authorises #ml-dsa-87-1; the key had been rotated out at 12:00:00Z. This is the required spec-level decision, but the APS chain verifier does not read the DID log, so no APS check is exercised here."
+        "checks": {
+          "aps_resolver_issuer_key_at_issued_at": "pass",
+          "aps_delegation_integrity": "pass",
+          "did_document_authorization": "not_exercised"
+        },
+        "rationale": "At signed_at (14:17:02Z) the active entry is version 2, which no longer authorises #ml-dsa-87-1; the key was rotated out at 12:00:00Z. APS returns valid because it does not read the DID log, so this check is not exercised by the pinned implementation."
       }
     },
     {
       "id": "case-3-deactivated-did",
       "title": "Deactivated DID",
-      "description": "The DID log's latest entry is marked deactivated=true at 2026-11-06T13:00:00Z, before signed_at. A DID deactivation is terminal: no key may sign after it. The APS chain verifier does not inspect the DID document, so it cannot exercise this check.",
-      "exercises": ["layer-0a"],
+      "description": "The DID log's latest entry is marked deactivated=true at 2026-11-06T13:00:00Z, before signed_at. Deactivation is terminal. APS never reads the DID log, so it accepts the record and does not exercise this check.",
+      "exercises": [
+        "layer-0a"
+      ],
       "aps_exercised": false,
       "input": {
         "signed_at": "2026-11-06T14:17:02Z",
-        "delegation": {
-          "delegation_id": "aps-20261106-4417-a2b1",
-          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
-          "mutations": []
-        },
+        "delegation_ref": "aps-delegation-valid-v1",
         "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
         "did_log": [
           {
@@ -245,27 +410,30 @@
       "expected": {
         "decision": "reject",
         "reason_code": "DID_DEACTIVATED",
-        "checks": {
-          "aps_resolver_issuer_key_at_issued_at": "not_exercised",
-          "did_document_authorization": "not_exercised",
-          "delegation_integrity": "pass"
+        "aps_verifier_result": {
+          "state": "valid",
+          "valid": true,
+          "failure_codes": []
         },
-        "rationale": "The DID was deactivated at 13:00:00Z, before signed_at; deactivation is terminal and precedes key-level checks. The APS chain verifier does not read the DID log, so this check is not exercised by the pinned implementation."
+        "checks": {
+          "aps_resolver_issuer_key_at_issued_at": "pass",
+          "aps_delegation_integrity": "pass",
+          "did_document_authorization": "not_exercised"
+        },
+        "rationale": "The DID was deactivated at 13:00:00Z, before signed_at. APS returns valid because it does not read the DID log, so this check is not exercised by the pinned implementation."
       }
     },
     {
       "id": "case-4-key-only-under-keyAgreement",
       "title": "Key listed only under keyAgreement",
-      "description": "The ML-DSA-87 key #ml-dsa-87-1 is present and active at signed_at, but it is listed only under keyAgreement (a key-agreement relationship), not under assertionMethod. A key in keyAgreement MUST NOT be used to verify signatures. The APS chain verifier does not inspect the DID document, so it cannot exercise this check.",
-      "exercises": ["layer-0a"],
+      "description": "The ML-DSA-87 key #ml-dsa-87-1 is present and active at signed_at, but listed only under keyAgreement, not assertionMethod. A keyAgreement key MUST NOT verify signatures. APS does not inspect the DID document, so it does not exercise this check.",
+      "exercises": [
+        "layer-0a"
+      ],
       "aps_exercised": false,
       "input": {
         "signed_at": "2026-11-06T14:17:02Z",
-        "delegation": {
-          "delegation_id": "aps-20261106-4417-a2b1",
-          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
-          "mutations": []
-        },
+        "delegation_ref": "aps-delegation-valid-v1",
         "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
         "did_log": [
           {
@@ -293,35 +461,31 @@
       "expected": {
         "decision": "reject",
         "reason_code": "WRONG_VERIFICATION_RELATIONSHIP",
-        "checks": {
-          "aps_resolver_issuer_key_at_issued_at": "not_exercised",
-          "did_document_authorization": "not_exercised",
-          "delegation_integrity": "pass"
+        "aps_verifier_result": {
+          "state": "valid",
+          "valid": true,
+          "failure_codes": []
         },
-        "rationale": "The key is active and unrevoked but appears only under keyAgreement. Per docs/NTI-Agent-DID-INTEROP.md section 2.1, only assertionMethod keys may verify receipts. The APS chain verifier does not inspect verification relationships, so this check is not exercised by the pinned implementation."
+        "checks": {
+          "aps_resolver_issuer_key_at_issued_at": "pass",
+          "aps_delegation_integrity": "pass",
+          "did_document_authorization": "not_exercised"
+        },
+        "rationale": "The key is active and unrevoked but appears only under keyAgreement. Only assertionMethod keys may verify receipts (docs/NTI-Agent-DID-INTEROP.md section 2.1). APS does not inspect verification relationships, so this check is not exercised by the pinned implementation."
       }
     },
     {
       "id": "case-5-delegation-modified-after-signing",
       "title": "Delegation modified after signing",
-      "description": "The key is fully valid (as in case 1), but the delegation scope was modified after signing: the `actions` array gained `ledger.admin`. The delegation now hashes to the tampered root, which does not match the signed delegation_chain_root. The ML-DSA-87 signature over the original payload no longer covers these bytes.",
-      "exercises": ["layer-1"],
+      "description": "The issuer key is valid, but the delegation scope was modified after signing: the grants array gained ledger:admin. The delegation_id is a content address over the body, so the recomputed id no longer matches the stored delegation_id. APS performs this check.",
+      "exercises": [
+        "layer-1"
+      ],
       "aps_exercised": true,
       "input": {
         "signed_at": "2026-11-06T14:17:02Z",
-        "delegation": {
-          "delegation_id": "aps-20261106-4417-a2b1",
-          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
-          "recomputed_sha256_after_mutation": "5e2583f3e2f0d60287baec32302bcaf88609adc35b195af9bc52e4db87a4079b",
-          "mutations": [
-            {
-              "path": "delegation.scope.actions",
-              "op": "add",
-              "value": "ledger.admin",
-              "note": "privilege escalation added after the signature was produced"
-            }
-          ]
-        },
+        "delegation_ref": "aps-delegation-tampered-v1",
+        "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
         "did_log": [
           {
             "versionId": "1-genesis",
@@ -348,27 +512,32 @@
       "expected": {
         "decision": "reject",
         "reason_code": "DELEGATION_TAMPERED_AFTER_SIGNING",
+        "aps_verifier_result": {
+          "state": "invalid",
+          "valid": false,
+          "failure_codes": [
+            "ID_MISMATCH"
+          ]
+        },
         "checks": {
           "aps_resolver_issuer_key_at_issued_at": "pass",
-          "did_document_authorization": "not_exercised",
-          "delegation_integrity": "fail"
+          "aps_delegation_integrity": "fail",
+          "did_document_authorization": "not_exercised"
         },
-        "rationale": "The recomputed delegation digest (5e2583...) does not equal the signed delegation_chain_root (fdc448...). APS verifies the delegation digest, so this check is exercised and fails."
+        "rationale": "The tampered body recomputes to delegation_id sha256:bc1d1473ad810f5d6749ebaee16cb8fa169b99e5050e2ead91ba460382b83073, which does not equal the stored delegation_id sha256:32c13399778b912bf8ff8502ee785f76650c4970c35f0472e0015c142fcb12a8. APS reports ID_MISMATCH, so this check is exercised and fails."
       }
     },
     {
       "id": "case-6-key-only-under-capabilityDelegation",
       "title": "Key listed only under capabilityDelegation",
-      "description": "The ML-DSA-87 key #ml-dsa-87-1 is present and active at signed_at, but it is listed only under capabilityDelegation (an object-capability delegation relationship), not under assertionMethod. A key in capabilityDelegation MUST NOT be used to verify receipt signatures. Requested by Tymofii (APS creator).",
-      "exercises": ["layer-0a"],
+      "description": "The ML-DSA-87 key #ml-dsa-87-1 is present and active at signed_at, but listed only under capabilityDelegation, not assertionMethod. capabilityDelegation is an object-capability relationship, not a signing relationship. Requested by Tymofii (APS creator).",
+      "exercises": [
+        "layer-0a"
+      ],
       "aps_exercised": false,
       "input": {
         "signed_at": "2026-11-06T14:17:02Z",
-        "delegation": {
-          "delegation_id": "aps-20261106-4417-a2b1",
-          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
-          "mutations": []
-        },
+        "delegation_ref": "aps-delegation-valid-v1",
         "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
         "did_log": [
           {
@@ -396,27 +565,31 @@
       "expected": {
         "decision": "reject",
         "reason_code": "WRONG_VERIFICATION_RELATIONSHIP",
-        "checks": {
-          "aps_resolver_issuer_key_at_issued_at": "not_exercised",
-          "did_document_authorization": "not_exercised",
-          "delegation_integrity": "pass"
+        "aps_verifier_result": {
+          "state": "valid",
+          "valid": true,
+          "failure_codes": []
         },
-        "rationale": "The key is active and unrevoked but appears only under capabilityDelegation. capabilityDelegation is an object-capability relationship, not a signing relationship; only assertionMethod keys may verify receipts. The APS chain verifier does not inspect verification relationships, so this check is not exercised by the pinned implementation."
+        "checks": {
+          "aps_resolver_issuer_key_at_issued_at": "pass",
+          "aps_delegation_integrity": "pass",
+          "did_document_authorization": "not_exercised"
+        },
+        "rationale": "The key is active and unrevoked but appears only under capabilityDelegation. Only assertionMethod keys may verify receipts. APS does not inspect verification relationships, so this check is not exercised by the pinned implementation."
       }
     },
     {
       "id": "case-7-key-only-under-assertionMethod",
       "title": "Key listed only under assertionMethod",
-      "description": "The ML-DSA-87 key #ml-dsa-87-1 is present and active at signed_at and is listed under assertionMethod (and nowhere else). This is the relationship a receipt-signing key must use, so the receipt is accepted. Requested by Tymofii (APS creator).",
-      "exercises": ["layer-0a", "layer-1"],
+      "description": "The ML-DSA-87 key #ml-dsa-87-1 is present and active at signed_at and listed under assertionMethod (and nowhere else). This is the relationship a receipt-signing key must use, so the receipt is accepted. Requested by Tymofii (APS creator).",
+      "exercises": [
+        "layer-0a",
+        "layer-1"
+      ],
       "aps_exercised": false,
       "input": {
         "signed_at": "2026-11-06T14:17:02Z",
-        "delegation": {
-          "delegation_id": "aps-20261106-4417-a2b1",
-          "delegation_chain_root": "fdc44810b7b29857dc928cc38d3c3cfeed8439ed73ab03fd72265cc2c50a4d05",
-          "mutations": []
-        },
+        "delegation_ref": "aps-delegation-valid-v1",
         "signing_verification_method": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
         "did_log": [
           {
@@ -444,12 +617,17 @@
       "expected": {
         "decision": "accept",
         "reason_code": "OK",
+        "aps_verifier_result": {
+          "state": "valid",
+          "valid": true,
+          "failure_codes": []
+        },
         "checks": {
           "aps_resolver_issuer_key_at_issued_at": "pass",
-          "did_document_authorization": "not_exercised",
-          "delegation_integrity": "pass"
+          "aps_delegation_integrity": "pass",
+          "did_document_authorization": "not_exercised"
         },
-        "rationale": "The key is listed only under assertionMethod, the only relationship valid for receipt signing, and the delegation digest matches. The relationship check itself is a DID-document check outside the APS boundary and is reported not_exercised; the APS resolver and digest checks pass."
+        "rationale": "The key is listed only under assertionMethod, the only relationship valid for receipt signing. The relationship check is a DID-document check outside the APS boundary and is reported not_exercised; APS itself parses and verifies the record."
       }
     }
   ],
@@ -460,7 +638,7 @@
     "aps_exercised": {
       "exercised": 2,
       "not_exercised": 5,
-      "note": "5 of 7 cases target DID-document checks the pinned APS implementation does not perform. Report them as not_exercised; do not count them as passes."
+      "note": "Cases 2, 3, 4, 6, 7 target DID-document checks the pinned APS implementation does not perform. Report them as not_exercised; do not count them as passes."
     },
     "reason_codes": {
       "case-1-valid-key": "OK",
