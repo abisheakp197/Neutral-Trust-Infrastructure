@@ -12,12 +12,14 @@ TSC is:
 | Name | Project / Organization | Scope |
 | :--- | :--- | :--- |
 | Abisheak P. | NTI (Neutral Trust Infrastructure) | Runtime enforcement layer |
-| Steven Zhao (Xinghua) | UIBC | Evidence packaging & lifecycle governance |
 
-The TSC represents multiple independent projects. Additional seats will be added
-as the contributor base grows, with the explicit goal of increasing
-organizational diversity (see the LFDT expectation of maintainers from three or
-more independent organizations for Graduated status).
+Steven Zhao (Xinghua) is invited to the TSC; his seat is pending written
+confirmation. He participates as an individual researcher and does not represent
+UIBC. An invitation is not a confirmed seat.
+
+Additional seats will be added as the contributor base grows, with the explicit
+goal of increasing organizational diversity (see the LFDT expectation of
+maintainers from three or more independent organizations for Graduated status).
 
 ## Decision Making
 

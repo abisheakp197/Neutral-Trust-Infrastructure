@@ -9,26 +9,18 @@ setting technical direction, and upholding the project's [Code of Conduct](CODE_
 | Name | Role | Project / Organization | GitHub |
 | :--- | :--- | :--- | :--- |
 | Abisheak P. | Lead Architect | NTI (Neutral Trust Infrastructure) | [@abisheakp197](https://github.com/abisheakp197) |
-| Steven Zhao (Xinghua) | Evidence Layer | UIBC | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
-| Takao Sato (Poke-nushi) | Receiving Layer | VATE / Verifiable-Agent-Trust-Envelope | [@Poke-nushi](https://github.com/Poke-nushi) |
+| Steven Zhao (Xinghua) | Individual Researcher | Independent — not representing UIBC | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
+
+Steven Zhao (Xinghua) - Individual Researcher (ORCID: 0009-0001-0512-1237). Invited to TSC; pending written confirmation. Not representing UIBC.
 
 ## Organizational Independence
 
-The maintainers above represent **three independent projects**, each with its own
-repository, governance, and release cadence. They are not employees of a single
-company, and no single organization controls more than one seat:
-
-- **NTI** — Neutral Trust Infrastructure: the runtime enforcement layer.
-- **UIBC** — [zhaoxinghua09-cell/uibc-core](https://github.com/zhaoxinghua09-cell/uibc-core):
-  the evidence-packaging and lifecycle-governance layer.
-- **VATE** — Takao Sato / Poke-nushi (VATE / Verifiable-Agent-Trust-Envelope:
-  <https://github.com/Poke-nushi/Verifiable-Agent-Trust-Envelope>):
-  the verifier-side receiving layer.
-
-This satisfies the LF Decentralized Trust diversity expectation of maintainers
-drawn from **two or more independent organizations** (see the
+NTI is an independent project. No third-party organization is represented in this
+file, and no single organization holds more than one seat. The project is
+committed to growing the maintainer base and to meeting the LF Decentralized
+Trust diversity expectation over time (see the
 [Project Lifecycle](https://lf-decentralized-trust.github.io/governance/governing-documents/project-lifecycle/)
-diversity criteria). The project is committed to growing this list over time.
+diversity criteria).
 
 ## Maintainer Responsibilities
 

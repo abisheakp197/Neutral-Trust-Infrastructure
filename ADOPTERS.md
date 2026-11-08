@@ -15,15 +15,7 @@ guidance: entries should reference publicly verifiable usage.
 
 | Partner | Layer | Repository |
 | :--- | :--- | :--- |
-| **VATE** (Verifiable Agent Trust Envelope) | Receiving / verifier layer | [Poke-nushi/Verifiable-Agent-Trust-Envelope](https://github.com/Poke-nushi/Verifiable-Agent-Trust-Envelope) |
 | **UIBC** | Evidence packaging & lifecycle governance | [zhaoxinghua09-cell/uibc-core](https://github.com/zhaoxinghua09-cell/uibc-core) |
-
-### VATE — Verifiable Agent Trust Envelope
-
-VATE provides the verifier-side receiving layer: it evaluates recovered evidence
-and decides how to link it to the original operation and attempt. NTI and VATE
-are collaborating on a joint lost-response recovery test case (see
-[`conformance/vate-recovery/`](conformance/vate-recovery/)).
 
 ### UIBC
 
