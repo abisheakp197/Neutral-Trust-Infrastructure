@@ -38,13 +38,17 @@ be merged.
 
 ---
 
-## 1. Contributor License Agreement (CLA)
+## 1. Licensing: DCO Only — No CLA
 
-All contributors must sign our Contributor License Agreement (CLA) before any code can be merged.
+**NTI uses the Developer Certificate of Origin (DCO) exclusively. We do not require a CLA. All commits must be signed off using `git commit -s`.**
 
-* When you open your first Pull Request (PR), an automated CLA bot will leave a comment on your PR prompting you to sign.
-* **Your PR cannot be merged until the CLA check passes.**
-* *Why this matters:* The CLA ensures you retain author credit while granting the project maintainer the legal rights required to manage, re-license, and protect the codebase as it evolves into a commercial platform.
+By signing off, you certify that you wrote the contribution or otherwise have the
+right to submit it under the project's open-source license (Apache-2.0 for code,
+CC BY 4.0 for the specification). You retain your copyright; there is no
+copyright-assignment or relicensing agreement to sign.
+
+There is no CLA bot and no CLA check to pass. The only contributor-agreement
+requirement is the DCO sign-off described in section 0.
 
 ---
 
@@ -54,7 +58,7 @@ All contributors must sign our Contributor License Agreement (CLA) before any co
 2. **Fork and Branch:** Create a feature branch off of `main` (e.g., `feature/vote-signing`).
 3. **Run Tests Locally:** Ensure `cargo test` and `cargo build` pass cleanly before submitting.
 4. **Submit a Pull Request:** Open a PR targeting the `main` branch with a clear title and description of your changes.
-5. **Sign the CLA:** Follow the prompt provided by the CLA bot on your PR.
+5. **Sign Off Your Commits:** Use `git commit -s` so each commit carries a DCO `Signed-off-by:` line (see section 0).
 
 ---
 

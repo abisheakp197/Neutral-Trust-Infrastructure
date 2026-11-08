@@ -10,7 +10,7 @@ setting technical direction, and upholding the project's [Code of Conduct](CODE_
 | :--- | :--- | :--- | :--- |
 | Abisheak P. | Lead Architect | NTI (Neutral Trust Infrastructure) | [@abisheakp197](https://github.com/abisheakp197) |
 | Steven Zhao (Xinghua) | Evidence Layer | UIBC | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
-| Takao Sato (Poke-nushi) | Receiving Layer | VATE | [@Poke-nushi](https://github.com/Poke-nushi) |
+| Takao Sato (Poke-nushi) | Receiving Layer | VATE / Verifiable-Agent-Trust-Envelope | [@Poke-nushi](https://github.com/Poke-nushi) |
 
 ## Organizational Independence
 
@@ -21,7 +21,8 @@ company, and no single organization controls more than one seat:
 - **NTI** — Neutral Trust Infrastructure: the runtime enforcement layer.
 - **UIBC** — [zhaoxinghua09-cell/uibc-core](https://github.com/zhaoxinghua09-cell/uibc-core):
   the evidence-packaging and lifecycle-governance layer.
-- **VATE** — [Poke-nushi/Verifiable-Agent-Trust-Envelope](https://github.com/Poke-nushi/Verifiable-Agent-Trust-Envelope):
+- **VATE** — Takao Sato / Poke-nushi (VATE / Verifiable-Agent-Trust-Envelope:
+  <https://github.com/Poke-nushi/Verifiable-Agent-Trust-Envelope>):
   the verifier-side receiving layer.
 
 This satisfies the LF Decentralized Trust diversity expectation of maintainers
