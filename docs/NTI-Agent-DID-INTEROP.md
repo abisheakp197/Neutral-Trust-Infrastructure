@@ -1,6 +1,6 @@
 # NTI x Agent-DID Interoperability
 
-**Status:** Draft for review (rev 2 - addresses Agent-DID cryptographic review)
+**Status:** Draft for review (rev 3 - cryptographic constants corrected)
 **Scope:** Cross-project integration between Neutral Trust Infrastructure (NTI) and Agent-DID
 **Audience:** Principal architects, cryptographic reviewers, and implementers of both projects
 
@@ -9,6 +9,8 @@
 This document defines how an NTI receipt and an Agent-DID identity compose at invocation time. The two layers are strictly independent and are combined by a verifier using a strict AND gate; neither layer trusts the other's result.
 
 > **Revision note (rev 2).** This revision fixes five critical cryptographic defects raised by Edison Duran (Agent-DID): ML-DSA-87 key binding (Section 1.1), signing-time validity of `did:webvh` keys (Section 2.1), the `assertionMethod` verification relationship (Section 2.1), separation of DID authorization from VC issuer checks (Section 2.1), and corrected DID / signature examples (Sections 1.2 and 4.3).
+>
+> **Revision note (rev 3).** Corrects two constant-level errors found on re-review: the ML-DSA-87 multicodec code is **`0x1212`** (`0x1211` is ML-DSA-65), and an ML-DSA-87 signature is **4627 bytes** (`2592` is the ML-DSA-87 public-key size, not the signature size). Both are fixed in Sections 1.1, 1.2, and 4.3, and the same corrections are applied to the `conformance/vate-recovery` receipt fixture.
 
 ## 1. Receipt Referencing Agent-DID
 
@@ -31,7 +33,7 @@ Two conforming binding patterns are permitted. The verifier MUST support **Patte
 
 **Pattern A - ML-DSA-87 verification method directly in the DID document (preferred).**
 
-The DID document carries a verification method with `type: "Multikey"` and a `publicKeyMultibase` encoding the ML-DSA-87 (Dilithium5) public key under the multicodec code `0x1211`. The `verification_method` fragment in the receipt points directly at this entry.
+The DID document carries a verification method with `type: "Multikey"` and a `publicKeyMultibase` encoding the ML-DSA-87 (Dilithium5) public key under the multicodec code `0x1212`. The `verification_method` fragment in the receipt points directly at this entry.
 
 ```json
 {
@@ -45,7 +47,7 @@ The DID document carries a verification method with `type: "Multikey"` and a `pu
       "id": "did:webvh:z6MkExampleSCID1234567890:agents.example.com#ml-dsa-87-1",
       "type": "Multikey",
       "controller": "did:webvh:z6MkExampleSCID1234567890:agents.example.com",
-      "publicKeyMultibase": "uz..."
+      "publicKeyMultibase": "uz6MkExampleMLDSA87PublicKey..."
     }
   ],
   "authentication": ["#ed25519-auth-1"],
@@ -63,7 +65,7 @@ When the ML-DSA-87 key cannot live in the DID document (for example, rotation or
 
 1. Resolve `agent_did` and confirm the DID document is valid at the current log entry (see Section 2.1).
 2. Resolve the fragment named by `verification_method`.
-3. Require that the resolved entry is an ML-DSA-87 (`Multikey` / multicodec `0x1211`) key. If it is an Ed25519 key, the receipt is invalid: Ed25519 keys can never verify an ML-DSA-87 receipt.
+3. Require that the resolved entry is an ML-DSA-87 (`Multikey` / multicodec `0x1212`) key. If it is an Ed25519 key, the receipt is invalid: Ed25519 keys can never verify an ML-DSA-87 receipt.
 4. If the key is present directly (Pattern A), use it. If the entry instead links to an external mapping (Pattern B), fetch and verify the mapping: the mapping's issuer MUST equal the DID controller, and the mapping MUST be signed by a key listed under `assertionMethod`.
 5. Require that the ML-DSA-87 key is listed under `assertionMethod` (see Section 2.1).
 6. Confirm that the ML-DSA-87 key was valid at the signing time recorded in the receipt (see Section 2.1).
@@ -79,12 +81,12 @@ When the ML-DSA-87 key cannot live in the DID document (for example, rotation or
   "delegation_chain_root": "a71b...3d",
   "signed_at": "2026-11-06T14:17:02Z",
   "algorithm": "ML-DSA-87",
-  "signature": "ml-dsa-87:2592:2f7a...c04b"
+  "signature": "ml-dsa-87:4627:2f7a...c04b"
 }
 ```
 
 * `agent_did` MUST be the canonical `did:webvh:{SCID}:{domain}` identifier, where `{SCID}` is the self-certifying identifier derived from the DID log genesis entry.
-* `signature` is the raw ML-DSA-87 signature, tagged `ml-dsa-87:{length}:{hex}`. It is **not** DER-encoded ECDSA and MUST NOT be encoded or interpreted as an ASN.1 DER structure. The tag and length let the verifier reject malformed or truncated signatures before invoking the verifier.
+* `signature` is the raw ML-DSA-87 signature, tagged `ml-dsa-87:{length}:{hex}`, where `{length}` is the signature length in bytes (**4627** for ML-DSA-87, FIPS 204). It is **not** DER-encoded ECDSA and MUST NOT be encoded or interpreted as an ASN.1 DER structure. The tag and length let the verifier reject malformed or truncated signatures before invoking the verifier; a `length` other than 4627 is itself a malformed receipt.
 * `signed_at` is the RFC 3339 timestamp at which the signature was produced. The verifier uses this value to check signing-time validity (Section 2.1).
 
 ## 2. Resource Verifier Checks
@@ -151,7 +153,7 @@ The `{SCID}` (`z6MkExampleSCID1234567890`) is derived from the genesis entry of 
 ```text
 algorithm:   ML-DSA-87
 encoding:    raw bytes, hex-encoded, tagged as ml-dsa-87:{length}:{hex}
-example:     ml-dsa-87:2592:2f7a...c04b
+example:     ml-dsa-87:4627:2f7a...c04b
 ```
 
 The signature is the raw ML-DSA-87 output. It is **not** a DER-encoded ECDSA signature, and verifiers MUST reject any receipt whose `signature` field is ASN.1 DER or otherwise not in the tagged ML-DSA-87 form.
