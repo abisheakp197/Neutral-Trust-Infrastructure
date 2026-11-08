@@ -8,14 +8,19 @@ checked with the `openssl` binary, which has native ML-DSA-87 support
 
 What this checks
 ----------------
-1. Schema          - the receipt has the required fields and an ML-DSA-87 tag.
+1. Schema          - the receipt has the required fields (including the
+                     authoritative identifiers) and an ML-DSA-87 tag.
 2. Payload binding - action_payload_sha256 is the SHA-256 of action_payload.
 3. Merkle root     - delegation_chain_root is recomputed from delegation_chain
                      (RFC 6962, odd node promoted, never duplicated).
 4. Merkle proof    - the inclusion proof for the leaf at leaf_index folds to
                      delegation_chain_root.
 5. ML-DSA-87 sig   - the signature verifies over the domain-separated,
-                     length-prefixed signing payload, with the public key.
+                     length-prefixed signing payload, with the public key. The
+                     payload binds the authoritative identifiers (receipt_id,
+                     recovery.attempt_id, recovery.idempotency_key) as well as
+                     the DID, key, delegation root, payload digest, and time, so
+                     altering any of them fails closed.
 
 What this does NOT check
 ------------------------
@@ -45,11 +50,24 @@ import tempfile
 
 DOMAIN_LEAF = b"nti-delegation-leaf-v1:"
 DOMAIN_NODE = b"nti-delegation-node-v1:"
-DOMAIN_SIGN = b"nti-vate-receipt-v1:"
+# Bumped to v2 when the signing payload gained the authoritative identifiers
+# (receipt_id, recovery.attempt_id, recovery.idempotency_key). The domain
+# separates the two layouts so a receipt signed under v1 can never verify as v2.
+DOMAIN_SIGN = b"nti-vate-receipt-v2:"
 
 REQUIRED_FIELDS = [
-    "agent_did", "delegation_chain_root", "action_payload_sha256",
-    "signed_at", "merkle_proof", "ml_dsa_87_signature",
+    "receipt_id", "agent_did", "verification_method", "delegation_chain_root",
+    "action_payload_sha256", "signed_at", "merkle_proof", "ml_dsa_87_signature",
+    "recovery",
+]
+
+# Authoritative identifiers the signature MUST bind. Each is a dotted path into
+# the receipt. If any is absent the receipt is malformed and verification fails
+# closed; if any is altered, the signature no longer verifies.
+SIGNED_IDENTIFIER_PATHS = [
+    ("receipt_id",),
+    ("recovery", "attempt_id"),
+    ("recovery", "idempotency_key"),
 ]
 
 
@@ -107,17 +125,38 @@ def fold_proof(leaf: bytes, siblings: list) -> bytes:
     return acc
 
 
+def resolve_path(obj: dict, path: tuple):
+    """Resolve a dotted path into the receipt. Raises KeyError if absent."""
+    cur = obj
+    for key in path:
+        if not isinstance(cur, dict) or key not in cur:
+            raise KeyError(".".join(path))
+        cur = cur[key]
+    if not isinstance(cur, str) or not cur:
+        raise KeyError(".".join(path))
+    return cur
+
+
 def signing_payload(r: dict) -> bytes:
-    """The exact bytes NTI signed: domain-separated and length-prefixed."""
+    """The exact bytes NTI signed: domain-separated and length-prefixed.
+
+    Binds the authoritative identifiers (receipt_id, recovery.attempt_id,
+    recovery.idempotency_key) together with the DID, key, delegation root,
+    payload digest, and timestamp, so altering any of them breaks the signature.
+    """
     def lp(s: str) -> bytes:
         b = s.encode()
         return u32(len(b)) + b
+    identifiers = [resolve_path(r, p) for p in SIGNED_IDENTIFIER_PATHS]
     return (DOMAIN_SIGN
+            + lp(identifiers[0])            # receipt_id
             + lp(r["agent_did"])
             + lp(r["verification_method"])
             + lp(r["delegation_chain_root"])
             + lp(r["action_payload_sha256"])
-            + lp(r["signed_at"]))
+            + lp(r["signed_at"])
+            + lp(identifiers[1])            # recovery.attempt_id
+            + lp(identifiers[2]))           # recovery.idempotency_key
 
 
 def parse_tagged_signature(tag: str):
@@ -192,6 +231,19 @@ def main():
         rep.fail("algorithm is ML-DSA-87", f"got {r.get('algorithm')!r}")
     else:
         rep.ok("algorithm is ML-DSA-87")
+    # The authoritative identifiers must be present; they are part of the signed
+    # payload, so an absent one is a malformed receipt (fail closed).
+    missing_ids = []
+    for path in SIGNED_IDENTIFIER_PATHS:
+        try:
+            resolve_path(r, path)
+        except KeyError:
+            missing_ids.append(".".join(path))
+    if missing_ids:
+        rep.fail("authoritative identifiers present", f"missing {missing_ids}")
+    else:
+        rep.ok("authoritative identifiers present",
+               ", ".join(".".join(p) for p in SIGNED_IDENTIFIER_PATHS))
 
     print("== 2. Action payload binding ==")
     if "action_payload" in r and r.get("action_payload_sha256"):
@@ -282,11 +334,20 @@ def main():
                 rep.warn("using the embedded public key",
                          "self-asserted; pin it out of band for a real decision")
         if pub_path is not None:
-            msg = signing_payload(r)
-            if openssl_verify(pub_path, sig, msg):
-                rep.ok("ML-DSA-87 signature verifies over the signing payload")
-            else:
-                rep.fail("ML-DSA-87 signature verifies over the signing payload")
+            try:
+                msg = signing_payload(r)
+            except KeyError as e:
+                rep.fail("signing payload reconstructed",
+                         f"missing field {e}; cannot verify (fail closed)")
+                msg = None
+            if msg is not None:
+                if openssl_verify(pub_path, sig, msg):
+                    rep.ok("ML-DSA-87 signature verifies over the signing payload",
+                           "binds identifiers + DID + delegation root + payload digest + time")
+                else:
+                    rep.fail("ML-DSA-87 signature verifies over the signing payload",
+                             "signature does not verify with this key over the reconstructed "
+                             "payload (a bound field was altered, or the key is wrong)")
 
     print()
     if rep.failed == 0:
