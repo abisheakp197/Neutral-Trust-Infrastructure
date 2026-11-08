@@ -1,6 +1,6 @@
 # NTI x VATE Recovery Fixture: Lost Response
 
-**Status:** Draft for review (joint test with VATE, Issue #64)
+**Status:** Draft for review (joint test with VATE, Issue #64). The receipt schema and the NTI-to-VATE mapping are **proposed**, not agreed: they are still under discussion in Issue #64.
 **Scope:** The NTI side of a "lost response after an action is accepted" recovery test.
 **Audience:** VATE implementers, NTI sidecar implementers, and reviewers of the joint vector.
 
@@ -16,8 +16,8 @@ and a verifier.
 
 | File | What it is |
 | :--- | :--- |
-| `nti_receipt.json` | A mock NTI receipt for one lost-response attempt. Real ML-DSA-87 signature over a real Merkle proof. |
-| `verify_receipt.py` | Self-contained verifier: schema, payload binding, Merkle root, Merkle inclusion proof, and ML-DSA-87 signature. |
+| `nti_receipt.json` | A mock NTI receipt for one lost-response attempt, in a proposed schema (see Status). Real ML-DSA-87 signature over a real Merkle proof. |
+| `verify_receipt.py` | Self-contained verifier: schema, payload binding, Merkle root, Merkle inclusion proof, and ML-DSA-87 signature. The signature binds the authoritative identifiers (`receipt_id`, `recovery.attempt_id`, `recovery.idempotency_key`). |
 | `README.md` | This file: what the receipt proves, what stays unknown, and how to retry safely. |
 
 ## Running the verifier
@@ -36,6 +36,7 @@ It runs five checks and prints one line per check:
 == 1. Schema ==
    OK   : required fields present
    OK   : algorithm is ML-DSA-87
+   OK   : authoritative identifiers present  receipt_id, recovery.attempt_id, recovery.idempotency_key
 == 2. Action payload binding ==
    OK   : action_payload_sha256 matches action_payload  8420f705ebda0222
 == 3. Merkle root over the delegation chain ==
@@ -47,7 +48,7 @@ It runs five checks and prints one line per check:
 == 5. ML-DSA-87 signature ==
    OK   : signature is tagged ML-DSA-87  4627 bytes
    WARN : using the embedded public key  self-asserted; pin it out of band for a real decision
-   OK   : ML-DSA-87 signature verifies over the signing payload
+   OK   : ML-DSA-87 signature verifies over the signing payload  binds identifiers + DID + delegation root + payload digest + time
 
 RESULT: receipt verified (Layer 1: payload binding + Merkle proof + ML-DSA-87 signature).
 NOTE:   this proves NTI signed the action. It does NOT prove the action took effect.
@@ -74,11 +75,16 @@ Verification establishes three things about the original attempt:
    `delegation_chain_root` was intact at signing time.
 2. **Intended.** NTI signed an action over exactly `action_payload_sha256`, at
    `signed_at`. The signature covers the payload digest, the delegation root, the
-   DID, the verification method, and the timestamp, domain-separated and
-   length-prefixed so no field can be moved into another position.
+   DID, the verification method, the timestamp, **and the authoritative
+   identifiers** (`receipt_id`, `recovery.attempt_id`, `recovery.idempotency_key`),
+   domain-separated and length-prefixed so no field can be moved into another
+   position. Altering any bound field, including an identifier, makes the
+   signature fail.
 3. **Identified.** The attempt has a stable identity: `action_payload_sha256`
-   plus `receipt_id` and the `idempotency_key` in `recovery`. This is what links
-   recovered evidence back to the original attempt rather than to a new one.
+   plus `receipt_id` and the `idempotency_key` in `recovery`. Because those
+   identifiers are signed, they are authoritative: they cannot be swapped for a
+   different attempt's identifiers without breaking the signature. This is what
+   links recovered evidence back to the original attempt rather than to a new one.
 
 ## What remains unknown
 
@@ -136,11 +142,21 @@ checked, and only ever retry idempotently.**
 
 The safe default for an unconfirmable outcome is to **not** double-apply.
 
-## Boundary: what this verifier does not check
+## Boundary: Layer 1 vs Layer 0
 
-`verify_receipt.py` verifies **Layer 1** of
-[`docs/NTI-Agent-DID-INTEROP.md`](../../docs/NTI-Agent-DID-INTEROP.md) — the NTI
-proofs. It deliberately does not perform:
+This verifier covers **Layer 1** only. The two layers are distinct checks and are
+not substitutes for one another:
+
+* **Layer 1 (performed here).** The signature and integrity checks: the payload
+  digest binding, the Merkle root and inclusion proof, and the ML-DSA-87
+  signature over the signing payload.
+* **Layer 0 (not performed here).** Authorisation and issuer checks that require
+  external material — the DID log and the VC — and therefore cannot be done from
+  the receipt alone.
+
+> The signature/integrity checks performed here (Layer 1) verify the payload digest and Merkle proof. They do NOT perform DID authorization or VC issuer checks (Layer 0), which are separate verification steps.
+
+Concretely, this script does **not** perform:
 
 * **Layer 0a — DID authorization.** Resolving `agent_did`, reading the DID log,
   confirming the key was valid **as of `signed_at`** (not merely now), and
@@ -148,11 +164,12 @@ proofs. It deliberately does not perform:
 * **Layer 0b — VC issuer identity.** Resolving and validating the VC issuer,
   which is a distinct check from DID authorization.
 
-A full decision requires all three layers to pass (a strict AND gate). In this
-fixture the ML-DSA-87 key is embedded in the receipt so the Layer 1 check is
-self-contained; that key is **self-asserted** and must be replaced by a key
-resolved from the DID document before the fixture is used for anything beyond
-the Layer 1 test.
+A full decision requires both layers to pass (a strict AND gate): a valid
+Layer 1 signature proves *some* key signed, but only Layer 0 establishes that the
+DID authorised that key. In this fixture the ML-DSA-87 key is embedded in the
+receipt so the Layer 1 check is self-contained; that key is **self-asserted** and
+must be replaced by a key resolved from the DID document (and checked under
+Layer 0) before the fixture is used for anything beyond the Layer 1 test.
 
 ## Fixture notes
 
@@ -165,9 +182,15 @@ the Layer 1 test.
 * **Encoding.** The signature is the raw ML-DSA-87 output, hex-encoded and
   tagged `ml-dsa-87:{length}:{hex}`. It is not DER-encoded ECDSA; the verifier
   rejects any signature that is not in the tagged raw form.
+* **Bound identifiers.** The signature payload binds `receipt_id`,
+  `recovery.attempt_id`, and `recovery.idempotency_key` (domain
+  `nti-vate-receipt-v2:`) alongside the DID, key, delegation root, payload
+  digest, and timestamp. Altering or removing any of them fails verification.
 * **Tamper check.** Flipping a byte of the signature, altering a delegation
-  record, altering a Merkle sibling, or substituting the public key each make the
-  verifier fail. See the joint vector for the expected VATE outcome per case.
+  record, altering a Merkle sibling, substituting the public key, or altering any
+  bound identifier (`receipt_id`, `recovery.attempt_id`,
+  `recovery.idempotency_key`) each make the verifier fail. See the joint vector
+  for the expected VATE outcome per case.
 
 ---
 
