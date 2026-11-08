@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Independent verification of the NTI witness evidence package.
 # Requires: openssl, python3.
+# Optional: cargo + python native bindings, to re-run and re-check the suite
+#           transcript digests (step 5 is reported as SKIP without them).
 # Usage: ./verify.sh [path-to-NTI-checkout]   (default: ../..)
 set -u
 
@@ -132,6 +134,82 @@ sys.exit(0 if ok else 1)
 PY
 [ $? -ne 0 ] && fail=1
 
+echo "== 5. Re-run the suites and compare transcript digests =="
+python3 - "$HERE" "$REPO" <<'PY'
+import hashlib, json, pathlib, re, shutil, subprocess, sys
+
+here, repo = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
+m = json.loads((here / "MANIFEST.json").read_text())
+bound = m.get("suite_evidence_logs", {})
+if not bound:
+    print("   SKIP: MANIFEST.json has no suite_evidence_logs")
+    sys.exit(0)
+
+def cargo_bin():
+    return shutil.which("cargo") or str(pathlib.Path.home() / ".cargo" / "bin" / "cargo")
+
+def run(argv):
+    p = subprocess.run(argv, cwd=str(repo), capture_output=True, text=True)
+    return p.returncode, p.stdout + p.stderr
+
+def strip_timing(line):
+    return re.sub(r"(finished in|Ran \d+ tests in) [0-9.]+s", r"\1 <t>", line).strip()
+
+def canonical(kind, transcript):
+    lines = [l.strip() for l in transcript.splitlines()]
+    if kind in ("cargo_test", "python_unittest"):
+        kept = []
+        for s in lines:
+            if re.match(r"^test[ _].+\.\.\. (ok|FAILED|ERROR|ignored)$", s):
+                kept.append(s)
+            elif (s.startswith("test result:") or s.startswith("Ran ")
+                  or s == "OK" or s.startswith("FAILED (")):
+                kept.append(strip_timing(s))
+        return "\n".join(sorted(kept)) + "\n"
+    errors = sum(1 for s in lines if s.startswith("error"))
+    finished = any(s.startswith("Finished") for s in lines)
+    return f"finished={finished}\nerror_lines={errors}\n"
+
+manifest_rel = "ube-foundation/Cargo.toml"
+py_dir = "ube-foundation/python_tests"
+cmds = {
+    "cargo_test": (["cargo", "test", "--locked", "--manifest-path", manifest_rel,
+                    "--lib", "--tests", "--", "--nocapture"], "cargo_test", True),
+    "cargo_build": (["cargo", "build", "--locked", "--manifest-path", manifest_rel], "cargo_build", True),
+    "cargo_check_python": (["cargo", "check", "--locked", "--manifest-path", manifest_rel,
+                            "--features", "python"], "cargo_check", True),
+    "python_unittest": (["python3", "-m", "unittest", "discover", "-s", py_dir, "-v"],
+                        "python_unittest", False),
+}
+
+have_cargo = shutil.which("cargo") is not None or pathlib.Path(cargo_bin()).exists()
+bad = skipped = 0
+for name, entry in bound.items():
+    argv, kind, needs_cargo = cmds[name]
+    if needs_cargo and not have_cargo:
+        print(f"   SKIP: {name} (cargo not on PATH)")
+        skipped += 1
+        continue
+    if argv[0] == "cargo":
+        argv = [cargo_bin()] + argv[1:]
+    code, transcript = run(argv)
+    got = hashlib.sha256(canonical(kind, transcript).encode("utf-8")).hexdigest()
+    want = entry["output_sha256"]
+    ok = got == want and code == 0
+    print(f"   {'OK  ' if ok else 'FAIL'}: {name} transcript digest {got[:16]} "
+          f"(bound {want[:16]}, exit {code})")
+    bad += 0 if ok else 1
+
+if bad:
+    print(f"   {bad} suite transcript mismatch(es)")
+elif skipped:
+    print(f"   {skipped} suite(s) skipped (no cargo); no mismatches in the rest")
+else:
+    print("   all suite transcript digests match")
+sys.exit(1 if bad else 0)
+PY
+[ $? -ne 0 ] && fail=1
+
 echo
-if [ "$fail" -eq 0 ]; then echo "RESULT: signature + seals + hashes + key fingerprint verified."; else echo "RESULT: VERIFICATION FAILED."; fi
+if [ "$fail" -eq 0 ]; then echo "RESULT: signature + seals + hashes + key fingerprint + suite digests verified."; else echo "RESULT: VERIFICATION FAILED."; fi
 exit "$fail"
