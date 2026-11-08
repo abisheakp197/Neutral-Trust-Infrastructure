@@ -4,6 +4,40 @@ We welcome community contributions! Please read this guide before getting starte
 
 ---
 
+## 0. Developer Certificate of Origin (DCO) — Required
+
+**All commits MUST be signed off using `git commit -s` to comply with the Developer Certificate of Origin (DCO).**
+
+Every commit in a pull request must contain a `Signed-off-by:` line with your real
+name and email address, matching the commit author. The DCO is a lightweight
+statement that you have the right to submit the contribution under the project's
+open-source license. The full text is at
+<https://developercertificate.org/>.
+
+Add the sign-off automatically:
+
+```bash
+git commit -s -m "your commit message"
+```
+
+This appends a line such as:
+
+```
+Signed-off-by: Jane Doe <jane.doe@example.com>
+```
+
+If you forgot, amend the commit and force-push your branch:
+
+```bash
+git commit --amend -s
+git push --force-with-lease
+```
+
+Pull requests whose commits lack a sign-off will fail the `DCO` check and cannot
+be merged.
+
+---
+
 ## 1. Contributor License Agreement (CLA)
 
 All contributors must sign our Contributor License Agreement (CLA) before any code can be merged.
