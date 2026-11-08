@@ -11,6 +11,8 @@ ML-DSA-87 key binding, signing-time key validity for `did:webvh`, the
 `assertionMethod` verification relationship, the separation of DID
 authorization from VC issuer checks, and the `did:webvh:{SCID}:{domain}` format.
 
+Note: These vectors have not been verified against the Agent-DID SDK by the Agent-DID maintainers. Cases 6 and 7 represent expected NTI behavior, and DID authorization remains marked as `not_exercised`.
+
 ## Contents
 
 | File | What it is |

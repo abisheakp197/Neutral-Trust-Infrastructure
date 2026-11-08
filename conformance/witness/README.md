@@ -10,8 +10,8 @@ Treat every file here as an input you re-derive, not as a claim you accept.
 
 | File | What it is |
 | :--- | :--- |
-| `MANIFEST.json` | SHA-256 of the witness generator, the sample evidence fixture, and NTI's native test scripts, plus `key_url` and `key_history`. |
-| `RESULTS.json` | NTI's native suite outcomes, plus the S4/S5/S6 seal values. |
+| `MANIFEST.json` | SHA-256 of the witness generator, the sample evidence fixture, and NTI's native test scripts, plus `key_url`, `key_history`, and `suite_evidence_logs`. |
+| `RESULTS.json` | NTI's native suite outcomes with bound transcript digests (`suite_evidence`), plus the S4/S5/S6 seal values. |
 | `PUBLIC_KEY.pem` | Ed25519 public key used for both the package signature and the S6 seal. |
 | `SIGNATURE.sig` | 64-byte Ed25519 signature over a domain-separated, length-prefixed encoding of `RESULTS.json` and `MANIFEST.json` (each file digested separately). |
 | `verify.sh` | Self-contained verifier: package signature, S4/S5/S6 seals, manifest hashes, and key fingerprint. |
@@ -73,13 +73,45 @@ recorded in `MANIFEST.json`.
 
 ## Key history and rotation
 
-`MANIFEST.json` carries a `key_history` block. Each entry records the Ed25519
-key's `fingerprint_sha256` (SHA-256 of the DER SPKI public key), its `status`
-(`active` or `retired`), and the validity window. When the signing key changes,
-the generator marks the previous key `retired` and adds the new key, so a
-rotation is recorded rather than silently replacing the old key. The published
-`PUBLIC_KEY.pem` is regenerated from the signing key on every run, and
+`MANIFEST.json` carries a `key_history` block listing **every** Ed25519 key this
+package has been signed with, oldest first. Each entry records the key's
+`fingerprint_sha256` (SHA-256 of the DER SPKI public key), its `status`
+(`active` or `retired`), and the validity window. Three keys were rotated
+through before the current one:
+
+| Fingerprint (first 16) | Status | Valid from |
+| :--- | :--- | :--- |
+| `1086f65bbd4dedf2` | retired | 2026-11-06T16:57:13Z |
+| `02c8859c08b7876f` | retired | 2026-11-06T17:37:59Z |
+| `0ef7c228f6828fa9` | retired | 2026-11-07T13:44:49Z |
+| current signing key | active | generation time |
+
+None of the retired keys' private halves were retained, so their packages cannot
+be re-signed; the fingerprints are recorded from repository history so a
+rotation is never silent. When the signing key changes, the generator marks the
+previous key `retired` and adds the new key. The published `PUBLIC_KEY.pem` is
+regenerated from the signing key on every run, and
 `signature.public_key_fingerprint_sha256` states which key signed the package.
+
+## Suite evidence
+
+`RESULTS.json` does not merely assert "PASSED". The generator **runs** the suites
+and binds the SHA-256 of each captured transcript under `suite_evidence` (and
+mirrors them into `MANIFEST.json` under `suite_evidence_logs`):
+
+| Suite | Command | Bound digest |
+| :--- | :--- | :--- |
+| `NTI-rust-tests` | `cargo test --locked --lib --tests` | `combined_sha256` of stdout+stderr |
+| `NTI-python-tests` | `python3 -m unittest discover -s ube-foundation/python_tests -v` | `combined_sha256` |
+| `NTI-rust-build` | `cargo build --locked` | `combined_sha256` |
+| `NTI-rust-check-python-feature` | `cargo check --locked --features python` | `combined_sha256` |
+
+Each entry also records `exit_code`, `stdout_sha256`, `stderr_sha256`, and the
+byte length. A witness re-runs each command and compares the digests; if the
+transcript differs, the suite did not run the same way and the claim is not
+independently confirmed. `verify.sh` re-runs the suites when the Rust toolchain
+is present and compares the digests, and reports the check as skipped when it is
+not.
 
 ## How to verify
 
@@ -88,7 +120,7 @@ cd docs/witness
 ./verify.sh /path/to/Neutral-Trust-Infrastructure
 ```
 
-It checks four things:
+It checks:
 
 1. The package signature over the domain-separated, length-prefixed encoding of
    `RESULTS.json` and `MANIFEST.json`.
@@ -98,6 +130,10 @@ It checks four things:
 3. The SHA-256 of every file listed in `MANIFEST.json`.
 4. That the published `PUBLIC_KEY.pem` matches
    `signature.public_key_fingerprint_sha256`.
+5. The suite transcript digests: re-runs `cargo test`, `cargo build`,
+   `cargo check --features python`, and `python -m unittest`, and compares the
+   SHA-256 of each transcript with the value bound in `RESULTS.json` /
+   `MANIFEST.json`. Skipped with a clear notice if the Rust toolchain is absent.
 
 To check the package signature by hand:
 

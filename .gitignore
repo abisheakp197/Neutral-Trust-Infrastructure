@@ -1,5 +1,7 @@
 target/
 **/target/
+dist/
+**/dist/
 Cargo.lock
 *.log
 .env

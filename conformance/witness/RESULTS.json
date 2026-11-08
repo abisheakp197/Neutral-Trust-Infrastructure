@@ -1,8 +1,8 @@
 {
-  "results_version": 4,
-  "generated_at_utc": "2026-11-07T13:46:27Z",
+  "results_version": 5,
+  "generated_at_utc": "2026-11-08T02:32:14Z",
   "repository": "abisheakp197/Neutral-Trust-Infrastructure",
-  "commit": "b5d7d02def3fee7067030658d08c2e7b3156dd93",
+  "commit": "ea763c0c7e41344bd82b0db0eb211840926e1c3c",
   "overall_status": "PASSED",
   "scope": "NTI native suites plus S4/S5/S6 seals over a synthetic fixture.",
   "environment": {
@@ -16,74 +16,37 @@
       "total_passed": 33,
       "total_failed": 0,
       "detail": [
-        {
-          "binary": "unittests src/lib.rs",
-          "passed": 1,
-          "failed": 0
-        },
-        {
-          "binary": "tests/adversarial_fuzz.rs",
-          "passed": 4,
-          "failed": 0
-        },
-        {
-          "binary": "tests/adversarial_suite.rs",
-          "passed": 5,
-          "failed": 0
-        },
-        {
-          "binary": "tests/core_tests.rs",
-          "passed": 5,
-          "failed": 0
-        },
-        {
-          "binary": "tests/enterprise_adversarial_stress_suite.rs",
-          "passed": 4,
-          "failed": 0
-        },
-        {
-          "binary": "tests/nti_conformance_regressions.rs",
-          "passed": 2,
-          "failed": 0
-        },
-        {
-          "binary": "tests/robustness_fuzz.rs",
-          "passed": 3,
-          "failed": 0
-        },
-        {
-          "binary": "tests/security_patch_tests.rs",
-          "passed": 5,
-          "failed": 0
-        },
-        {
-          "binary": "tests/trust_marketplace_adversarial.rs",
-          "passed": 4,
-          "failed": 0
-        }
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s"
       ]
     },
     {
       "id": "NTI-python-tests",
       "status": "PASSED",
-      "module": "ube-foundation/python_tests/test_python_sdk.py",
-      "ran": 2,
-      "failures": 0,
-      "errors": 0,
+      "command": "python3 -m unittest discover -s ube-foundation/python_tests -v",
+      "total_passed": 2,
+      "total_failed": 0,
       "native_bindings": true
     },
     {
       "id": "NTI-rust-build",
       "status": "PASSED",
-      "detail": "cargo build --locked: ok"
+      "detail": "cargo build --locked"
     },
     {
       "id": "NTI-rust-check-python-feature",
       "status": "PASSED",
-      "detail": "cargo check --features python: ok"
+      "detail": "cargo check --locked --features python"
     }
   ],
-  "statement": "The NTI Rust suite (33 tests) and the NTI Python SDK suite passed under rustc/cargo 1.90.0 with native bindings built by maturin 1.9.6. The S4/S5/S6 seals below are computed over a synthetic evidence fixture.",
+  "statement": "The NTI Rust suite (33 tests) and the NTI Python SDK suite were run for this package under rustc/cargo 1.90.0 with native bindings built by maturin 1.9.6. The SHA-256 digest of each suite transcript is bound in `suite_evidence`; re-run the suites and compare the digests. The S4/S5/S6 seals below are computed over a synthetic evidence fixture.",
   "S4_file_integrity": [
     {
       "name": "evidence_package.json",
@@ -139,11 +102,76 @@
       "policy.txt",
       "audit_note.txt"
     ],
-    "seal_hex": "a1431bd22347c241aa03e0bf5b3c3eac4f4fc9f0347c60bcbca78b215a7415d18114a7cfcee883bf9834cee15ba3dc908085d14ae2cffc5250dfdc451c93610f"
+    "seal_hex": "548ef855907a1d52baa1f4ea71b419b676746cfa7ca87b49b9300d4524e1c7b9defd4dde906f87199efac635e8533e89899eba69b8bce316aee7a1cf96b4b10b"
   },
   "seal_scope": {
     "evidence_file": "conformance/witness_generator/sample_evidence.json",
     "classification": "SYNTHETIC - test fixture, not production evidence",
     "note": "Synthetic fixture. These seals demonstrate the mechanism; they are not production evidence."
+  },
+  "suite_evidence": {
+    "rust_tests": {
+      "command": "/home/openhands/.cargo/bin/cargo test --locked --manifest-path ube-foundation/Cargo.toml --lib --tests -- --nocapture",
+      "status": "PASSED",
+      "total_passed": 33,
+      "total_failed": 0,
+      "exit_code": 0,
+      "output_sha256": "53e35a593635411b08d8944b86adff06f8a70528e6a021ddaa46b98f3fd6fb50",
+      "canonical_form": "sorted `test <name> ... <status>` lines plus the sorted `test result:` summary lines with the trailing `finished in <t>` stripped",
+      "canonical_bytes": 2712,
+      "raw_bytes": 4567
+    },
+    "python_tests": {
+      "command": "/usr/local/bin/python3 -m unittest discover -s ube-foundation/python_tests -v",
+      "status": "PASSED",
+      "exit_code": 0,
+      "output_sha256": "f5baff7833ae63f85f1f27ba620689f1a66ff77326f6f6d844dbc601c1e68352",
+      "canonical_form": "sorted `test_<name> ... <status>` lines plus the `Ran N tests` line (timing stripped) and the final `OK`/`FAILED` line",
+      "canonical_bytes": 238,
+      "raw_bytes": 314
+    },
+    "logs": {
+      "cargo_test": {
+        "command": "/home/openhands/.cargo/bin/cargo test --locked --manifest-path ube-foundation/Cargo.toml --lib --tests -- --nocapture",
+        "exit_code": 0,
+        "status": "PASSED",
+        "label": "cargo test --locked (all suites)",
+        "output_sha256": "53e35a593635411b08d8944b86adff06f8a70528e6a021ddaa46b98f3fd6fb50",
+        "canonical_form": "sorted `test <name> ... <status>` lines plus the sorted `test result:` summary lines with the trailing `finished in <t>` stripped",
+        "canonical_bytes": 2712,
+        "raw_bytes": 4567
+      },
+      "cargo_build": {
+        "command": "/home/openhands/.cargo/bin/cargo build --locked --manifest-path ube-foundation/Cargo.toml",
+        "exit_code": 0,
+        "status": "PASSED",
+        "label": "cargo build --locked",
+        "output_sha256": "08344a03a3788eec6baf26a976eb3e99799736cd4d0f4f6a439e4c5d416efe20",
+        "canonical_form": "outcome only: `finished=<bool>` and `error_lines=<count>` (an incremental build compiles a varying set of crates, so compile order is not reproducible)",
+        "canonical_bytes": 28,
+        "raw_bytes": 524
+      },
+      "cargo_check_python": {
+        "command": "/home/openhands/.cargo/bin/cargo check --locked --manifest-path ube-foundation/Cargo.toml --features python",
+        "exit_code": 0,
+        "status": "PASSED",
+        "label": "cargo check --locked --features python",
+        "output_sha256": "08344a03a3788eec6baf26a976eb3e99799736cd4d0f4f6a439e4c5d416efe20",
+        "canonical_form": "outcome only: `finished=<bool>` and `error_lines=<count>`",
+        "canonical_bytes": 28,
+        "raw_bytes": 580
+      },
+      "python_unittest": {
+        "command": "/usr/local/bin/python3 -m unittest discover -s ube-foundation/python_tests -v",
+        "exit_code": 0,
+        "status": "PASSED",
+        "label": "python -m unittest (NTI Python SDK)",
+        "output_sha256": "f5baff7833ae63f85f1f27ba620689f1a66ff77326f6f6d844dbc601c1e68352",
+        "canonical_form": "sorted `test_<name> ... <status>` lines plus the `Ran N tests` line (timing stripped) and the final `OK`/`FAILED` line",
+        "canonical_bytes": 238,
+        "raw_bytes": 314
+      }
+    },
+    "note": "output_sha256 is over the canonicalised transcript (see canonical_form): outcome lines sorted, timing stripped, so a re-run is reproducible. Re-run each command and canonicalise the same way to confirm the digest."
   }
 }

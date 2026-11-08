@@ -85,10 +85,18 @@
 
   <h2>Key history</h2>
   <div class="card">
-    <p><code>MANIFEST.json</code> carries a <code>key_history</code> block recording each Ed25519
-    key's fingerprint, status, and validity window. When the signing key changes, the previous key
-    is marked <code>retired</code> and the new key is added, so a rotation is recorded rather than
-    silently replacing the old key.</p>
+    <p><code>MANIFEST.json</code> carries a <code>key_history</code> block listing every Ed25519
+    key this package has been signed with, oldest first. Three keys were rotated through before
+    the current one:</p>
+    <table>
+      <tr><th>Fingerprint (first 16)</th><th>Status</th><th>Valid from</th></tr>
+      <tr><td><code>1086f65bbd4dedf2</code></td><td>retired</td><td>2026-11-06T16:57:13Z</td></tr>
+      <tr><td><code>02c8859c08b7876f</code></td><td>retired</td><td>2026-11-06T17:37:59Z</td></tr>
+      <tr><td><code>0ef7c228f6828fa9</code></td><td>retired</td><td>2026-11-07T13:44:49Z</td></tr>
+      <tr><td>current signing key</td><td>active</td><td>generation time</td></tr>
+    </table>
+    <p>None of the retired keys' private halves were retained; their fingerprints are recorded from
+    repository history so a rotation is never silent.</p>
   </div>
 
   <h2>Results</h2>
@@ -97,6 +105,15 @@
     <tr><td>NTI Rust tests (rustc 1.90.0)</td><td class="ok">33 passed, 0 failed</td></tr>
     <tr><td>NTI Python SDK tests (native bindings)</td><td class="ok">2 passed, 0 failed</td></tr>
   </table>
+  <div class="card">
+    <p><strong>Suite evidence.</strong> The generator runs these suites and binds the SHA-256 of
+    each captured transcript under <code>suite_evidence</code> in RESULTS.json (mirrored in
+    MANIFEST.json as <code>suite_evidence_logs</code>). The digest is over a canonicalised
+    transcript (outcome lines sorted, timing stripped), so a witness that re-runs
+    <code>cargo test</code>, <code>cargo build</code>, <code>cargo check --features python</code>,
+    and <code>python -m unittest</code> derives the same digest. A "PASSED" string alone is no
+    longer the claim — the transcript is.</p>
+  </div>
 
   <div class="card">
     <p><strong>Scope and limits.</strong></p>
