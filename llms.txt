@@ -12,7 +12,6 @@ Directory structure:
     ├── README.md
     ├── API_REPORT.md
     ├── AUDIT_REPORT.md
-    ├── CLA.md
     ├── CONTRIBUTING.md
     ├── CONTRIBUTOR_ROADMAP.md
     ├── DISCOVERY_PLAYBOOK.md
@@ -698,20 +697,6 @@ FILE: AUDIT_REPORT.md
 
 
 
-================================================
-FILE: CLA.md
-================================================
-# Individual Contributor License Agreement (CLA)
-
-By contributing code, documentation, or other materials to this project ("Universal-Trust-Layer"), you agree to the following terms:
-
-1. **Grant of License:** You hereby grant to the project maintainer(s) a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright and patent license to reproduce, prepare derivative works of, publicly display, sublicense, and distribute your contributions.
-2. **Right to Relicense:** You agree that the project maintainer(s) retain the right to relicense, offer commercial licenses, or change open-source licensing models for the project as a whole in the future.
-3. **Ownership:** You retain ownership of your copyright in your individual contributions.
-4. **Originality:** You represent that your contribution is your original creation and that you have the full legal right to grant these permissions.
-5.
-
-
 
 ================================================
 FILE: CONTRIBUTING.md
@@ -722,13 +707,9 @@ We welcome community contributions! Please read this guide before getting starte
 
 ---
 
-## 1. Contributor License Agreement (CLA)
+## 1. Licensing: DCO Only — No CLA
 
-All contributors must sign our Contributor License Agreement (CLA) before any code can be merged.
-
-* When you open your first Pull Request (PR), an automated CLA bot will leave a comment on your PR prompting you to sign.
-* **Your PR cannot be merged until the CLA check passes.**
-* *Why this matters:* The CLA ensures you retain author credit while granting the project maintainer the legal rights required to manage, re-license, and protect the codebase as it evolves into a commercial platform.
+**NTI uses the Developer Certificate of Origin (DCO) exclusively. We do not require a CLA. All commits must be signed off using `git commit -s`.**
 
 ---
 
@@ -738,7 +719,7 @@ All contributors must sign our Contributor License Agreement (CLA) before any co
 2. **Fork and Branch:** Create a feature branch off of `main` (e.g., `feature/vote-signing`).
 3. **Run Tests Locally:** Ensure `cargo test` and `cargo build` pass cleanly before submitting.
 4. **Submit a Pull Request:** Open a PR targeting the `main` branch with a clear title and description of your changes.
-5. **Sign the CLA:** Follow the prompt provided by the CLA bot on your PR.
+5. **Sign Off Your Commits:** Use `git commit -s` so each commit carries a DCO `Signed-off-by:` line (see section 0).
 
 ---
 
@@ -8549,10 +8530,10 @@ Briefly describe the changes introduced by this PR and which roadmap issue it so
 - [ ] Code refactoring / performance improvement
 - [ ] Documentation update
 
-## Contributor Agreement (CLA)
-**Important:** Your pull request cannot be merged without agreeing to our Contributor License Agreement.
+## Developer Certificate of Origin (DCO)
+**Important:** Your pull request cannot be merged unless every commit is signed off under the Developer Certificate of Origin. There is no CLA to sign.
 
-- [ ] **I confirm that I have read, understood, and agree to the terms outlined in the [Individual Contributor License Agreement (CLA)](./CLA.md) for this project.**
+- [ ] **I confirm that every commit in this PR carries a `Signed-off-by:` line (added with `git commit -s`).**
 
 ## Verification
 - [ ] I have run `cargo test` and all tests pass locally.

@@ -7,10 +7,10 @@ Briefly describe the changes introduced by this PR and which roadmap issue it so
 - [ ] Code refactoring / performance improvement
 - [ ] Documentation update
 
-## Contributor Agreement (CLA)
-**Important:** Your pull request cannot be merged without agreeing to our Contributor License Agreement.
+## Developer Certificate of Origin (DCO)
+**Important:** Your pull request cannot be merged unless every commit is signed off under the Developer Certificate of Origin. There is no CLA to sign.
 
-- [ ] **I confirm that I have read, understood, and agree to the terms outlined in the [Individual Contributor License Agreement (CLA)](./CLA.md) for this project.**
+- [ ] **I confirm that every commit in this PR carries a `Signed-off-by:` line (added with `git commit -s`).**
 
 ## Verification
 - [ ] I have run `cargo test` and all tests pass locally.
