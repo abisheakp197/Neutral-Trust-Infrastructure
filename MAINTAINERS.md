@@ -9,9 +9,9 @@ setting technical direction, and upholding the project's [Code of Conduct](CODE_
 | Name | Role | Project / Organization | GitHub |
 | :--- | :--- | :--- | :--- |
 | Abisheak P. | Lead Architect | NTI (Neutral Trust Infrastructure) | [@abisheakp197](https://github.com/abisheakp197) |
-| Steven Zhao (Xinghua) | initial TSC seat of the proposed TSC | Independent — not representing UIBC or any organization | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
+| Steven Zhao (Xinghua) | initial TSC seat of the proposed TSC | Independent — no organizational affiliation | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
 
-Steven Zhao (Xinghua) — initial TSC seat of the proposed TSC. Independent researcher (ORCID: 0009-0001-0512-1237), writing in a personal capacity, not representing UIBC or any organization.
+Steven Zhao (Xinghua) — initial TSC seat of the proposed TSC. Independent researcher (ORCID: 0009-0001-0512-1237). Writing in a personal capacity, with no organizational affiliation, and not representing any organization.
 
 ## Organizational Independence
 

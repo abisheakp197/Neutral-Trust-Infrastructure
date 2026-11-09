@@ -12,11 +12,12 @@ TSC is:
 | Name | Project / Organization | Scope |
 | :--- | :--- | :--- |
 | Abisheak P. | NTI (Neutral Trust Infrastructure) | Runtime enforcement layer |
-| Steven Zhao (Xinghua) | Independent — not representing UIBC or any organization | initial TSC seat of the proposed TSC |
+| Steven Zhao (Xinghua) | Independent — no organizational affiliation | initial TSC seat of the proposed TSC |
 
 Steven Zhao (Xinghua) holds an initial TSC seat of the proposed TSC. He
-participates as an independent researcher (ORCID: 0009-0001-0512-1237), writing
-in a personal capacity, and does not represent UIBC or any organization.
+participates as an independent researcher (ORCID: 0009-0001-0512-1237). Writing
+in a personal capacity, with no organizational affiliation, and not representing
+any organization.
 
 Additional seats will be added as the contributor base grows, with the explicit
 goal of increasing organizational diversity (see the LFDT expectation of
