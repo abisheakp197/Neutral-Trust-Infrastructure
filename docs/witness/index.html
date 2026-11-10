@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NTI Witness Evidence Package</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --border:#30363d; --accent:#58a6ff; --text:#c9d1d9; --head:#f0f6fc; --green:#3fb950; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); line-height:1.6;
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { max-width:900px; margin:0 auto; padding:40px 20px 80px; }
+  h1 { color:var(--head); font-size:2rem; margin:0 0 6px; }
+  h2 { color:var(--head); font-size:1.25rem; margin:34px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px; }
+  .sub { color:var(--accent); margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:18px 20px; margin:14px 0; }
+  code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; background:#010409; padding:2px 6px; border-radius:4px; font-size:.9em; }
+  ul { padding-left:20px; } li { margin:6px 0; }
+  .ok { color:var(--green); font-weight:600; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:.95rem; }
+  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--head); }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NTI Witness Evidence Package</h1>
+  <div class="sub">Fixed verification location for external witnesses</div>
+
+  <div class="card">
+    <p>This directory is the stable location where external witnesses (such as
+    <strong>HORIZON SHIELD</strong>) recompute and verify the cryptographic state of
+    Neutral Trust Infrastructure. Every artifact is an input to be re-derived, not a
+    claim to be accepted.</p>
+  </div>
+
+  <h2>Artifacts</h2>
+  <ul>
+    <li><a href="MANIFEST.json">MANIFEST.json</a> — SHA-256 of the witness generator, the sample evidence fixture, and NTI's native test scripts, plus <code>key_url</code> and <code>key_history</code>.</li>
+    <li><a href="RESULTS.json">RESULTS.json</a> — NTI's native suite outcomes plus the S4/S5/S6 seal values.</li>
+    <li><a href="PUBLIC_KEY.pem">PUBLIC_KEY.pem</a> — Ed25519 public key (trust anchor: <code>key_url</code>).</li>
+    <li><a href="SIGNATURE.sig">SIGNATURE.sig</a> — 64-byte Ed25519 signature over a domain-separated, length-prefixed encoding of RESULTS.json and MANIFEST.json.</li>
+    <li><a href="verify.sh">verify.sh</a> — self-contained verifier: package signature, S4/S5/S6 seals, all manifest hashes, and the key fingerprint.</li>
+    <li><a href="README.md">README.md</a> — full documentation.</li>
+  </ul>
+
+  <h2>How to verify</h2>
+  <div class="card">
+    <p><code>cd docs/witness &amp;&amp; ./verify.sh /path/to/Neutral-Trust-Infrastructure</code></p>
+    <p>The verifier checks the package signature, recomputes the S4/S5/S6 seals, re-hashes every
+    file in MANIFEST.json, and confirms the published key fingerprint. See the README for the
+    exact bytes the package signature covers.</p>
+  </div>
+
+  <h2>The S4 / S5 / S6 seals</h2>
+  <div class="card">
+    <p>NTI's own native implementation, Apache-2.0. It shares no code with any external
+    conformance kit. Generator: <code>conformance/witness_generator/generate_seals.py</code>.</p>
+    <table>
+      <tr><th>Seal</th><th>Field</th><th>Construction</th></tr>
+      <tr><td>S4 file integrity</td><td><code>S4_file_integrity</code></td><td>SHA-256 of each evidence artifact</td></tr>
+      <tr><td>S5 evidence root</td><td><code>S5_evidence_root</code></td><td>RFC 6962 Merkle Tree Hash over the S4 digests (domain-separated; odd node promoted, never duplicated)</td></tr>
+      <tr><td>S6 seal</td><td><code>S6_hmac_seal</code></td><td>Ed25519 <strong>signature</strong> over the S5 root <strong>plus the leaf count and artifact names</strong></td></tr>
+    </table>
+    <p>The S6 field is named <code>S6_hmac_seal</code> to match the witness spec, but the
+    construction is a signature, not an HMAC. An HMAC needs a shared secret, which a witness
+    cannot verify without holding it; a signature verifies with the public key alone.</p>
+  </div>
+
+  <h2>Cryptographic hardening</h2>
+  <div class="card">
+    <p>The packaging logic was hardened against four structural weaknesses:</p>
+    <ul>
+      <li><strong>Package signature:</strong> domain-separated and length-prefixed. Each file is
+      digested on its own, so a byte cannot be moved between RESULTS.json and MANIFEST.json.</li>
+      <li><strong>Merkle tree:</strong> the odd node on a level is promoted unchanged (RFC 6962),
+      not duplicated, so two different leaf sets cannot collapse to the same root.</li>
+      <li><strong>S6:</strong> signs the root <em>and</em> the leaf count and artifact names, so a
+      valid root cannot be shown for a different artifact set.</li>
+      <li><strong>Trust anchor:</strong> <code>MANIFEST.json</code> carries a <code>key_url</code>
+      pointing at the GitHub Pages copy of the public key, fetched out of band.</li>
+    </ul>
+  </div>
+
+  <h2>Key history</h2>
+  <div class="card">
+    <p><code>MANIFEST.json</code> carries a <code>key_history</code> block listing every Ed25519
+    key this package has been signed with, oldest first. Three keys were rotated through before
+    the current one:</p>
+    <table>
+      <tr><th>Fingerprint (first 16)</th><th>Status</th><th>Valid from</th></tr>
+      <tr><td><code>1086f65bbd4dedf2</code></td><td>retired</td><td>2026-11-06T16:57:13Z</td></tr>
+      <tr><td><code>02c8859c08b7876f</code></td><td>retired</td><td>2026-11-06T17:37:59Z</td></tr>
+      <tr><td><code>0ef7c228f6828fa9</code></td><td>retired</td><td>2026-11-07T13:44:49Z</td></tr>
+      <tr><td>current signing key</td><td>active</td><td>generation time</td></tr>
+    </table>
+    <p>None of the retired keys' private halves were retained; their fingerprints are recorded from
+    repository history so a rotation is never silent.</p>
+  </div>
+
+  <h2>Results</h2>
+  <table>
+    <tr><th>Suite</th><th>Result</th></tr>
+    <tr><td>NTI Rust tests (rustc 1.90.0)</td><td class="ok">33 passed, 0 failed</td></tr>
+    <tr><td>NTI Python SDK tests (native bindings)</td><td class="ok">2 passed, 0 failed</td></tr>
+  </table>
+  <div class="card">
+    <p><strong>Suite evidence.</strong> The generator runs these suites and binds the SHA-256 of
+    each captured transcript under <code>suite_evidence</code> in RESULTS.json (mirrored in
+    MANIFEST.json as <code>suite_evidence_logs</code>). The digest is over a canonicalised
+    transcript (outcome lines sorted, timing stripped), so a witness that re-runs
+    <code>cargo test</code>, <code>cargo build</code>, <code>cargo check --features python</code>,
+    and <code>python -m unittest</code> derives the same digest. A "PASSED" string alone is no
+    longer the claim — the transcript is.</p>
+  </div>
+
+  <div class="card">
+    <p><strong>Scope and limits.</strong></p>
+    <ul>
+      <li><strong>The S4/S5/S6 seals are computed over a synthetic fixture</strong>
+      (<code>sample_evidence.json</code>). They prove the mechanism works; they are not seals
+      over production evidence. The suite results below are separate and real.</li>
+      <li>No third-party or external conformance suite is included or referenced.</li>
+      <li><strong>Trust anchor.</strong> <code>MANIFEST.json</code> carries a <code>key_url</code>
+      pointing at the GitHub Pages copy of the public key, fetched out of band. The private key is
+      not published, so a valid signature proves the files are intact under that key, not who holds it.</li>
+    </ul>
+  </div>
+
+  <p style="margin-top:28px;color:#8b949e;font-size:.9rem;">
+    This page was created by an AI agent (OpenHands) on behalf of the repository owner.
+  </p>
+</div>
+</body>
+</html>

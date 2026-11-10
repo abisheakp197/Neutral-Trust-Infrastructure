@@ -1,0 +1,164 @@
+{
+  "manifest_version": 5,
+  "generated_at_utc": "2026-11-08T02:32:14Z",
+  "repository": "abisheakp197/Neutral-Trust-Infrastructure",
+  "commit": "ea763c0c7e41344bd82b0db0eb211840926e1c3c",
+  "purpose": "Cryptographic evidence package for independent external witnesses to recompute and verify NTI's cryptographic state.",
+  "scope": "NTI's native Rust and Python test suites only.",
+  "signature": {
+    "algorithm": "Ed25519",
+    "signed_artifacts": [
+      "RESULTS.json",
+      "MANIFEST.json"
+    ],
+    "signature_file": "SIGNATURE.sig",
+    "public_key_file": "PUBLIC_KEY.pem",
+    "public_key_fingerprint_sha256": "bab3766759e6fd21224cbba132ef8f08685e21d30dafac77bc75c6daa3e9c009",
+    "canonical_form": "domain-separated, length-prefixed: b\"nti-witness-package-v2:\" || uint32_be(file_count) || for each file: uint32_be(len(name)) || name || SHA-256(file bytes). Each file is digested separately; the two files are never concatenated."
+  },
+  "nti_test_scripts": [
+    {
+      "path": "ube-foundation/tests/nti_conformance_regressions.rs",
+      "sha256": "ff6b3e8bdf88d750f186f4e6a57afd7ec0da891cb002c5dccab197fc51becb7e",
+      "description": "NTI conformance regression suite (issuer authority + quorum enforcement)"
+    },
+    {
+      "path": "ube-foundation/tests/core_tests.rs",
+      "sha256": "e13a23e324262fcb65429767dbb519e833714d62a4509d5523d9e2f72e66ab61",
+      "description": "NTI core engine tests"
+    },
+    {
+      "path": "ube-foundation/tests/adversarial_suite.rs",
+      "sha256": "d4536b2c7c00313b67c219e2ce92c80a87c035c51da91cf557e360012231ebdd",
+      "description": "NTI adversarial suite"
+    },
+    {
+      "path": "ube-foundation/tests/adversarial_fuzz.rs",
+      "sha256": "325f4aca981b2c93f3c3d974add6953736be2313d95495da9e20c2758ccd14e8",
+      "description": "NTI adversarial fuzz harness"
+    },
+    {
+      "path": "ube-foundation/tests/robustness_fuzz.rs",
+      "sha256": "184c6847fbd418bd9f172231d7124ccc67cdcf2cb52e037b6314db95b1e5438d",
+      "description": "NTI robustness fuzz harness"
+    },
+    {
+      "path": "ube-foundation/tests/security_patch_tests.rs",
+      "sha256": "52df5a6bc84aa34c0df7036c6a418987f7a61a23d17656c9d302d1fb4967284e",
+      "description": "NTI security patch regression tests"
+    },
+    {
+      "path": "ube-foundation/tests/trust_marketplace_adversarial.rs",
+      "sha256": "846b51a6ff8645f30e6ff6df3075304e95dd9afd34f831a4711d19351907e03d",
+      "description": "NTI trust-marketplace adversarial suite"
+    },
+    {
+      "path": "ube-foundation/tests/enterprise_adversarial_stress_suite.rs",
+      "sha256": "c107e7fa629f630663ff20b8d0aeb60c41cc56c8ad05648cc7db3eaefd6cb584",
+      "description": "NTI enterprise adversarial stress suite"
+    },
+    {
+      "path": "ube-foundation/python_tests/test_python_sdk.py",
+      "sha256": "0c88b846b62cd69de2ab3c6c382ca2c7cdb6f5cdab3a2cbe2d622330b0495093",
+      "description": "NTI Python SDK tests (native bindings required)"
+    },
+    {
+      "path": "ube-foundation/Cargo.toml",
+      "sha256": "11a42eba316fa3e9a8a85e66dff3cdc492c4a6bb2cc3d947b7d36ec34f87fc28",
+      "description": "NTI Rust crate manifest"
+    },
+    {
+      "path": "ube-foundation/Cargo.lock",
+      "sha256": "3fe85cec7e96773c65a3d37c7640e8a69a5202dc2e0f95fe532661f12613833e",
+      "description": "NTI locked dependency graph"
+    },
+    {
+      "path": ".github/workflows/issuer-quorum-regressions.yml",
+      "sha256": "87975c4ad9a0fa4b753b419a25c3a3d49c4e723d328ff4e014fb0f147b827730",
+      "description": "CI job that runs the NTI conformance regression suite"
+    }
+  ],
+  "witness_generator": [
+    {
+      "path": "conformance/witness_generator/generate_seals.py",
+      "sha256": "a7ee4a2f7b86c11767d8f1b30e2aa5b9443cdf41039446c0a0f5483712d39e59",
+      "description": "Native Apache-2.0 S4/S5/S6 seal generator"
+    },
+    {
+      "path": "conformance/witness_generator/sample_evidence.json",
+      "sha256": "d988746568821931152a6567d9929b7052abf692a319f340d47688ae5350cc84",
+      "description": "Synthetic sample evidence package"
+    }
+  ],
+  "key_history": [
+    {
+      "fingerprint_sha256": "1086f65bbd4dedf2da66d08c55d233bb324748fd54f6659c79ce6e96d2811654",
+      "algorithm": "Ed25519",
+      "public_key_file": "PUBLIC_KEY.pem",
+      "key_url": "https://abisheakp197.github.io/Neutral-Trust-Infrastructure/witness/PUBLIC_KEY.pem",
+      "status": "retired",
+      "valid_from_utc": "2026-11-06T16:57:13Z",
+      "retired_at_utc": "2026-11-06T17:37:59Z",
+      "note": "First witness key (branch feat/witness-package). Private key not retained."
+    },
+    {
+      "fingerprint_sha256": "02c8859c08b7876fbf3739812d4c35dd8e931a089351485fbef194ea72347812",
+      "algorithm": "Ed25519",
+      "public_key_file": "PUBLIC_KEY.pem",
+      "key_url": "https://abisheakp197.github.io/Neutral-Trust-Infrastructure/witness/PUBLIC_KEY.pem",
+      "status": "retired",
+      "valid_from_utc": "2026-11-06T17:37:59Z",
+      "retired_at_utc": "2026-11-07T13:44:49Z",
+      "note": "Second witness key (branch feat/native-s4-s5-s6-witness). Private key not retained."
+    },
+    {
+      "fingerprint_sha256": "0ef7c228f6828fa9c5eadc4cf1e472b4f7130e71560cbf1a454c2ca830987673",
+      "algorithm": "Ed25519",
+      "public_key_file": "PUBLIC_KEY.pem",
+      "key_url": "https://abisheakp197.github.io/Neutral-Trust-Infrastructure/witness/PUBLIC_KEY.pem",
+      "status": "retired",
+      "valid_from_utc": "2026-11-07T13:44:49Z",
+      "retired_at_utc": "2026-11-07T14:20:00Z",
+      "note": "Third witness key. Private key not retained; rotated for the provenance fix."
+    },
+    {
+      "fingerprint_sha256": "bab3766759e6fd21224cbba132ef8f08685e21d30dafac77bc75c6daa3e9c009",
+      "algorithm": "Ed25519",
+      "public_key_file": "PUBLIC_KEY.pem",
+      "key_url": "https://abisheakp197.github.io/Neutral-Trust-Infrastructure/witness/PUBLIC_KEY.pem",
+      "status": "active",
+      "valid_from_utc": "2026-11-08T02:28:05Z"
+    }
+  ],
+  "key_url": "https://abisheakp197.github.io/Neutral-Trust-Infrastructure/witness/PUBLIC_KEY.pem",
+  "suite_evidence_logs": {
+    "cargo_test": {
+      "command": "/home/openhands/.cargo/bin/cargo test --locked --manifest-path ube-foundation/Cargo.toml --lib --tests -- --nocapture",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output_sha256": "53e35a593635411b08d8944b86adff06f8a70528e6a021ddaa46b98f3fd6fb50",
+      "canonical_form": "sorted `test <name> ... <status>` lines plus the sorted `test result:` summary lines with the trailing `finished in <t>` stripped"
+    },
+    "cargo_build": {
+      "command": "/home/openhands/.cargo/bin/cargo build --locked --manifest-path ube-foundation/Cargo.toml",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output_sha256": "08344a03a3788eec6baf26a976eb3e99799736cd4d0f4f6a439e4c5d416efe20",
+      "canonical_form": "outcome only: `finished=<bool>` and `error_lines=<count>` (an incremental build compiles a varying set of crates, so compile order is not reproducible)"
+    },
+    "cargo_check_python": {
+      "command": "/home/openhands/.cargo/bin/cargo check --locked --manifest-path ube-foundation/Cargo.toml --features python",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output_sha256": "08344a03a3788eec6baf26a976eb3e99799736cd4d0f4f6a439e4c5d416efe20",
+      "canonical_form": "outcome only: `finished=<bool>` and `error_lines=<count>`"
+    },
+    "python_unittest": {
+      "command": "/usr/local/bin/python3 -m unittest discover -s ube-foundation/python_tests -v",
+      "exit_code": 0,
+      "status": "PASSED",
+      "output_sha256": "f5baff7833ae63f85f1f27ba620689f1a66ff77326f6f6d844dbc601c1e68352",
+      "canonical_form": "sorted `test_<name> ... <status>` lines plus the `Ran N tests` line (timing stripped) and the final `OK`/`FAILED` line"
+    }
+  }
+}

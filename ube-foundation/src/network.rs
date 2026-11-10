@@ -1,0 +1,239 @@
+use crate::*;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use warp::Filter;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerInfo {
+    pub id: String,
+    pub endpoint: String,
+    pub public_key: Vec<u8>,
+    pub capabilities: Vec<String>,
+    pub last_seen: chrono::DateTime<chrono::Utc>,
+}
+
+pub struct DistributedNode {
+    pub mesh_node: AgentMeshNode,
+    pub orchestrator: Arc<Mutex<Orchestrator>>,
+    pub known_peers: Arc<Mutex<BTreeMap<String, PeerInfo>>>,
+}
+
+impl DistributedNode {
+    pub fn new(id: String, orchestrator: Orchestrator) -> Self {
+        Self {
+            mesh_node: AgentMeshNode::new(id),
+            orchestrator: Arc::new(Mutex::new(orchestrator)),
+            known_peers: Arc::new(Mutex::new(BTreeMap::new())),
+        }
+    }
+
+    pub async fn start_api(self: Arc<Self>, port: u16) {
+        let node = self.clone();
+
+        // GET /peers - List known peers
+        let node_peers = self.clone();
+        let get_peers = warp::get().and(warp::path("peers")).and_then(move || {
+            let node = node_peers.clone();
+            async move {
+                let peers = node.known_peers.lock().await;
+                Ok::<_, warp::Rejection>(warp::reply::json(&*peers))
+            }
+        });
+
+        let body_limit = warp::body::content_length_limit(1024 * 1024 * 2); // 2MB Max Payload Limit
+
+        // POST /execute - Execute an action request
+        let execute = warp::post()
+            .and(warp::path("execute"))
+            .and(body_limit)
+            .and(warp::body::json())
+            .and_then(move |req: ActionRequest| {
+                let node = node.clone();
+                async move {
+                    let mut orch = node.orchestrator.lock().await;
+                    match orch.run_task(req).await {
+                        Ok(res) => Ok::<_, warp::Rejection>(warp::reply::json(&res)),
+                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(&serde_json::json!({"error": "Action execution denied or failed", "details": e}))),
+                    }
+                }
+            });
+
+        // POST /handshake - Peer-to-peer identity exchange
+        let node = self.clone();
+        let handshake = warp::post()
+            .and(warp::path("handshake"))
+            .and(body_limit)
+            .and(warp::body::json())
+            .and_then(move |req: HandshakeRequest| {
+                let node = node.clone();
+                async move {
+                    match node.mesh_node.respond_to_handshake(&req) {
+                        Ok((resp, _shared_secret)) => {
+                            Ok::<_, warp::Rejection>(warp::reply::json(&resp))
+                        }
+                        Err(e) => Ok::<_, warp::Rejection>(warp::reply::json(
+                            &serde_json::json!({"error": "Handshake rejected", "details": e}),
+                        )),
+                    }
+                }
+            });
+
+        // POST /vote - Respond to a consensus proposal
+        let node_vote = self.clone();
+        let vote = warp::post()
+            .and(warp::path("vote"))
+            .and(body_limit)
+            .and(warp::body::json())
+            .and_then(move |proposal: RemoteProposal| {
+                let node = node_vote.clone();
+                async move {
+                    let _orch = node.orchestrator.lock().await;
+                    // Run the request through the local verifier
+                    let verdict = IntentVerifier::verify(
+                        &proposal.request,
+                        &serde_json::Value::Null,
+                        &IntentPolicy {
+                            name: "Network Vote".into(),
+                            capability: proposal.request.capability.clone(),
+                            constraints: serde_json::Value::Object(serde_json::Map::new()),
+                        },
+                    );
+
+                    let mut vote = RemoteVote {
+                        proposal_id: proposal.id,
+                        voter_id: node.mesh_node.id.clone(),
+                        verdict,
+                        signature: vec![],
+                    };
+
+                    let consensus_vote = ConsensusVote {
+                        voter_id: vote.voter_id.clone(),
+                        request_id: vote.proposal_id.clone(),
+                        decision: match &vote.verdict {
+                            OutcomeVerdict::Valid => Some(PolicyDecision {
+                                decision: Decision::Allow,
+                                reason: "Network Vote Allow".into(),
+                            }),
+                            _ => Some(PolicyDecision {
+                                decision: Decision::Deny,
+                                reason: "Network Vote Deny".into(),
+                            }),
+                        },
+                        outcome_hash: proposal.request.id.clone(),
+                        signature: vec![],
+                    };
+
+                    let sig = node
+                        .mesh_node
+                        .signing_key
+                        .sign(&consensus_vote.message_to_sign());
+                    vote.signature = sig.to_bytes().to_vec();
+                    Ok::<_, warp::Rejection>(warp::reply::json(&vote))
+                }
+            });
+
+        let routes = execute.or(handshake).or(get_peers).or(vote);
+        warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+    }
+
+
+    pub async fn discover_peer(&self, endpoint: String) -> Result<(), String> {
+        let (req, _secret) = self.mesh_node.initiate_handshake();
+        let client = reqwest::Client::new();
+
+        let resp = client
+            .post(format!("{}/handshake", endpoint))
+            .json(&req)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if resp.status().is_success() {
+            let handshake_resp: HandshakeResponse = resp.json().await.map_err(|e| e.to_string())?;
+
+            // Cryptographic signature verification of handshake response
+            let Ok(pk_bytes) = handshake_resp.responder_public_key.as_slice().try_into() else {
+                return Err("Invalid responder public key length".into());
+            };
+            let Ok(responder_pk) = VerifyingKey::from_bytes(pk_bytes) else {
+                return Err("Invalid responder public key format".into());
+            };
+            let Ok(sig) = Signature::from_slice(&handshake_resp.signature) else {
+                return Err("Invalid handshake response signature format".into());
+            };
+
+            let mut msg = Vec::new();
+            msg.extend_from_slice(&req.ephemeral_public_key);
+            msg.extend_from_slice(&handshake_resp.ephemeral_public_key);
+
+            if responder_pk.verify(&msg, &sig).is_err() {
+                return Err("Peer handshake signature verification failed".into());
+            }
+
+            let mut peers = self.known_peers.lock().await;
+            peers.insert(
+                handshake_resp.responder_id.clone(),
+                PeerInfo {
+                    id: handshake_resp.responder_id,
+                    endpoint,
+                    public_key: handshake_resp.responder_public_key,
+                    capabilities: vec![], // Would be populated via a follow-up info request
+                    last_seen: chrono::Utc::now(),
+                },
+            );
+            Ok(())
+        } else {
+            Err("Handshake failed".into())
+        }
+    }
+}
+
+pub struct NetworkModule {
+    pub endpoint: String,
+    pub capability: String,
+}
+
+#[async_trait::async_trait]
+impl Module for NetworkModule {
+    fn name(&self) -> &str {
+        &self.endpoint
+    }
+    fn capabilities(&self) -> Vec<String> {
+        vec![self.capability.clone()]
+    }
+    async fn execute(
+        &self,
+        action: &str,
+        input: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let client = reqwest::Client::new();
+        // In a real network, this request would be signed by the MeshNode
+        let req = ActionRequest {
+            id: rand::random::<u64>().to_string(),
+            actor: "network_orchestrator".into(),
+            capability: self.capability.clone(),
+            action: action.into(),
+            input,
+            signature: None,
+            pqc_signature: None,
+            public_key: None,
+            pqc_public_key: None,
+            token: None,
+            identity_claim: None,
+        };
+
+        let resp = client
+            .post(format!("{}/execute", self.endpoint))
+            .json(&req)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if resp.status().is_success() {
+            resp.json().await.map_err(|e| e.to_string())
+        } else {
+            let err: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+            Err(err["error"].as_str().unwrap_or("Unknown error").into())
+        }
+    }
+}

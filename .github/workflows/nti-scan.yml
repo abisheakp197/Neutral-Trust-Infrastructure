@@ -1,0 +1,21 @@
+name: NTI Security Scan
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+# Read-only by design. The scan reports its score in the job log only; it does
+# not modify the repository. The self-issued "NTI Verified" compliance badge is
+# intentionally NOT committed back to README.md — project health is reported by
+# the OpenSSF Scorecard badge instead. Read-only permissions also satisfy the
+# LFDT / OpenSSF Token-Permissions and Dangerous-Workflow requirements.
+permissions:
+  contents: read
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: abisheakp197/nti-scan-action@v1.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

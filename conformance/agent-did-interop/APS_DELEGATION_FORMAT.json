@@ -1,0 +1,46 @@
+{
+  "record_type": "aps:authority-delegation:v1",
+  "version": "1.0",
+  "parent_delegation_id": null,
+  "issuer": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com",
+  "subject": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
+  "verification_method": "did:webvh:z6MkExampleIssuerSCID0000000000000000000000:issuer.example.com#aps-ed25519-1",
+  "issued_at": "2026-11-06T14:00:00.000Z",
+  "nonce": "77857a3d9352d4d8916cc2b04980de6b",
+  "authority": {
+    "scope": {
+      "profile": "aps-hierarchical-v1",
+      "grants": [
+        "ledger:read",
+        "ledger:transfer"
+      ]
+    },
+    "spend": {
+      "mode": "bounded",
+      "unit": "iso4217:USD:minor",
+      "per_action": "1000000",
+      "cumulative": "100000000"
+    },
+    "depth": {
+      "remaining": 0
+    },
+    "time": {
+      "not_before": "2026-11-06T14:00:00.000Z",
+      "not_after": "2026-11-07T14:00:00.000Z"
+    },
+    "reputation": {
+      "profile": "aps-score-0-100-v1",
+      "ceiling": 80
+    },
+    "values": {
+      "profile": "aps-values-identifiers-v1",
+      "required": []
+    },
+    "reversibility": {
+      "profile": "aps-tci-v1",
+      "ceiling": "compensable"
+    }
+  },
+  "delegation_id": "sha256:32c13399778b912bf8ff8502ee785f76650c4970c35f0472e0015c142fcb12a8",
+  "signature": "4980879442d570854a866bc6795cd5a20a56ec583ffbc2319fc5b81c356ef5ceaa4da8dffb2ed7886805c4a51b2c8872aad7724891866ee10846d9b52a07d60a"
+}

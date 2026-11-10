@@ -1,0 +1,11 @@
+target/
+**/target/
+dist/
+**/dist/
+Cargo.lock
+*.log
+.env
+*.pyc
+__pycache__/
+.pytest_cache/
+.DS_Store
