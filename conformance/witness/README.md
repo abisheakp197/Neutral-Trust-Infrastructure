@@ -167,6 +167,28 @@ The generator refreshes `RESULTS.json` and `MANIFEST.json`, republishes
 `PUBLIC_KEY.pem` from the signing key, updates `key_history`, and writes
 `SIGNATURE.sig`.
 
+## Commit provenance
+
+`MANIFEST.json` carries a `commit` field. It is a **generation-time anchor**: the
+commit checked out when this evidence was produced, consistent with
+`generated_at_utc`. It records *when* the package was built, not a claim that the
+package is current.
+
+The anchored commit (`ea763c0c`) left `main`'s history when the repository was
+squashed to a single DCO-signed commit for Linux Foundation compliance. It
+remains available on the `backup/pre-squash-main` branch:
+
+```bash
+git fetch origin backup/pre-squash-main
+git checkout ea763c0c
+```
+
+The field is deliberately **not** rewritten to the squashed commit. It sits
+inside the signed byte range, so editing it invalidates `SIGNATURE.sig`; and it
+would misstate the record, since the squashed commit postdates the evidence and
+attests no test run. A package anchored to current history would be a new
+generation, signed with a key supplied out of band (see `sign.sh`).
+
 ## Scope — read this
 
 **The seals are computed over a synthetic fixture.**
