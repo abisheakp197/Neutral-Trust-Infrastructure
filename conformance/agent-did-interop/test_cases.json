@@ -1,7 +1,7 @@
 {
   "format_version": "nti-agent-did-conformance/1.2",
   "generated_by": "abisheakp197/Neutral-Trust-Infrastructure",
-  "profile": "NTI x Agent-DID interop (docs/NTI-Agent-DID-INTEROP.md rev 2)",
+  "profile": "NTI x Agent-DID interop (docs/NTI-Agent-DID-INTEROP.md rev 4)",
   "classification": "SYNTHETIC - conformance fixtures, not production evidence",
   "pinned_implementation": {
     "name": "agent-passport-system",
@@ -262,7 +262,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+                "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
               }
             ],
             "assertionMethod": [
@@ -313,7 +313,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+                "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
               }
             ],
             "assertionMethod": [
@@ -333,7 +333,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-2",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+                "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
               }
             ],
             "assertionMethod": [
@@ -384,7 +384,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+                "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
               }
             ],
             "assertionMethod": [
@@ -446,7 +446,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+                "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
               }
             ],
             "assertionMethod": [],
@@ -497,7 +497,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+                "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
               }
             ],
             "assertionMethod": [
@@ -551,7 +551,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+                "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
               }
             ],
             "assertionMethod": [],
@@ -603,7 +603,7 @@
                 "id": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com#ml-dsa-87-1",
                 "type": "Multikey",
                 "controller": "did:webvh:z6MkExampleAgentSCID0000000000000000000000:agents.example.com",
-                "publicKeyMultibase": "uz2G...MLDSA87_PUBLIC_KEY...9k"
+                "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
               }
             ],
             "assertionMethod": [

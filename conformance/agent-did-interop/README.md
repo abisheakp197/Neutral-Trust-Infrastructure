@@ -6,7 +6,7 @@ side is pinned to **`agent-passport-system 8.0.1`**, implementing
 **`draft-pidlisnyi-aps-04`** sections **4.1–4.3**.
 
 The vectors exercise the verification rules in
-[`docs/NTI-Agent-DID-INTEROP.md`](../../docs/NTI-Agent-DID-INTEROP.md) (rev 2):
+[`docs/NTI-Agent-DID-INTEROP.md`](../../docs/NTI-Agent-DID-INTEROP.md) (rev 4):
 ML-DSA-87 key binding, signing-time key validity for `did:webvh`, the
 `assertionMethod` verification relationship, the separation of DID
 authorization from VC issuer checks, and the `did:webvh:{SCID}:{domain}` format.
@@ -133,8 +133,15 @@ end to end.
 
 **Everything here is a synthetic fixture.** The DIDs use the reserved-looking
 SCIDs `z6MkExampleAgentSCID...` and `z6MkExampleIssuerSCID...`, and the DID-log
-public keys are placeholders (`uz2G...MLDSA87_PUBLIC_KEY...9k`). The APS
-signature is real and self-consistent, but it is over a throwaway key generated
+public keys are placeholders (`ukiQExampleMLDSA87PublicKey...`). The SCIDs here
+are intentionally non-conforming placeholders: they are embedded in the APS
+`issuer`/`subject` fields, which are covered by the `delegation_id` content
+address and the Ed25519 `signature`, so they cannot be renumbered without
+re-signing. The `docs/NTI-Agent-DID-INTEROP.md` examples use a real conforming
+46-character base58btc SCID and a conforming `ukiQ…` ML-DSA-87 multibase value;
+these fixtures pin the *decision* an implementation must reach, not a
+byte-exact SCID. The APS signature is real and self-consistent, but it is over a
+throwaway key generated
 for these fixtures; the matching public key is published in
 `test_cases.json` under `reference.issuer_public_key_hex` purely so the record
 can be verified. These vectors pin the *format* and the *decision* an
