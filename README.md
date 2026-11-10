@@ -2,7 +2,7 @@
 ### Post-Quantum Cryptographic Trust & Governance Layer for Autonomous Agent Ecosystems
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Spec License](https://img.shields.io/badge/Spec%20License-CC%20BY%204.0-lightgrey)](LICENSE-SPEC)
+[![Spec License](https://img.shields.io/badge/Spec%20License-CSL%201.0-lightgrey)](LICENSE-SPEC)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/abisheakp197/Neutral-Trust-Infrastructure/badge)](https://scorecard.dev/viewer/?uri=github.com/abisheakp197/Neutral-Trust-Infrastructure)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
 [![PQC Standard](https://img.shields.io/badge/PQC-NIST%20Dilithium5%20%26%20Kyber1024-purple.svg)]()
@@ -149,7 +149,7 @@ python3 python_tests/test_python_sdk.py
 ## License
 
 - **Code** — Apache License 2.0. See [LICENSE](LICENSE).
-- **Specification text and conformance vectors** — Creative Commons Attribution 4.0 International (CC BY 4.0). See [LICENSE-SPEC](LICENSE-SPEC).
+- **Specification text and conformance vectors** — Community Specification License 1.0 (CSL). See [LICENSE-SPEC](LICENSE-SPEC).
 
 ---
 
