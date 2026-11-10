@@ -38,17 +38,23 @@ be merged.
 
 ---
 
-## 1. Licensing: DCO Only — No CLA
+## 1. Licensing: DCO for Code, CSL for the Specification
 
-**NTI uses the Developer Certificate of Origin (DCO) exclusively. We do not require a CLA. All commits must be signed off using `git commit -s`.**
+**Code contributions use the Developer Certificate of Origin (DCO) exclusively; no separate CLA is required for code. All commits must be signed off using `git commit -s`.**
 
 By signing off, you certify that you wrote the contribution or otherwise have the
 right to submit it under the project's open-source license (Apache-2.0 for code,
-CC BY 4.0 for the specification). You retain your copyright; there is no
-copyright-assignment or relicensing agreement to sign.
+Community Specification License 1.0 for the specification). You retain your
+copyright; there is no copyright-assignment or relicensing agreement to sign for
+code contributions.
 
-There is no CLA bot and no CLA check to pass. The only contributor-agreement
-requirement is the DCO sign-off described in section 0.
+Specification contributions are made under the Community Specification License
+1.0 (CSL) framework, which includes the Community Specification Contributor
+License Agreement. See [LICENSE-SPEC](LICENSE-SPEC) for the full text.
+
+There is no CLA bot and no CLA check to pass for code contributions. The only
+contributor-agreement requirement for code is the DCO sign-off described in
+section 0.
 
 ---
 
