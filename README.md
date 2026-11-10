@@ -143,6 +143,7 @@ python3 python_tests/test_python_sdk.py
 * [Technical Whitepaper & Architecture Specification](WHITEPAPER.md)
 * [Developer Quickstart Guide](QUICKSTART.md)
 * [Implementation Status & Audit Log](IMPLEMENTATION_STATUS.md)
+* [NTI-1 Specification & LFDT Lab Proposal](https://github.com/abisheakp197/nti-spec) — the normative specification and the proposal to host it as a Linux Foundation Decentralized Trust (LFDT) Lab.
 
 ---
 

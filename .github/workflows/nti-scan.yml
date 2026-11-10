@@ -15,7 +15,7 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: abisheakp197/nti-scan-action@v1.0.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: abisheakp197/nti-scan-action@6591bbe4929a38d9ce8db2f81166472c77066df6 # v1.0.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
