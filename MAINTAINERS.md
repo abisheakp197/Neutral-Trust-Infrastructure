@@ -9,18 +9,33 @@ setting technical direction, and upholding the project's [Code of Conduct](CODE_
 | Name | Role | Project / Organization | GitHub |
 | :--- | :--- | :--- | :--- |
 | Abisheak P. | Lead Architect | NTI (Neutral Trust Infrastructure) | [@abisheakp197](https://github.com/abisheakp197) |
-| Steven Zhao (Xinghua) | initial TSC seat of the proposed TSC | Independent — no organizational affiliation | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
+| Tymofii Pidlisnyi | Maintainer | Independent Researcher — Agent Passport System (APS) | [@aeoess](https://github.com/aeoess) |
+| Steven Zhao (Xinghua) | Maintainer | Independent Researcher | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
 
-Steven Zhao (Xinghua) — initial TSC seat of the proposed TSC. Independent researcher (ORCID: 0009-0001-0512-1237). Writing in a personal capacity, with no organizational affiliation, and not representing any organization.
+## Maintainer Affiliations
+
+Tymofii Pidlisnyi participates as an independent researcher and is the author of
+the **Agent Passport System (APS)**. He contributes to NTI through the joint
+Agent-DID / APS conformance work (see
+[`conformance/agent-did-interop/`](conformance/agent-did-interop/)), where the
+NTI receipt profile is aligned with APS `draft-pidlisnyi-aps-04`. He participates
+in a personal capacity and is not acting as a representative of any organization.
+
+Steven Zhao (Xinghua) participates as an independent researcher
+(ORCID: 0009-0001-0512-1237), writing in a personal capacity, with no
+organizational affiliation, and not representing any organization.
 
 ## Organizational Independence
 
-NTI is an independent project. No third-party organization is represented in this
-file, and no single organization holds more than one seat. The project is
-committed to growing the maintainer base and to meeting the LF Decentralized
-Trust diversity expectation over time (see the
-[Project Lifecycle](https://lf-decentralized-trust.github.io/governance/governing-documents/project-lifecycle/)
-diversity criteria).
+These maintainers represent independent projects and individuals, satisfying the
+LFDT diversity requirement of at least two independent organizations.
+
+No single organization holds more than one seat. Each maintainer is an
+independent party: NTI, the Agent Passport System, and Steven Zhao's independent
+work are separate efforts, and none is a subsidiary or controlled affiliate of
+another. The project is committed to growing the maintainer base further, in line
+with the LF Decentralized Trust [Project Lifecycle](https://lf-decentralized-trust.github.io/governance/governing-documents/project-lifecycle/)
+diversity criteria.
 
 ## Maintainer Responsibilities
 
