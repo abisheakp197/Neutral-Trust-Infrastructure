@@ -1,6 +1,6 @@
 # NTI x Agent-DID Interoperability
 
-**Status:** Draft for review (rev 3 - cryptographic constants corrected)
+**Status:** Draft for review (rev 4 - example encodings corrected)
 **Scope:** Cross-project integration between Neutral Trust Infrastructure (NTI) and Agent-DID
 **Audience:** Principal architects, cryptographic reviewers, and implementers of both projects
 
@@ -11,6 +11,8 @@ This document defines how an NTI receipt and an Agent-DID identity compose at in
 > **Revision note (rev 2).** This revision fixes five critical cryptographic defects raised by Edison Duran (Agent-DID): ML-DSA-87 key binding (Section 1.1), signing-time validity of `did:webvh` keys (Section 2.1), the `assertionMethod` verification relationship (Section 2.1), separation of DID authorization from VC issuer checks (Section 2.1), and corrected DID / signature examples (Sections 1.2 and 4.3).
 >
 > **Revision note (rev 3).** Corrects two constant-level errors found on re-review: the ML-DSA-87 multicodec code is **`0x1212`** (`0x1211` is ML-DSA-65), and an ML-DSA-87 signature is **4627 bytes** (`2592` is the ML-DSA-87 public-key size, not the signature size). Both are fixed in Sections 1.1, 1.2, and 4.3, and the same corrections are applied to the `conformance/vate-recovery` receipt fixture.
+>
+> **Revision note (rev 4).** Fixes two example-encoding defects found on cryptographic re-review, where the constants in rev 3 were correct but the illustrative values were still non-conforming. (a) The `did:webvh` SCID in the examples was `z6MkExampleSCID1234567890`, which is not a conforming SCID: `did:webvh` requires a 46-character base58btc SHA-256 multihash (`0x12 0x20`), which begins `Qm…`, whereas `z6Mk…` is an Ed25519 multibase key prefix. It is replaced with a real 46-character SCID. (b) The ML-DSA-87 `publicKeyMultibase` example began `uz6Mk…` (an Ed25519 `0xed01` key); the conforming ML-DSA-87 (`0x1212`) multibase value begins `ukiQ…`. A normative encoding note now pins both formats. The same fixes are applied to the `conformance/agent-did-interop` fixtures.
 
 ## 1. Receipt Referencing Agent-DID
 
@@ -35,24 +37,26 @@ Two conforming binding patterns are permitted. The verifier MUST support **Patte
 
 The DID document carries a verification method with `type: "Multikey"` and a `publicKeyMultibase` encoding the ML-DSA-87 (Dilithium5) public key under the multicodec code `0x1212`. The `verification_method` fragment in the receipt points directly at this entry.
 
+> **Encoding note (normative).** The `publicKeyMultibase` value is a multibase string whose decoded bytes begin with the multicodec varint for the key type. For an ML-DSA-87 public key the varint for `0x1212` is `0x92 0x24`, so a base64url (`u`) multibase value **MUST** begin `ukiQ…` and a base58btc (`z`) value would begin with the base58btc form of `0x92 0x24`. A value beginning `z6Mk…` or `uz6Mk…` is an **Ed25519** key (`0xed01`) and is **not** a conforming ML-DSA-87 key. Implementations MUST reject an ML-DSA-87 verification method whose `publicKeyMultibase` does not decode to multicodec `0x1212`.
+
 ```json
 {
   "@context": [
     "https://www.w3.org/ns/did/v1",
     "https://w3id.org/security/multikey/v1"
   ],
-  "id": "did:webvh:z6MkExampleSCID1234567890:agents.example.com",
+  "id": "did:webvh:Qmb3pCN8exEP6g69273nojYfVNuDV97FoXmgWqAeHva88c:agents.example.com",
   "verificationMethod": [
     {
-      "id": "did:webvh:z6MkExampleSCID1234567890:agents.example.com#ml-dsa-87-1",
+      "id": "did:webvh:Qmb3pCN8exEP6g69273nojYfVNuDV97FoXmgWqAeHva88c:agents.example.com#ml-dsa-87-1",
       "type": "Multikey",
-      "controller": "did:webvh:z6MkExampleSCID1234567890:agents.example.com",
-      "publicKeyMultibase": "uz6MkExampleMLDSA87PublicKey..."
+      "controller": "did:webvh:Qmb3pCN8exEP6g69273nojYfVNuDV97FoXmgWqAeHva88c:agents.example.com",
+      "publicKeyMultibase": "ukiQExampleMLDSA87PublicKey..."
     }
   ],
   "authentication": ["#ed25519-auth-1"],
   "assertionMethod": [
-    "did:webvh:z6MkExampleSCID1234567890:agents.example.com#ml-dsa-87-1"
+    "did:webvh:Qmb3pCN8exEP6g69273nojYfVNuDV97FoXmgWqAeHva88c:agents.example.com#ml-dsa-87-1"
   ]
 }
 ```
@@ -75,8 +79,8 @@ When the ML-DSA-87 key cannot live in the DID document (for example, rotation or
 ```json
 {
   "receipt_id": "rcpt-20261106-4417-a2b1",
-  "agent_did": "did:webvh:z6MkExampleSCID1234567890:agents.example.com",
-  "verification_method": "did:webvh:z6MkExampleSCID1234567890:agents.example.com#ml-dsa-87-1",
+  "agent_did": "did:webvh:Qmb3pCN8exEP6g69273nojYfVNuDV97FoXmgWqAeHva88c:agents.example.com",
+  "verification_method": "did:webvh:Qmb3pCN8exEP6g69273nojYfVNuDV97FoXmgWqAeHva88c:agents.example.com#ml-dsa-87-1",
   "payload_sha256": "9f2c...e1",
   "delegation_chain_root": "a71b...3d",
   "signed_at": "2026-11-06T14:17:02Z",
@@ -137,10 +141,10 @@ Neither side falls back to the other's result. The composition is a **strict AND
 ### 4.1 Identifier
 
 ```text
-did:webvh:z6MkExampleSCID1234567890:agents.example.com
+did:webvh:Qmb3pCN8exEP6g69273nojYfVNuDV97FoXmgWqAeHva88c:agents.example.com
 ```
 
-The `{SCID}` (`z6MkExampleSCID1234567890`) is derived from the genesis entry of the DID log; the `{domain}` (`agents.example.com`) hosts `/.well-known/did.jsonl`.
+The `{SCID}` (`Qmb3pCN8exEP6g69273nojYfVNuDV97FoXmgWqAeHva88c`) is derived from the genesis entry of the DID log; the `{domain}` (`agents.example.com`) hosts `/.well-known/did.jsonl`.
 
 ### 4.2 Signing-time resolution
 
