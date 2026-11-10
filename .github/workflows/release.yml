@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag to (re)sign — manual runs only"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -67,3 +72,47 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+
+  # Sign release artifacts with Sigstore (keyless) and attach SLSA build
+  # provenance, so consumers can verify origin and integrity. This is the
+  # artifact-signing process documented in RELEASE.md and required by the
+  # LFDT Release Signing policy (SLSA Level 1 minimum for incubation).
+  release-signing:
+    name: Sign release artifacts (Sigstore)
+    needs: build-wheels
+    if: github.event_name == 'release' || inputs.release_tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Download built wheels
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+
+      - name: Generate checksums
+        working-directory: dist
+        run: find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' ! -name 'SHA256SUMS.sigstore.json' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+
+      - name: Sign artifacts (keyless, Sigstore)
+        working-directory: dist
+        run: cosign sign-blob --yes --bundle SHA256SUMS.sigstore.json SHA256SUMS.txt
+
+      - name: Attest build provenance (SLSA)
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: dist/*
+
+      - name: Upload signed artifacts to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: gh release upload "$TAG" dist/SHA256SUMS.txt dist/SHA256SUMS.sigstore.json --clobber

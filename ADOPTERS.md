@@ -5,23 +5,16 @@ build on Neutral Trust Infrastructure (NTI). It follows the LF Decentralized
 Trust [defining adopters](https://lf-decentralized-trust.github.io/governance/governing-documents/defining-adopters.html)
 guidance: entries should reference publicly verifiable usage.
 
-> **Note on status:** The entries below are **integration partners** — independent
-> projects that interoperate with NTI at defined boundaries and are collaborating
-> on the joint conformance work. They are listed here with links to their public
-> repositories. This list is expected to grow, and we invite anyone deploying NTI
-> to open a pull request adding themselves.
+> **Note on status:** The entries below are independent reviewers and
+> implementers that interoperate with NTI at defined boundaries. They are listed
+> with links to their public work. This list is expected to grow, and we invite
+> anyone deploying NTI to open a pull request adding themselves.
 
-## Integration Partners
+## Independent Researchers
 
-| Partner | Layer | Repository |
-| :--- | :--- | :--- |
-| **UIBC** | Evidence packaging & lifecycle governance | [zhaoxinghua09-cell/uibc-core](https://github.com/zhaoxinghua09-cell/uibc-core) |
-
-### UIBC
-
-UIBC provides evidence packages and lifecycle governance for autonomous agents,
-with a registry / evidence / gate reference implementation and a verifiable
-package format (Apache-2.0).
+| Researcher | Contribution |
+| :--- | :--- |
+| **Independent individual researcher** | Independent review and interoperability testing of NTI at defined boundaries. |
 
 ## Adding Yourself
 
