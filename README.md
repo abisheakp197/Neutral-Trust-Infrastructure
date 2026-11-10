@@ -1,9 +1,11 @@
 # Neutral Trust Infrastructure (NTI)
 ### Post-Quantum Cryptographic Trust & Governance Layer for Autonomous Agent Ecosystems
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue)](https://www.apache.org/licenses/LICENSE-2.0)
+[![License](https://img.shields.io/github/license/abisheakp197/Neutral-Trust-Infrastructure)](LICENSE)
 [![Spec License](https://img.shields.io/badge/Spec%20License-CSL%201.0-lightgrey)](LICENSE-SPEC)
+[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/10506/badge)](https://bestpractices.coreinfrastructure.org/projects/10506)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/abisheakp197/Neutral-Trust-Infrastructure/badge)](https://scorecard.dev/viewer/?uri=github.com/abisheakp197/Neutral-Trust-Infrastructure)
+[![SLSA Level 1](https://img.shields.io/badge/SLSA-Level%201-blue)](RELEASE.md)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
 [![PQC Standard](https://img.shields.io/badge/PQC-NIST%20Dilithium5%20%26%20Kyber1024-purple.svg)]()
 [![SDKs](https://img.shields.io/badge/SDK-Rust%20%26%20Python-orange.svg)]()
@@ -144,6 +146,8 @@ python3 python_tests/test_python_sdk.py
 * [Developer Quickstart Guide](QUICKSTART.md)
 * [Implementation Status & Audit Log](IMPLEMENTATION_STATUS.md)
 * [NTI-1 Specification & LFDT Lab Proposal](https://github.com/abisheakp197/nti-spec) — the normative specification and the proposal to host it as a Linux Foundation Decentralized Trust (LFDT) Lab.
+* [Release Process & Verification](RELEASE.md) — how releases are built, signed with Sigstore, and verified.
+* [Adopters](ADOPTERS.md) — organizations and individuals building on or reviewing NTI.
 
 ---
 
