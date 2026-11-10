@@ -1,0 +1,40 @@
+version: 2
+updates:
+  # Rust crate dependencies for the core engine.
+  - package-ecosystem: cargo
+    directory: /ube-foundation
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - dependencies
+      - rust
+
+  # Python build-system dependencies (maturin, pyo3 bindings).
+  - package-ecosystem: pip
+    directory: /ube-foundation
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - dependencies
+      - python
+
+  # Keep GitHub Actions pinned SHAs current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - dependencies
+      - github-actions
