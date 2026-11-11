@@ -12,12 +12,15 @@ TSC is:
 | Name | Project / Organization | Scope |
 | :--- | :--- | :--- |
 | Abisheak P. | NTI (Neutral Trust Infrastructure) | Runtime enforcement layer |
-| Steven Zhao (Xinghua) | Independent — no organizational affiliation | initial TSC seat of the proposed TSC |
+| Tymofii Pidlisnyi | Independent Researcher — Agent Passport System (APS) | Receipt / Agent-DID interoperability |
+| Steven Zhao (Xinghua) | Independent Researcher | Independent research (ORCID: 0009-0001-0512-1237) |
 
-Steven Zhao (Xinghua) holds an initial TSC seat of the proposed TSC. He
-participates as an independent researcher (ORCID: 0009-0001-0512-1237). Writing
-in a personal capacity, with no organizational affiliation, and not representing
-any organization.
+The TSC and the maintainer list in [MAINTAINERS.md](MAINTAINERS.md) contain the
+same individuals. Tymofii Pidlisnyi participates as an independent researcher and
+is the author of the Agent Passport System (APS). Steven Zhao (Xinghua)
+participates as an independent researcher (ORCID: 0009-0001-0512-1237). Both
+write in a personal capacity, with no organizational affiliation, and do not
+represent any organization.
 
 Additional seats will be added as the contributor base grows, with the explicit
 goal of increasing organizational diversity (see the LFDT expectation of
