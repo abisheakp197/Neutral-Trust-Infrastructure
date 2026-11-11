@@ -1,0 +1,9 @@
+{
+  "name": "nti-jules-tools",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pinned CI tooling for the Jules automation workflow. Not a published package.",
+  "devDependencies": {
+    "@google/jules": "0.1.42"
+  }
+}
