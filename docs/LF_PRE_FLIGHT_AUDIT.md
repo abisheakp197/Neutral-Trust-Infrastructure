@@ -57,8 +57,12 @@ the pin cannot silently change the toolchain if the `stable` tag moves.
 ### 2.2 Tool installs pinned
 
 CI installs that previously used floating versions now pin exact versions:
-`maturin==1.9.6`, `twine==6.1.0`, `@google/jules@0.1.42`, `markdownlint-cli@0.50.0`,
-`requests==2.32.3`.
+`maturin==1.9.6`. The `maturin` install is additionally hash-verified — CI
+installs it from `ube-foundation/requirements-ci.txt` with
+`pip install --require-hashes`, which is what OpenSSF Scorecard's
+Pinned-Dependencies check requires for pip commands. The `jules.yml` workflow
+(which installed `@google/jules@0.1.42` and `twine==6.1.0`) was removed, so those
+unhashed installs no longer exist.
 
 ### 2.3 Dependabot
 

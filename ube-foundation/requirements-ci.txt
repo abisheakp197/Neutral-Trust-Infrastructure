@@ -1,0 +1,12 @@
+# Hash-pinned build tooling for CI.
+#
+# OpenSSF Scorecard's Pinned-Dependencies check treats a pip command as pinned
+# only when it is hash-verified, so CI installs from this file with
+# `--require-hashes`. Every entry MUST carry a --hash.
+#
+# maturin 1.9.6 wheels for the Linux runner architectures
+# (x86_64 = ubuntu-latest, aarch64 = ubuntu-24.04-arm).
+# Hashes: https://pypi.org/project/maturin/1.9.6/#files
+maturin==1.9.6 \
+    --hash=sha256:0246202377c49449315305209f45c8ecef6e2d6bd27a04b5b6f1ab3e4ea47238 \
+    --hash=sha256:f5bac167700fbb6f8c8ed1a97b494522554b4432d7578e11403b894b6a91d99f

@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install "maturin==1.9.6"
+          python -m pip install --require-hashes -r ube-foundation/requirements-ci.txt
           RUSTUP_TOOLCHAIN=1.90.0 maturin build --locked --manifest-path ube-foundation/Cargo.toml --features python --interpreter python --out dist 2>&1 | tee harness-results/python-wheel.log
           python -m pip install dist/*.whl
           python -c "import ube_foundation; assert hasattr(ube_foundation.TrustEngine(), 'register_issuer_key')"
