@@ -10,7 +10,7 @@ setting technical direction, and upholding the project's [Code of Conduct](CODE_
 | :--- | :--- | :--- | :--- |
 | Abisheak P. | Lead Architect | NTI (Neutral Trust Infrastructure) | [@abisheakp197](https://github.com/abisheakp197) |
 | Tymofii Pidlisnyi | Maintainer | Independent Researcher — Agent Passport System (APS) | [@aeoess](https://github.com/aeoess) |
-| Steven Zhao (Xinghua) | Maintainer | Independent Researcher | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
+| Steven Zhao (Xinghua) | Initial TSC Member (Standards Capacity) | Independent Researcher | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
 
 ## Maintainer Affiliations
 
@@ -22,8 +22,10 @@ NTI receipt profile is aligned with APS `draft-pidlisnyi-aps-04`. He participate
 in a personal capacity and is not acting as a representative of any organization.
 
 Steven Zhao (Xinghua) participates as an independent researcher
-(ORCID: 0009-0001-0512-1237), writing in a personal capacity, with no
-organizational affiliation, and not representing any organization.
+(ORCID: 0009-0001-0512-1237) and serves as an Initial TSC Member (Standards
+Capacity), contributing standards and specification governance rather than
+day-to-day code maintenance. He writes in a personal capacity, with no
+organizational affiliation, and does not represent any organization.
 
 ## Organizational Independence
 

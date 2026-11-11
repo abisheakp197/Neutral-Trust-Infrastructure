@@ -9,16 +9,18 @@ Linux Foundation Decentralized Trust (LFDT).
 The project is led by a Technical Steering Committee (TSC). The initial proposed
 TSC is:
 
-| Name | Project / Organization | Scope |
-| :--- | :--- | :--- |
-| Abisheak P. | NTI (Neutral Trust Infrastructure) | Runtime enforcement layer |
-| Tymofii Pidlisnyi | Independent Researcher — Agent Passport System (APS) | Receipt / Agent-DID interoperability |
-| Steven Zhao (Xinghua) | Independent Researcher | Independent research (ORCID: 0009-0001-0512-1237) |
+| Name | Role | Project / Organization | Scope |
+| :--- | :--- | :--- | :--- |
+| Abisheak P. | Lead Architect | NTI (Neutral Trust Infrastructure) | Runtime enforcement layer |
+| Tymofii Pidlisnyi | Maintainer | Independent Researcher — Agent Passport System (APS) | Receipt / Agent-DID interoperability |
+| Steven Zhao (Xinghua) | Initial TSC Member (Standards Capacity) | Independent Researcher | Standards and specification governance (ORCID: 0009-0001-0512-1237) |
 
 The TSC and the maintainer list in [MAINTAINERS.md](MAINTAINERS.md) contain the
 same individuals. Tymofii Pidlisnyi participates as an independent researcher and
 is the author of the Agent Passport System (APS). Steven Zhao (Xinghua)
-participates as an independent researcher (ORCID: 0009-0001-0512-1237). Both
+participates as an independent researcher (ORCID: 0009-0001-0512-1237) and serves
+as an Initial TSC Member (Standards Capacity), contributing standards and
+specification governance rather than day-to-day code maintenance. Both
 write in a personal capacity, with no organizational affiliation, and do not
 represent any organization.
 
