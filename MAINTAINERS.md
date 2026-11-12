@@ -11,6 +11,7 @@ setting technical direction, and upholding the project's [Code of Conduct](CODE_
 | Abisheak P. | Lead Architect | NTI (Neutral Trust Infrastructure) | [@abisheakp197](https://github.com/abisheakp197) |
 | Tymofii Pidlisnyi | Maintainer | Independent Researcher — Agent Passport System (APS) | [@aeoess](https://github.com/aeoess) |
 | Steven Zhao (Xinghua) | Initial TSC Member (Standards Capacity) | Independent Researcher | [@zhaoxinghua09-cell](https://github.com/zhaoxinghua09-cell) |
+| Larry Lewis | Initial TSC Member | Personal Capacity (W3C ATP CG Chair — separate affiliation) | [@bigblackcoder](https://github.com/bigblackcoder) |
 
 ## Maintainer Affiliations
 
@@ -27,15 +28,23 @@ Capacity), contributing standards and specification governance rather than
 day-to-day code maintenance. He writes in a personal capacity, with no
 organizational affiliation, and does not represent any organization.
 
+Larry Lewis (@bigblackcoder) serves as an Initial TSC Member, participating in a
+personal capacity and covering runtime security and conformance. His role as
+Chair of the W3C Agent Trust Protocol Community Group is a **separate
+affiliation**: it is not an NTI role, and it does not represent W3C participation
+in, review of, or endorsement of NTI.
+
 ## Organizational Independence
 
 These maintainers represent independent projects and individuals, satisfying the
 LFDT diversity requirement of at least two independent organizations.
 
 No single organization holds more than one seat. Each maintainer is an
-independent party: NTI, the Agent Passport System, and Steven Zhao's independent
-work are separate efforts, and none is a subsidiary or controlled affiliate of
-another. The project is committed to growing the maintainer base further, in line
+independent party: NTI, the Agent Passport System, and the independent work of
+Steven Zhao and Larry Lewis are separate efforts, and none is a subsidiary or
+controlled affiliate of another. Larry Lewis's W3C Community Group chairmanship
+is a personal-capacity affiliation, not a project seat held by W3C. The project
+is committed to growing the maintainer base further, in line
 with the LF Decentralized Trust [Project Lifecycle](https://lf-decentralized-trust.github.io/governance/governing-documents/project-lifecycle/)
 diversity criteria.
 
