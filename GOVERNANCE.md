@@ -14,15 +14,19 @@ TSC is:
 | Abisheak P. | Lead Architect | NTI (Neutral Trust Infrastructure) | Runtime enforcement layer |
 | Tymofii Pidlisnyi | Maintainer | Independent Researcher — Agent Passport System (APS) | Receipt / Agent-DID interoperability |
 | Steven Zhao (Xinghua) | Initial TSC Member (Standards Capacity) | Independent Researcher | Standards and specification governance (ORCID: 0009-0001-0512-1237) |
+| Larry Lewis | Initial TSC Member | Personal Capacity (W3C ATP CG Chair — separate affiliation) | Runtime security and conformance |
 
 The TSC and the maintainer list in [MAINTAINERS.md](MAINTAINERS.md) contain the
 same individuals. Tymofii Pidlisnyi participates as an independent researcher and
 is the author of the Agent Passport System (APS). Steven Zhao (Xinghua)
 participates as an independent researcher (ORCID: 0009-0001-0512-1237) and serves
 as an Initial TSC Member (Standards Capacity), contributing standards and
-specification governance rather than day-to-day code maintenance. Both
-write in a personal capacity, with no organizational affiliation, and do not
-represent any organization.
+specification governance rather than day-to-day code maintenance. Larry Lewis
+serves as an Initial TSC Member in a personal capacity, covering runtime security
+and conformance; his W3C Agent Trust Protocol Community Group chairmanship is a
+separate affiliation and does not represent W3C participation in, review of, or
+endorsement of NTI. All three write in a personal capacity, with no
+organizational affiliation, and do not represent any organization.
 
 Additional seats will be added as the contributor base grows, with the explicit
 goal of increasing organizational diversity (see the LFDT expectation of
