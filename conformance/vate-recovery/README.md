@@ -16,9 +16,9 @@ and a verifier.
 
 | File | What it is |
 | :--- | :--- |
-| `nti_receipt.json` | A mock NTI receipt for one lost-response attempt, in a proposed schema (see Status). Real ML-DSA-87 signature over a real Merkle proof. |
+| `nti_receipt.json` | A mock NTI receipt for one lost-response attempt, in a proposed schema (see Status). Real ML-DSA-87 signature over a real Merkle proof. Bound to the VATE case 01 operation `demo.create_file_set` (exact resource and file contents). |
 | `verify_receipt.py` | Self-contained verifier: schema, payload binding, Merkle root, Merkle inclusion proof, and ML-DSA-87 signature. The signature binds the authoritative identifiers (`receipt_id`, `recovery.attempt_id`, `recovery.idempotency_key`). |
-| `README.md` | This file: what the receipt proves, what stays unknown, and how to retry safely. |
+| `README.md` | This file: what the receipt proves, what stays unknown, and how to recover the original result safely. |
 
 ## Running the verifier
 
@@ -38,12 +38,12 @@ It runs five checks and prints one line per check:
    OK   : algorithm is ML-DSA-87
    OK   : authoritative identifiers present  receipt_id, recovery.attempt_id, recovery.idempotency_key
 == 2. Action payload binding ==
-   OK   : action_payload_sha256 matches action_payload  8420f705ebda0222
+   OK   : action_payload_sha256 matches action_payload  ed93f6175b8d0430
 == 3. Merkle root over the delegation chain ==
-   OK   : delegation_chain_root recomputed  c597c2194da80fba
+   OK   : delegation_chain_root recomputed  b8eaad91f6911a30
 == 4. Merkle inclusion proof ==
    OK   : leaf_sha256 matches the record at leaf_index  index 2
-   OK   : proof folds to merkle_proof.root_sha256  c597c2194da80fba
+   OK   : proof folds to merkle_proof.root_sha256  b8eaad91f6911a30
    OK   : proof root equals delegation_chain_root
 == 5. ML-DSA-87 signature ==
    OK   : signature is tagged ML-DSA-87  4627 bytes
@@ -58,7 +58,8 @@ Two options matter for recovery:
 
 * `--expect-payload-sha256 <hex>` binds the receipt to the original attempt. Pass
   the digest of the request you actually sent; if it differs, the receipt does
-  not describe this attempt and the run fails. **Use this on every retry.**
+  not describe this attempt and the run fails. **Use this whenever you verify a
+  recovered attempt.**
 * `--public-key <pem>` pins the ML-DSA-87 key. Without it the verifier uses the
   key embedded in the receipt, which is self-asserted. In production, pin the
   key resolved from the agent's DID document (see the boundary note below).
@@ -70,9 +71,11 @@ read.
 
 Verification establishes three things about the original attempt:
 
-1. **Authorised.** The agent's DID authorised the ML-DSA-87 key that signed
-   (`agent_did` + `verification_method`), and the delegation chain committed by
-   `delegation_chain_root` was intact at signing time.
+1. **Signed by the claimed key.** The ML-DSA-87 signature verifies over the
+   signing payload, which binds `agent_did` and `verification_method`. **In this
+   fixture the key is embedded in the receipt and is self-asserted**: Layer 1
+   proves only that *a* key signed, not that the DID authorised it. Layer 0a
+   (see the boundary note below) is what establishes authorisation.
 2. **Intended.** NTI signed an action over exactly `action_payload_sha256`, at
    `signed_at`. The signature covers the payload digest, the delegation root, the
    DID, the verification method, the timestamp, **and the authoritative
@@ -86,6 +89,11 @@ Verification establishes three things about the original attempt:
    different attempt's identifiers without breaking the signature. This is what
    links recovered evidence back to the original attempt rather than to a new one.
 
+**What the receipt does not prove.** It is not evidence that the agent was
+authorised to act (Layer 0a), and it is not evidence that the action took effect.
+DID authorisation, signing-time key validity, and VC issuer identity are separate
+checks (Layer 0a/0b) that this fixture does not perform.
+
 ## What remains unknown
 
 The receipt is a signature over the *intent* to act. It is **not** evidence that
@@ -96,51 +104,49 @@ lost-response case leaves exactly one question open:
 > Did the downstream effect commit, and if so, exactly once?
 
 The receipt collapses a broad "did anything happen?" into that single
-reconciliation question. Everything upstream of the effect — authorisation,
-scope, intent, and the payload's identity — is already fixed by the receipt. VATE
-does not need to re-derive any of it; it needs to resolve one unknown against the
-downstream system.
+reconciliation question. Everything upstream of the effect — scope, intent, and
+the payload's identity — is already fixed by the receipt. VATE does not need to
+re-derive any of it; it needs to resolve one unknown against the downstream
+system.
 
 Concretely, the receipt does not tell you:
 
-* whether the ledger write (or other downstream effect) completed;
+* whether the file-set creation (or other downstream effect) completed;
 * whether the action was applied exactly once, not twice;
 * whether the counterparty observed the effect.
 
-## Executing a retry safely
+## Recovering the original result
 
-A naive retry after a lost response risks applying the effect twice. The rule is:
-**never retry until the receipt is verified and the downstream effect has been
-checked, and only ever retry idempotently.**
+**This first trial is recovery-only: no outcome authorises a fresh execution.**
+A missing response, or a lookup that returns "not found", does not establish that
+the action did not happen. It leaves the outcome unresolved, and the correct
+action is to preserve that unresolved outcome, not to retry.
 
 1. **Verify the receipt.** Run `verify_receipt.py`. Fail-closed: if any check
-   fails, do not retry; treat the evidence as untrusted and escalate.
+   fails, treat the evidence as untrusted, preserve the current record, and
+   escalate.
 2. **Bind to the original attempt.** Re-run with
    `--expect-payload-sha256 <digest-of-the-request-you-sent>`. A mismatch means
-   the receipt describes a different action; refuse.
+   the receipt describes a different action; reject the linkage and preserve the
+   original record.
 3. **Probe the downstream system.** Query for the effect using the
-   `idempotency_key` and the payload's natural key (for example the ledger
-   transfer id or the `nonce` inside `action_payload`). This is the only step
-   that resolves the unknown.
-4. **Decide.** See the table below.
-5. **Retry idempotently, if allowed.** Reuse the *same* `idempotency_key` and
-   `nonce`. Never retry with a fresh nonce: a new nonce would let a second
-   execution produce a second effect, defeating exactly-once.
-6. **Re-check authorisation at retry time.** If the retry happens later, confirm
-   the delegation is still within its validity window and the key was not revoked
-   since `signed_at`.
+   `idempotency_key` and the payload's natural key (the `resource` and file names
+   inside `action_payload`). This is the observation that resolves the unknown.
+4. **Decide.** See the table below. For this trial the decision never authorises
+   a new dispatch.
 
 ### Decision table
 
 | Receipt verifies | Bound to this attempt | Downstream effect found | Action |
 | :--- | :--- | :--- | :--- |
 | No | - | - | Do not retry. Escalate; treat evidence as untrusted. |
-| Yes | No | - | Do not retry. The receipt is for a different action. |
-| Yes | Yes | Present | **Do not retry.** The action completed; reconcile client state to succeeded. |
-| Yes | Yes | Absent, retry window open | Retry idempotently with the same key/nonce. |
-| Yes | Yes | Unknown (cannot confirm) | Do not retry blind. Wait, then re-probe, or escalate. |
+| Yes | No | - | Do not retry. The receipt is for a different action; reject the linkage. |
+| Yes | Yes | Present | **Do not retry.** The action completed; reconcile client state to succeeded, retaining the earlier unknown observation. |
+| Yes | Yes | Absent, retry window open | **Do not retry. Preserve unresolved outcome.** |
+| Yes | Yes | Unknown (cannot confirm) | **Do not retry. Preserve unresolved outcome.** |
 
-The safe default for an unconfirmable outcome is to **not** double-apply.
+The safe default for an unconfirmable outcome is to **preserve the unresolved
+outcome**; absence alone does not establish non-execution.
 
 ## Boundary: Layer 1 vs Layer 0
 
@@ -154,7 +160,9 @@ not substitutes for one another:
   external material — the DID log and the VC — and therefore cannot be done from
   the receipt alone.
 
-> The signature/integrity checks performed here (Layer 1) verify the payload digest and Merkle proof. They do NOT perform DID authorization or VC issuer checks (Layer 0), which are separate verification steps.
+> This fixture verifies Layer 1 integrity (signature and Merkle proof) ONLY. It
+> does not verify DID authorization or key validity (Layer 0a) and does not
+> establish permission to act.
 
 Concretely, this script does **not** perform:
 
@@ -175,6 +183,12 @@ Layer 0) before the fixture is used for anything beyond the Layer 1 test.
 
 * **Synthetic.** This receipt is a test fixture for Issue #64. It is not
   production evidence and the DID is a placeholder.
+* **Bound to the VATE operation.** The receipt describes the VATE case 01
+  operation `demo.create_file_set` with the same resource
+  (`urn:vate:handoff:store-…:resource-…`) and the same file contents
+  (`first.txt`, `second.txt`), so both sides describe the same action. The NTI
+  digest basis (`action_payload_sha256`) is preserved separately from VATE's
+  request digest; the two are not interchangeable.
 * **Real cryptography.** The ML-DSA-87 signature is a genuine FIPS 204
   signature (4627 bytes, produced with OpenSSL 3.5). The Merkle proof is a real
   RFC 6962 inclusion proof over the three-record delegation chain, with the odd
