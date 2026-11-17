@@ -1,6 +1,6 @@
 # NTI x Agent-DID Interoperability
 
-**Status:** Draft for review (rev 4 - example encodings corrected)
+**Status:** Draft for review (rev 5 - ML-DSA-87 multibase prefix corrected)
 **Scope:** Cross-project integration between Neutral Trust Infrastructure (NTI) and Agent-DID
 **Audience:** Principal architects, cryptographic reviewers, and implementers of both projects
 
@@ -13,6 +13,8 @@ This document defines how an NTI receipt and an Agent-DID identity compose at in
 > **Revision note (rev 3).** Corrects two constant-level errors found on re-review: the ML-DSA-87 multicodec code is **`0x1212`** (`0x1211` is ML-DSA-65), and an ML-DSA-87 signature is **4627 bytes** (`2592` is the ML-DSA-87 public-key size, not the signature size). Both are fixed in Sections 1.1, 1.2, and 4.3, and the same corrections are applied to the `conformance/vate-recovery` receipt fixture.
 >
 > **Revision note (rev 4).** Fixes two example-encoding defects found on cryptographic re-review, where the constants in rev 3 were correct but the illustrative values were still non-conforming. (a) The `did:webvh` SCID in the examples was `z6MkExampleSCID1234567890`, which is not a conforming SCID: `did:webvh` requires a 46-character base58btc SHA-256 multihash (`0x12 0x20`), which begins `Qm…`, whereas `z6Mk…` is an Ed25519 multibase key prefix. It is replaced with a real 46-character SCID. (b) The ML-DSA-87 `publicKeyMultibase` example began `uz6Mk…` (an Ed25519 `0xed01` key); the conforming ML-DSA-87 (`0x1212`) multibase value begins `ukiQ…`. A normative encoding note now pins both formats. The same fixes are applied to the `conformance/agent-did-interop` fixtures.
+>
+> **Revision note (rev 5).** Corrects a normative over-specification introduced in rev 4. Rev 4 required a base64url ML-DSA-87 `publicKeyMultibase` to begin the literal `ukiQ…`. That prefix is too strict and is wrong: only the first three characters, `uki`, are fixed (they are the base64url encoding of the two-byte multicodec varint `0x92 0x24`). The **fourth** character encodes the high bits of the key's first byte and is one of `Q`, `R`, `S`, or `T`. A verifier that enforced the literal `ukiQ` prefix would reject roughly three of every four valid ML-DSA-87 keys. Section 1.1 now requires `uki` only and explicitly forbids requiring a fixed fourth character; the `conformance/agent-did-interop` README is corrected to match.
 
 ## 1. Receipt Referencing Agent-DID
 
@@ -37,7 +39,7 @@ Two conforming binding patterns are permitted. The verifier MUST support **Patte
 
 The DID document carries a verification method with `type: "Multikey"` and a `publicKeyMultibase` encoding the ML-DSA-87 (Dilithium5) public key under the multicodec code `0x1212`. The `verification_method` fragment in the receipt points directly at this entry.
 
-> **Encoding note (normative).** The `publicKeyMultibase` value is a multibase string whose decoded bytes begin with the multicodec varint for the key type. For an ML-DSA-87 public key the varint for `0x1212` is `0x92 0x24`, so a base64url (`u`) multibase value **MUST** begin `ukiQ…` and a base58btc (`z`) value would begin with the base58btc form of `0x92 0x24`. A value beginning `z6Mk…` or `uz6Mk…` is an **Ed25519** key (`0xed01`) and is **not** a conforming ML-DSA-87 key. Implementations MUST reject an ML-DSA-87 verification method whose `publicKeyMultibase` does not decode to multicodec `0x1212`.
+> **Encoding note (normative).** The `publicKeyMultibase` value is a multibase string whose decoded bytes begin with the multicodec varint for the key type. For an ML-DSA-87 public key the varint for `0x1212` is `0x92 0x24`, so a base64url (`u`) multibase value **MUST** begin `uki` — the base64url encoding of those two bytes. The **fourth** character is **not** fixed: it encodes the high bits of the key's first byte and is one of `Q`, `R`, `S`, or `T`. Implementations **MUST NOT** require the literal prefix `ukiQ`, which would reject roughly three of every four valid keys. A base58btc (`z`) value would begin with the base58btc form of `0x92 0x24`. A value beginning `z6Mk…` or `uz6Mk…` is an **Ed25519** key (`0xed01`) and is **not** a conforming ML-DSA-87 key. Implementations MUST reject an ML-DSA-87 verification method whose `publicKeyMultibase` does not decode to multicodec `0x1212`.
 
 ```json
 {

@@ -138,7 +138,7 @@ are intentionally non-conforming placeholders: they are embedded in the APS
 `issuer`/`subject` fields, which are covered by the `delegation_id` content
 address and the Ed25519 `signature`, so they cannot be renumbered without
 re-signing. The `docs/NTI-Agent-DID-INTEROP.md` examples use a real conforming
-46-character base58btc SCID and a conforming `ukiQ…` ML-DSA-87 multibase value;
+46-character base58btc SCID and a conforming `uki…` ML-DSA-87 multibase value;
 these fixtures pin the *decision* an implementation must reach, not a
 byte-exact SCID. The APS signature is real and self-consistent, but it is over a
 throwaway key generated
