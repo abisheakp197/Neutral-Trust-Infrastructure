@@ -35,7 +35,7 @@ jobs:
             os: ubuntu-24.04-arm
             artifact-name: wheels-aarch64-linux-musl
           - target: universal2-apple-darwin
-            os: macos-14
+            os: macos-15
             artifact-name: wheels-universal2-apple-darwin
           - target: x86_64-pc-windows-msvc
             os: windows-latest
