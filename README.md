@@ -151,6 +151,16 @@ python3 python_tests/test_python_sdk.py
 
 ---
 
+## Official Framework Wrappers
+
+NTI integrates with agent frameworks through thin, drop-in wrappers. Each wrapper intercepts the framework's action execution path, so every tool call is signed with ML-DSA-87 and verified against a Merkle delegation chain before it runs — no changes to the agent's own code beyond the wrapper's setup.
+
+* [**openhands-nti**](https://github.com/abisheakp197/openhands-nti) — drop-in NTI guardrail for the [OpenHands](https://github.com/OpenHands/software-agent-sdk) agent framework. A one-line change wraps every bash command, Python execution, file edit, browser/web request, MCP call, and client tool call in NTI verification, attaching a signed receipt to each observation. Install with `pip install openhands-nti`.
+
+Are you maintaining another agent framework? Wrappers are intentionally small and follow the same pattern: intercept the single action-execution choke point, canonicalize and sign the action, verify the delegation chain, and fail closed on any error. See [ADOPTERS.md](ADOPTERS.md) to add yours to this list.
+
+---
+
 ## License
 
 - **Code** — Apache License 2.0. See [LICENSE](LICENSE).
