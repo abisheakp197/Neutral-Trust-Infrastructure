@@ -1,0 +1,3 @@
+# Generated fixture output. `generate_fixture.py --out-dir ./pinned` writes a
+# disposable private key (test_key.pem) here; never commit it.
+pinned/
