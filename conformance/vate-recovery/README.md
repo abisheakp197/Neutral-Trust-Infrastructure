@@ -18,6 +18,7 @@ and a verifier.
 | :--- | :--- |
 | `nti_receipt.json` | A mock NTI receipt for one lost-response attempt, in a proposed schema (see Status). Real ML-DSA-87 signature over a real Merkle proof. Bound to the VATE case 01 operation `demo.create_file_set` (exact resource and file contents). |
 | `verify_receipt.py` | Self-contained verifier: schema, payload binding, Merkle root, Merkle inclusion proof, and ML-DSA-87 signature. The signature binds the authoritative identifiers (`receipt_id`, `recovery.attempt_id`, `recovery.idempotency_key`). |
+| `generate_fixture.py` | Rebuilds the fixture from source (fresh key, exact VATE action, real Merkle proof) so the signature and binding can be checked independently. `--signed-at` aligns to the VATE timeline; `--tamper` emits the wrong-operation / wrong-attempt negative cases. |
 | `README.md` | This file: what the receipt proves, what stays unknown, and how to recover the original result safely. |
 
 ## Running the verifier
@@ -66,6 +67,72 @@ Two options matter for recovery:
 
 Exit codes: `0` all checks pass, `1` a check failed, `2` the receipt could not be
 read.
+
+## Reproducing the Fixture
+
+`nti_receipt.json` is committed with a signature over a disposable key, so its
+bytes are only as trustworthy as the file. `generate_fixture.py` rebuilds the
+fixture from source so anyone can regenerate it and **independently verify the
+signature and the binding**, rather than trusting the committed copy:
+
+```bash
+cd conformance/vate-recovery
+python3 generate_fixture.py --signed-at "2026-10-25T00:00:00Z" --out-dir ./pinned
+python3 verify_receipt.py ./pinned/nti_receipt.json
+```
+
+The script writes `nti_receipt.json` and `test_key.pem` into `--out-dir`, signs
+the canonical signing payload with a fresh key, and reuses the verifier's own
+primitives (`canon`, the RFC 6962 Merkle functions, and `signing_payload`), so
+the producer and the checker cannot drift. With no `--signed-at` it reproduces
+the committed fixture exactly: the default `2026-11-08T06:31:07Z` yields the same
+`action_payload_sha256` (`ed93f6175b8d0430…`) and the same VATE resource and file
+contents.
+
+`--signed-at` moves the receipt onto the **VATE timeline**. The original VATE
+attempt is dated **2026-10-25** (`observed_at` = `2026-10-25T00:00:00Z`), so pass
+`--signed-at "2026-10-25T00:00:00Z"` to align the two sides. The action's
+`requested_at` and the delegation `issued_at` values are derived from the signing
+instant, so the whole timeline shifts consistently.
+
+### Negative cases (`--tamper`)
+
+Larry's review asked for the "wrong operation" and "wrong attempt" cases. Pass
+`--tamper` to emit them alongside a valid receipt:
+
+```bash
+python3 generate_fixture.py --signed-at "2026-10-25T00:00:00Z" --tamper all --out-dir ./pinned
+```
+
+| File | What it is |
+| :--- | :--- |
+| `nti_receipt.json` | The valid receipt for the attempt. |
+| `nti_receipt.tampered.wrong-operation.json` | The same attempt, but the action is a different operation (`demo.delete_file_set`, different `resource`). |
+| `nti_receipt.tampered.wrong-attempt.json` | A different attempt of the same operation (new `nonce`, new `attempt_id`/`idempotency_key`). |
+
+Each tampered receipt is **re-signed**, so it is internally consistent and its
+signature verifies: a signature check alone cannot reject it. That is the point.
+A receiver catches these only by *binding*: comparing `action_payload_sha256`
+against the request it actually sent (`--expect-payload-sha256`), and comparing
+the signed identifiers against the attempt it recorded.
+
+```bash
+# The valid receipt is accepted when bound to its own digest.
+python3 verify_receipt.py ./pinned/nti_receipt.json \
+    --expect-payload-sha256 "$(python3 -c 'import json;print(json.load(open("./pinned/nti_receipt.json"))["action_payload_sha256"])')"
+
+# Both tampered receipts verify standalone, but are rejected when bound:
+python3 verify_receipt.py ./pinned/nti_receipt.tampered.wrong-operation.json \
+    --expect-payload-sha256 <digest-of-the-request-you-sent>   # exit 1
+python3 verify_receipt.py ./pinned/nti_receipt.tampered.wrong-attempt.json \
+    --expect-payload-sha256 <digest-of-the-request-you-sent>   # exit 1
+```
+
+**Algorithm.** The script signs with **ML-DSA-87**, matching the receipt schema
+and `verify_receipt.py`. The task brief called for an Ed25519 keypair; NTI
+receipts are not Ed25519, and an Ed25519 signature can never verify against them.
+`--algorithm ed25519` exists only for experimentation and prints a warning that
+the result is not a conforming NTI receipt.
 
 ## What the receipt proves
 
@@ -203,8 +270,11 @@ Layer 0) before the fixture is used for anything beyond the Layer 1 test.
 * **Tamper check.** Flipping a byte of the signature, altering a delegation
   record, altering a Merkle sibling, substituting the public key, or altering any
   bound identifier (`receipt_id`, `recovery.attempt_id`,
-  `recovery.idempotency_key`) each make the verifier fail. See the joint vector
-  for the expected VATE outcome per case.
+  `recovery.idempotency_key`) each make the verifier fail. For the
+  wrong-operation and wrong-attempt cases — which stay validly signed and must be
+  caught by binding rather than by the signature — regenerate them with
+  `generate_fixture.py --tamper all` (see "Reproducing the Fixture"). See the
+  joint vector for the expected VATE outcome per case.
 
 ---
 
