@@ -37,6 +37,32 @@ impl PyTrustEngine {
             .map_err(pyo3::exceptions::PyValueError::new_err)
     }
 
+    /// Pins the ML-DSA-87 public key that identifies `actor`.
+    ///
+    /// Required before a PQC-signed request from `actor` can be allowed: the
+    /// engine only authorizes a signature made by the key pinned here, so a
+    /// caller cannot self-sign with a key of its own choosing.
+    pub fn register_pqc_identity_key(
+        &mut self,
+        actor: String,
+        public_key_bytes: Vec<u8>,
+    ) -> PyResult<()> {
+        self.inner
+            .register_pqc_identity_key(actor, public_key_bytes)
+            .map_err(pyo3::exceptions::PyValueError::new_err)
+    }
+
+    /// Removes the pinned ML-DSA-87 identity key for `actor`, returning the
+    /// removed key bytes if one was pinned.
+    pub fn remove_pqc_identity_key(&mut self, actor: String) -> Option<Vec<u8>> {
+        self.inner.remove_pqc_identity_key(&actor)
+    }
+
+    /// Returns the pinned ML-DSA-87 public key for `actor`, if any.
+    pub fn pqc_identity_key(&self, actor: String) -> Option<Vec<u8>> {
+        self.inner.pqc_identity_keys.get(&actor).cloned()
+    }
+
     pub fn revoke_token(&mut self, token_id: String) {
         self.inner.revoke_token(&token_id);
     }
@@ -53,6 +79,56 @@ impl PyTrustEngine {
         serde_json::to_string(&decision).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("Failed to serialize decision: {}", e))
         })
+    }
+
+    /// Evaluates a request with time-based caveats checked against `now_rfc3339`.
+    ///
+    /// Pinning the evaluation time keeps a decision consistent with the instant
+    /// the request was received, instead of whatever the clock reads after the
+    /// verification work finishes.
+    pub fn evaluate_at(&self, req_json: String, now_rfc3339: String) -> PyResult<String> {
+        let req: ActionRequest = serde_json::from_str(&req_json).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Invalid ActionRequest JSON: {}", e))
+        })?;
+        let now = chrono::DateTime::parse_from_rfc3339(&now_rfc3339)
+            .map_err(|e| {
+                pyo3::exceptions::PyValueError::new_err(format!(
+                    "Invalid RFC 3339 evaluation time: {}",
+                    e
+                ))
+            })?
+            .with_timezone(&chrono::Utc);
+        let decision = self.inner.evaluate_at(&req, now);
+        serde_json::to_string(&decision).map_err(|e| {
+            pyo3::exceptions::PyValueError::new_err(format!("Failed to serialize decision: {}", e))
+        })
+    }
+
+    /// RFC 6962 inclusion proof for one audit event: `(batch_root, siblings)`.
+    ///
+    /// Returns `None` when the batch or sequence is unknown, so callers cannot
+    /// mistake a missing proof for a valid one.
+    pub fn audit_inclusion_proof(
+        &self,
+        batch_index: usize,
+        sequence: u64,
+    ) -> Option<(String, Vec<(String, String)>)> {
+        self.inner
+            .audit_inclusion_proof(batch_index, sequence)
+            .map(|(root, siblings)| {
+                let proof = siblings
+                    .into_iter()
+                    .map(|sibling| {
+                        let position = match sibling.position {
+                            crate::merkle::MerkleSiblingPosition::Left => "left",
+                            crate::merkle::MerkleSiblingPosition::Right => "right",
+                            crate::merkle::MerkleSiblingPosition::Promoted => "promoted",
+                        };
+                        (position.to_string(), sibling.sha256)
+                    })
+                    .collect();
+                (root, proof)
+            })
     }
 }
 

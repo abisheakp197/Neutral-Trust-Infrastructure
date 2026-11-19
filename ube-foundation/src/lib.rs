@@ -4,6 +4,7 @@
 //! Dilithium5 (FIPS 204 ML-DSA-87) signatures, Kyber1024 (FIPS 203 ML-KEM-1024) hybrid AEAD encryption,
 //! Ed25519 capabilities, Merkle-tree audit trails, and BFT consensus governance.
 
+pub mod merkle;
 pub mod network;
 #[cfg(feature = "python")]
 pub mod python_bindings;
@@ -346,6 +347,9 @@ pub struct TrustEngineState {
     /// Trusted capability issuer keys, configured locally rather than supplied by requests.
     #[serde(default)]
     pub issuer_keys: BTreeMap<String, Vec<u8>>,
+    /// Pinned ML-DSA-87 identity keys per actor, configured locally rather than supplied by requests.
+    #[serde(default)]
+    pub pqc_identity_keys: BTreeMap<String, Vec<u8>>,
     /// Registered validator voter Ed25519 public keys.
     pub voter_keys: BTreeMap<String, Vec<u8>>,
     /// Revocation list of invalidated capability token IDs.
@@ -367,6 +371,14 @@ pub struct TrustEngine {
     pub expected_code_hashes: BTreeMap<String, String>,
     /// Trusted capability issuer keys. Issuers also need a local capability grant.
     pub issuer_keys: BTreeMap<String, Vec<u8>>,
+    /// Pinned ML-DSA-87 identity keys per actor.
+    ///
+    /// A request that carries a PQC signature is only allowed when the presented
+    /// public key matches the key pinned here for the actor. This is what binds
+    /// a signature to an identity: without it any caller can present its own key
+    /// and self-sign, so "signature verifies" would only prove key possession,
+    /// not authorization.
+    pub pqc_identity_keys: BTreeMap<String, Vec<u8>>,
     /// Registered validator public keys.
     pub voter_keys: BTreeMap<String, Vec<u8>>,
     /// Token revocation set.
@@ -385,22 +397,41 @@ pub struct TrustEngine {
 pub struct CaveatInterpreter;
 
 impl CaveatInterpreter {
-    /// Verifies all caveats attached to a token against action request input parameters.
+    /// Verifies all caveats attached to a token against action request input parameters,
+    /// evaluating expiry against the current wall clock.
     pub fn verify_all(
         caveats: &[Caveat],
         request: &ActionRequest,
         engine: &TrustEngine,
     ) -> OutcomeVerdict {
+        Self::verify_all_at(caveats, request, engine, chrono::Utc::now())
+    }
+
+    /// Verifies all caveats, evaluating expiry against an explicit `now`.
+    ///
+    /// `now` is a parameter rather than a clock read so callers can evaluate a
+    /// request at the moment it was received, and so expiry behaviour is
+    /// testable without sleeping. Every branch fails closed: a caveat whose
+    /// condition cannot be evaluated (missing or wrongly-typed input, malformed
+    /// timestamp) is a violation, never a pass.
+    pub fn verify_all_at(
+        caveats: &[Caveat],
+        request: &ActionRequest,
+        engine: &TrustEngine,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> OutcomeVerdict {
         for caveat in caveats {
             match &caveat.condition {
                 CaveatType::MaxExecutions(max) => {
+                    let Some(token_id) = request.token.as_ref().map(|t| &t.id) else {
+                        return OutcomeVerdict::Invalid(
+                            "Execution limit requires a capability token".into(),
+                        );
+                    };
                     let count = engine
                         .events
                         .iter()
-                        .filter(|e| {
-                            e.request.token.as_ref().map(|t| &t.id)
-                                == request.token.as_ref().map(|t| &t.id)
-                        })
+                        .filter(|e| e.request.token.as_ref().map(|t| &t.id) == Some(token_id))
                         .count();
                     if count as u64 >= *max {
                         return OutcomeVerdict::Invalid(format!(
@@ -410,7 +441,11 @@ impl CaveatInterpreter {
                     }
                 }
                 CaveatType::ValueLimit(max_val, _curr) => {
-                    let val = request.input["amount"].as_u64().unwrap_or(0);
+                    let Some(val) = request.input.get("amount").and_then(|v| v.as_u64()) else {
+                        return OutcomeVerdict::Invalid(
+                            "Value limit requires a non-negative integer 'amount'".into(),
+                        );
+                    };
                     if val > *max_val {
                         return OutcomeVerdict::Invalid(format!(
                             "Value limit exceeded: {} > {}",
@@ -419,7 +454,11 @@ impl CaveatInterpreter {
                     }
                 }
                 CaveatType::PathRestricted(prefix) => {
-                    let path = request.input["path"].as_str().unwrap_or("");
+                    let Some(path) = request.input.get("path").and_then(|v| v.as_str()) else {
+                        return OutcomeVerdict::Invalid(
+                            "Path restriction requires a string 'path'".into(),
+                        );
+                    };
                     if !path.starts_with(prefix) {
                         return OutcomeVerdict::Invalid(format!(
                             "Path restricted: {} must start with {}",
@@ -428,25 +467,21 @@ impl CaveatInterpreter {
                     }
                 }
                 CaveatType::Expires(timestamp) => {
-                    if let Ok(expiry) =
+                    let Ok(expiry) =
                         timestamp
                             .parse::<chrono::DateTime<chrono::Utc>>()
                             .or_else(|_| {
                                 chrono::DateTime::parse_from_rfc3339(timestamp)
                                     .map(|dt| dt.with_timezone(&chrono::Utc))
                             })
-                    {
-                        if chrono::Utc::now() > expiry {
-                            return OutcomeVerdict::Invalid(format!(
-                                "Token expired at {}",
-                                timestamp
-                            ));
-                        }
-                    } else {
+                    else {
                         return OutcomeVerdict::Invalid(format!(
                             "Invalid expiry format: {}",
                             timestamp
                         ));
+                    };
+                    if now > expiry {
+                        return OutcomeVerdict::Invalid(format!("Token expired at {}", timestamp));
                     }
                 }
             }
@@ -462,6 +497,7 @@ impl TrustEngine {
             capabilities: BTreeMap::new(),
             expected_code_hashes: BTreeMap::new(),
             issuer_keys: BTreeMap::new(),
+            pqc_identity_keys: BTreeMap::new(),
             voter_keys: BTreeMap::new(),
             revocation_list: BTreeSet::new(),
             events: Vec::new(),
@@ -483,6 +519,7 @@ impl TrustEngine {
             capabilities: self.capabilities.clone(),
             expected_code_hashes: self.expected_code_hashes.clone(),
             issuer_keys: self.issuer_keys.clone(),
+            pqc_identity_keys: self.pqc_identity_keys.clone(),
             voter_keys: self.voter_keys.clone(),
             revocation_list: self.revocation_list.clone(),
             events: self.events.clone(),
@@ -508,6 +545,7 @@ impl TrustEngine {
             capabilities: state.capabilities,
             expected_code_hashes: state.expected_code_hashes,
             issuer_keys: state.issuer_keys,
+            pqc_identity_keys: state.pqc_identity_keys,
             voter_keys: state.voter_keys,
             revocation_list: state.revocation_list,
             events: state.events,
@@ -568,26 +606,35 @@ impl TrustEngine {
             .insert(capability.into());
     }
 
+    /// Pins the ML-DSA-87 public key that identifies `actor`.
+    ///
+    /// Once pinned, [`TrustEngine::evaluate`] only accepts a PQC-signed request
+    /// from `actor` when the presented `pqc_public_key` is byte-identical to this
+    /// key. Pinning is what turns a valid signature into an *authorized* one.
+    ///
+    /// The key must be a well-formed ML-DSA-87 (Dilithium5) public key. Returns
+    /// an error for a malformed key so a caller cannot silently pin garbage and
+    /// then be denied later with no explanation.
+    pub fn register_pqc_identity_key(
+        &mut self,
+        actor: impl Into<String>,
+        public_key_bytes: Vec<u8>,
+    ) -> Result<(), String> {
+        dilithium5::PublicKey::from_bytes(&public_key_bytes)
+            .map_err(|_| "Invalid ML-DSA-87 identity public key".to_string())?;
+        self.pqc_identity_keys
+            .insert(actor.into(), public_key_bytes);
+        Ok(())
+    }
+
+    /// Removes the pinned ML-DSA-87 identity key for `actor`, if any.
+    pub fn remove_pqc_identity_key(&mut self, actor: &str) -> Option<Vec<u8>> {
+        self.pqc_identity_keys.remove(actor)
+    }
+
     fn compute_merkle_root(events: &[AuditEvent]) -> String {
-        if events.is_empty() {
-            return "".into();
-        }
-        let mut hashes: Vec<String> = events.iter().map(|e| e.hash.clone()).collect();
-        while hashes.len() > 1 {
-            let mut next_level = Vec::new();
-            for i in (0..hashes.len()).step_by(2) {
-                let mut hasher = Sha256::new();
-                hasher.update(&hashes[i]);
-                if i + 1 < hashes.len() {
-                    hasher.update(&hashes[i + 1]);
-                } else {
-                    hasher.update(&hashes[i]);
-                }
-                next_level.push(hex::encode(hasher.finalize()));
-            }
-            hashes = next_level;
-        }
-        hashes[0].clone()
+        let hashes: Vec<String> = events.iter().map(|e| e.hash.clone()).collect();
+        merkle::merkle_root(&hashes).unwrap_or_default()
     }
 
     /// Commits active event buffer into a Merkle-rooted AuditBatch.
@@ -611,34 +658,90 @@ impl TrustEngine {
         Some(batch_hash)
     }
 
-    /// Evaluates policy verdict for an action request without recording it to audit history.
+    /// RFC 6962 inclusion proof for the audit event at `sequence` in `batch_index`.
+    ///
+    /// Returns the proof together with the batch root so a verifier can check
+    /// that one recorded decision belongs to a committed batch without holding
+    /// the whole batch.
+    pub fn audit_inclusion_proof(
+        &self,
+        batch_index: usize,
+        sequence: u64,
+    ) -> Option<(String, Vec<merkle::MerkleSibling>)> {
+        let batch = self.batches.get(batch_index)?;
+        let index = batch
+            .events
+            .iter()
+            .position(|event| event.sequence == sequence)?;
+        let leaves: Vec<String> = batch.events.iter().map(|e| e.hash.clone()).collect();
+        let proof = merkle::inclusion_proof(&leaves, index)?;
+        Some((batch.merkle_root.clone(), proof))
+    }
+
+    /// Evaluates policy verdict for an action request without recording it to audit history,
+    /// evaluating time-based caveats against the current wall clock.
     pub fn evaluate(&self, request: &ActionRequest) -> PolicyDecision {
+        self.evaluate_at(request, chrono::Utc::now())
+    }
+
+    /// Evaluates policy verdict for an action request at an explicit `now`.
+    ///
+    /// Policy timing is a parameter so a caller can pin the decision to the
+    /// moment the request was received. Re-reading the clock deeper in the
+    /// stack lets a slow or stalled verification path straddle an expiry
+    /// boundary, so a token valid on arrival is denied (or worse, the reverse
+    /// for a decision recorded earlier than it was made).
+    pub fn evaluate_at(
+        &self,
+        request: &ActionRequest,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> PolicyDecision {
         // PQC Verification (Post-Quantum Durability)
         if let Some(pqc_sig) = &request.pqc_signature {
-            if let Some(pqc_pk_bytes) = &request.pqc_public_key {
-                if pqc_sig.algorithm != "Dilithium5" && pqc_sig.algorithm != "ML-DSA-87" {
-                    return PolicyDecision {
-                        decision: Decision::Deny,
-                        reason: "unsupported pqc algorithm".into(),
-                    };
-                }
-                let pqc_pk = PqcPublicKey {
-                    algorithm: pqc_sig.algorithm.clone(),
-                    key_bytes: pqc_pk_bytes.clone(),
-                    kyber_public_key_bytes: vec![],
-                };
-                if !pqc_pk.verify(&request.message_to_sign(), pqc_sig) {
-                    return PolicyDecision {
-                        decision: Decision::Deny,
-                        reason: "pqc sig mismatch".into(),
-                    };
-                }
-            } else {
+            let Some(pqc_pk_bytes) = &request.pqc_public_key else {
                 return PolicyDecision {
                     decision: Decision::Deny,
                     reason: "missing pqc public key".into(),
                 };
+            };
+            if pqc_sig.algorithm != "Dilithium5" && pqc_sig.algorithm != "ML-DSA-87" {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "unsupported pqc algorithm".into(),
+                };
             }
+            // Key binding: a signature only proves possession of *a* key. It
+            // authorizes the actor only when that key is the one pinned for
+            // this actor. Without this check any caller can self-sign.
+            let Some(pinned) = self.pqc_identity_keys.get(&request.actor) else {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "no pqc identity key bound to actor".into(),
+                };
+            };
+            if !bool::from(pinned.as_slice().ct_eq(pqc_pk_bytes.as_slice())) {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "pqc key not bound to actor".into(),
+                };
+            }
+            let pqc_pk = PqcPublicKey {
+                algorithm: pqc_sig.algorithm.clone(),
+                key_bytes: pqc_pk_bytes.clone(),
+                kyber_public_key_bytes: vec![],
+            };
+            if !pqc_pk.verify(&request.message_to_sign(), pqc_sig) {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "pqc sig mismatch".into(),
+                };
+            }
+        } else if request.pqc_public_key.is_some() {
+            // A bare key with no signature must never be treated as a credential.
+            return PolicyDecision {
+                decision: Decision::Deny,
+                reason: "pqc public key presented without signature".into(),
+            };
         }
 
         if let Some(claim) = &request.identity_claim {
@@ -745,7 +848,7 @@ impl TrustEngine {
                 };
             }
             if let OutcomeVerdict::Invalid(reason) =
-                CaveatInterpreter::verify_all(&token.caveats, request, self)
+                CaveatInterpreter::verify_all_at(&token.caveats, request, self, now)
             {
                 return PolicyDecision {
                     decision: Decision::Deny,
@@ -777,7 +880,8 @@ impl TrustEngine {
 
     /// Evaluates policy verdict for an action request and appends it to the immutable audit event log.
     pub fn record(&mut self, request: ActionRequest) -> PolicyDecision {
-        let decision = self.evaluate(&request);
+        // One clock read: the decision and the audit entry describe the same instant.
+        let decision = self.evaluate_at(&request, chrono::Utc::now());
         let previous_hash = self
             .events
             .last()
