@@ -11,7 +11,10 @@ requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 keywords = ["opentelemetry", "ai-agents", "audit", "tamper-evident", "nti"]
-dependencies = ["opentelemetry-api>=1.20"]
+# SpanProcessor is an SDK class, so the SDK is a hard requirement: importing
+# the package with only opentelemetry-api installed fails on
+# `from opentelemetry.sdk.trace import SpanProcessor`.
+dependencies = ["opentelemetry-api>=1.20", "opentelemetry-sdk>=1.20"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -33,7 +36,7 @@ Specification = "https://github.com/abisheakp197/nti-spec"
 
 [project.optional-dependencies]
 signing = ["ube-foundation==0.2.1"]
-test = ["opentelemetry-sdk>=1.20", "pytest>=8"]
+test = ["pytest>=8"]
 
 [project.scripts]
 nti-otel = "nti_otel.cli:main"
