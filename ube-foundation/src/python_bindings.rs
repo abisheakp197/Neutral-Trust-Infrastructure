@@ -104,7 +104,17 @@ impl PyTrustEngine {
     /// Pinning the evaluation time keeps a decision consistent with the instant
     /// the request was received, instead of whatever the clock reads after the
     /// verification work finishes.
-    pub fn evaluate_at(&self, req_json: String, now_rfc3339: String) -> PyResult<String> {
+    ///
+    /// `observed_measurement` is the digest the *caller* read from the runtime,
+    /// not the value in the request. Actors bound to a workload are denied when
+    /// it is omitted.
+    #[pyo3(signature = (req_json, now_rfc3339, observed_measurement=None))]
+    pub fn evaluate_at(
+        &self,
+        req_json: String,
+        now_rfc3339: String,
+        observed_measurement: Option<String>,
+    ) -> PyResult<String> {
         let req: ActionRequest = serde_json::from_str(&req_json).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("Invalid ActionRequest JSON: {}", e))
         })?;
@@ -116,7 +126,9 @@ impl PyTrustEngine {
                 ))
             })?
             .with_timezone(&chrono::Utc);
-        let decision = self.inner.evaluate_at(&req, now);
+        let decision = self
+            .inner
+            .evaluate_with_measurement(&req, observed_measurement.as_deref(), now);
         serde_json::to_string(&decision).map_err(|e| {
             pyo3::exceptions::PyValueError::new_err(format!("Failed to serialize decision: {}", e))
         })

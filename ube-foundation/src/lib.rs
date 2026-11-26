@@ -663,10 +663,18 @@ impl TrustEngine {
     /// `workload_measurement_hash` optionally binds the identity to a *workload*
     /// in addition to a key. Pass the SHA-256 of the container image (or other
     /// build artefact) the agent is expected to run as; every subsequent request
-    /// from `actor` must then carry that measurement or be denied. This closes
-    /// the gap where a stolen private key is replayable from any host: the key
-    /// proves *who* is calling, the measurement proves *what* is calling. Pass
-    /// `None` to authorize on key possession alone, which is the pre-0.2.0
+    /// from `actor` must then be evaluated by a caller that supplies the observed
+    /// measurement via [`TrustEngine::evaluate_with_measurement`].
+    ///
+    /// The binding is only as strong as the observation behind it. The engine
+    /// cannot measure a remote host, so it compares against a digest the
+    /// enforcement point obtained out of band. Copying
+    /// [`ActionRequest::workload_measurement_hash`] into that argument defeats the
+    /// check: the field is under the sender's control, so a stolen key can carry
+    /// the expected digest. Reading it from a container runtime, an attestation
+    /// report, or a TPM quote is what makes the measurement evidence.
+    ///
+    /// Pass `None` to authorize on key possession alone, which is the pre-0.2.0
     /// behaviour and is not recommended for agents holding real authority.
     ///
     /// The key must be a well-formed ML-DSA-87 (Dilithium5) public key and the
@@ -779,9 +787,35 @@ impl TrustEngine {
     /// stack lets a slow or stalled verification path straddle an expiry
     /// boundary, so a token valid on arrival is denied (or worse, the reverse
     /// for a decision recorded earlier than it was made).
+    ///
+    /// This entry point supplies no workload measurement, so an actor bound via
+    /// [`TrustEngine::register_pqc_identity_key`] is denied. Use
+    /// [`TrustEngine::evaluate_with_measurement`] to authorize bound actors.
     pub fn evaluate_at(
         &self,
         request: &ActionRequest,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> PolicyDecision {
+        self.evaluate_with_measurement(request, None, now)
+    }
+
+    /// Evaluates policy for a request whose workload measurement was observed by
+    /// the enforcement point, at an explicit `now`.
+    ///
+    /// `observed_measurement` must be produced by the caller from the actual
+    /// runtime (a container runtime's image digest, an attestation report, a TPM
+    /// quote), *not* copied out of `request`. [`ActionRequest::workload_measurement_hash`]
+    /// is attacker-controlled: whoever holds the signing key also controls that
+    /// field, so treating it as evidence of the caller's environment would let
+    /// exactly the attacker this check targets satisfy it.
+    ///
+    /// The request field is still compared against `observed_measurement` when
+    /// both are present, which catches a measurement altered in transit but
+    /// cannot substitute for the observation.
+    pub fn evaluate_with_measurement(
+        &self,
+        request: &ActionRequest,
+        observed_measurement: Option<&str>,
         now: chrono::DateTime<chrono::Utc>,
     ) -> PolicyDecision {
         // PQC Verification (Post-Quantum Durability)
@@ -834,29 +868,62 @@ impl TrustEngine {
 
         // Workload binding. Deliberately evaluated outside the PQC block above so
         // that a registered measurement constrains *every* request path, including
-        // Ed25519-only and unsigned ones. A key proves who is calling; the
-        // measurement proves what is calling. Without this, a stolen key is
-        // replayable from any host.
+        // Ed25519-only and unsigned ones.
+        //
+        // The measurement compared here is the one the enforcement point observed,
+        // never `request.workload_measurement_hash` alone. That field travels with
+        // the request, so it is only as trustworthy as the signature on it: an
+        // attacker who holds the stolen key can set it to the expected digest and
+        // sign the result. It is therefore evidence of nothing by itself, and
+        // authorizing on it would leave the replay path this check exists to close.
         if let Some(expected) = self.workload_measurements.get(&request.actor) {
-            let Some(presented_raw) = &request.workload_measurement_hash else {
+            let Some(observed_raw) = observed_measurement else {
                 return PolicyDecision {
                     decision: Decision::Deny,
-                    reason: "workload measurement required but not presented".into(),
+                    reason: "workload measurement required but not observed".into(),
                 };
             };
-            let presented = match normalize_workload_measurement(presented_raw) {
+            let observed = match normalize_workload_measurement(observed_raw) {
                 Ok(v) => v,
                 Err(_) => {
                     return PolicyDecision {
                         decision: Decision::Deny,
-                        reason: "malformed workload measurement".into(),
+                        reason: "malformed observed workload measurement".into(),
                     }
                 }
             };
-            if !bool::from(presented.as_bytes().ct_eq(expected.as_bytes())) {
+            if !bool::from(observed.as_bytes().ct_eq(expected.as_bytes())) {
                 return PolicyDecision {
                     decision: Decision::Deny,
-                    reason: "workload measurement does not match registered identity".into(),
+                    reason: "observed workload measurement does not match registered identity".into(),
+                };
+            }
+            // Transit consistency only: the request may echo the measurement, but
+            // an echo that contradicts what was observed is a tampered request.
+            if let Some(claimed_raw) = &request.workload_measurement_hash {
+                let claimed = match normalize_workload_measurement(claimed_raw) {
+                    Ok(v) => v,
+                    Err(_) => {
+                        return PolicyDecision {
+                            decision: Decision::Deny,
+                            reason: "malformed workload measurement".into(),
+                        }
+                    }
+                };
+                if !bool::from(claimed.as_bytes().ct_eq(observed.as_bytes())) {
+                    return PolicyDecision {
+                        decision: Decision::Deny,
+                        reason: "declared workload measurement does not match observed".into(),
+                    };
+                }
+            }
+        } else if let Some(claimed_raw) = &request.workload_measurement_hash {
+            // Unbound actors keep pre-0.2.0 key-only semantics, but a malformed
+            // measurement is still rejected rather than ignored.
+            if normalize_workload_measurement(claimed_raw).is_err() {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "malformed workload measurement".into(),
                 };
             }
         }
@@ -996,9 +1063,22 @@ impl TrustEngine {
     }
 
     /// Evaluates policy verdict for an action request and appends it to the immutable audit event log.
+    ///
+    /// No workload measurement is observed, so an actor bound via
+    /// [`TrustEngine::register_pqc_identity_key`] is denied and recorded as such.
+    /// Use [`TrustEngine::record_with_measurement`] for bound actors.
     pub fn record(&mut self, request: ActionRequest) -> PolicyDecision {
+        self.record_with_measurement(request, None)
+    }
+
+    /// Records a request whose workload measurement the enforcement point observed.
+    pub fn record_with_measurement(
+        &mut self,
+        request: ActionRequest,
+        observed_measurement: Option<&str>,
+    ) -> PolicyDecision {
         // One clock read: the decision and the audit entry describe the same instant.
-        let decision = self.evaluate_at(&request, chrono::Utc::now());
+        let decision = self.evaluate_with_measurement(&request, observed_measurement, chrono::Utc::now());
         let previous_hash = self
             .events
             .last()

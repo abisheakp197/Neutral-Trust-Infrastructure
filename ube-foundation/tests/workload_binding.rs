@@ -1,10 +1,17 @@
-//! Regression tests for workload-bound identity (0.2.0).
+//! Regression tests for workload-bound identity.
 //!
 //! The defect these cover: binding an identity to a key proves *who* is calling
 //! but not *what* is calling. An attacker who steals the private key and a
-//! capability token could replay both from any host and be authorized. Binding
-//! the identity to a workload measurement restores the missing half of the
-//! binding.
+//! capability token could replay both from any host and be authorized.
+//!
+//! A first attempt at this (0.2.0) compared the expected measurement against
+//! `ActionRequest::workload_measurement_hash`. That field travels with the
+//! request and is signed by whoever holds the key, so a thief could set it to the
+//! expected digest and sign the result. `stolen_key_cannot_self_report_measurement`
+//! is the test that fails against that design: it performs the attack rather than
+//! asserting a proxy for it. The measurement is now supplied by the enforcement
+//! point from the actual runtime, and the request field is only checked for
+//! transit consistency.
 //!
 //! Each denial case has a positive control, so a passing suite cannot be
 //! explained by the engine denying everything.
@@ -52,44 +59,115 @@ fn signed_request(key_pair: &PqcKeyPair, measurement: Option<String>) -> ActionR
 }
 
 #[test]
-fn matching_workload_measurement_is_allowed() {
+fn attested_matching_measurement_is_allowed() {
     let key_pair = PqcKeyPair::generate();
     let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
 
-    let decision = engine.evaluate(&signed_request(&key_pair, Some(oci(HEX_A))));
+    let decision = engine.evaluate_with_measurement(
+        &signed_request(&key_pair, Some(oci(HEX_A))),
+        Some(&oci(HEX_A)),
+        chrono::Utc::now(),
+    );
+    assert_eq!(decision.decision, Decision::Allow, "{}", decision.reason);
+}
+
+#[test]
+fn stolen_key_cannot_self_report_measurement() {
+    // The attack: the key is stolen, the host is not the pinned workload, and the
+    // attacker declares the expected digest in the request they sign.
+    let key_pair = PqcKeyPair::generate();
+    let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
+
+    let forged = signed_request(&key_pair, Some(oci(HEX_A)));
+    assert!(
+        forged.pqc_signature.is_some(),
+        "the forged request must carry a valid signature, or this proves nothing"
+    );
+
+    let decision = engine.evaluate_with_measurement(&forged, None, chrono::Utc::now());
     assert_eq!(
         decision.decision,
-        Decision::Allow,
-        "positive control failed: {}",
-        decision.reason
+        Decision::Deny,
+        "a self-declared measurement must never satisfy the binding"
+    );
+
+    // Same request, but the enforcement point observed a different workload.
+    let decision = engine.evaluate_with_measurement(&forged, Some(&oci(HEX_B)), chrono::Utc::now());
+    assert_eq!(
+        decision.decision,
+        Decision::Deny,
+        "observed workload must override what the request claims"
     );
 }
 
 #[test]
-fn mismatched_workload_measurement_is_denied() {
-    // The attacker holds the stolen key and can produce a perfectly valid
-    // signature. Only the workload measurement distinguishes them.
+fn replay_from_unmeasured_host_is_denied() {
     let key_pair = PqcKeyPair::generate();
     let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
 
-    let decision = engine.evaluate(&signed_request(&key_pair, Some(oci(HEX_B))));
+    // A verbatim capture of a legitimate request is still not authorized from a
+    // host the enforcement point did not measure as the pinned workload.
+    let captured = signed_request(&key_pair, Some(oci(HEX_A)));
+    let decision = engine.evaluate(&captured);
     assert_eq!(decision.decision, Decision::Deny);
     assert!(
-        decision.reason.contains("workload measurement does not match"),
+        decision.reason.contains("not observed"),
         "unexpected reason: {}",
         decision.reason
     );
 }
 
 #[test]
-fn missing_workload_measurement_is_denied_when_registered() {
+fn observed_mismatch_is_denied() {
     let key_pair = PqcKeyPair::generate();
     let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
 
-    let decision = engine.evaluate(&signed_request(&key_pair, None));
+    let decision = engine.evaluate_with_measurement(
+        &signed_request(&key_pair, None),
+        Some(&oci(HEX_B)),
+        chrono::Utc::now(),
+    );
     assert_eq!(decision.decision, Decision::Deny);
     assert!(
-        decision.reason.contains("workload measurement required"),
+        decision.reason.contains("does not match"),
+        "unexpected reason: {}",
+        decision.reason
+    );
+}
+
+#[test]
+fn declared_measurement_contradicting_observation_is_denied() {
+    let key_pair = PqcKeyPair::generate();
+    let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
+
+    // Observation is correct, but the request claims something else: the request
+    // was altered in transit, so it is rejected rather than quietly accepted.
+    let decision = engine.evaluate_with_measurement(
+        &signed_request(&key_pair, Some(oci(HEX_B))),
+        Some(&oci(HEX_A)),
+        chrono::Utc::now(),
+    );
+    assert_eq!(decision.decision, Decision::Deny);
+    assert!(
+        decision.reason.contains("does not match observed"),
+        "unexpected reason: {}",
+        decision.reason
+    );
+}
+
+#[test]
+fn malformed_observed_measurement_is_denied() {
+    let key_pair = PqcKeyPair::generate();
+    let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
+
+    let decision = engine.evaluate_with_measurement(
+        &signed_request(&key_pair, None),
+        Some("not-a-digest"),
+        chrono::Utc::now(),
+    );
+    assert_eq!(decision.decision, Decision::Deny);
+    assert!(
+        decision.reason.contains("malformed"),
         "unexpected reason: {}",
         decision.reason
     );
@@ -97,8 +175,6 @@ fn missing_workload_measurement_is_denied_when_registered() {
 
 #[test]
 fn unregistered_measurement_keeps_key_only_authorization() {
-    // Backwards compatibility with 0.1.x: an actor with no measurement
-    // registered is authorized on key possession, as before.
     let key_pair = PqcKeyPair::generate();
     let engine = bound_engine(&key_pair, None);
 
@@ -108,52 +184,36 @@ fn unregistered_measurement_keeps_key_only_authorization() {
 
 #[test]
 fn oci_prefixed_and_bare_hex_compare_equal() {
-    // A registry reports `sha256:<hex>`; a workload may report the bare digest.
     let key_pair = PqcKeyPair::generate();
     let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
 
-    let decision = engine.evaluate(&signed_request(&key_pair, Some(HEX_A.into())));
-    assert_eq!(decision.decision, Decision::Allow, "{}", decision.reason);
-}
-
-#[test]
-fn malformed_presented_measurement_is_denied() {
-    let key_pair = PqcKeyPair::generate();
-    let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
-
-    let decision = engine.evaluate(&signed_request(&key_pair, Some("not-a-digest".into())));
-    assert_eq!(decision.decision, Decision::Deny);
-    assert!(
-        decision.reason.contains("malformed workload measurement"),
-        "unexpected reason: {}",
-        decision.reason
+    let decision = engine.evaluate_with_measurement(
+        &signed_request(&key_pair, Some(HEX_A.into())),
+        Some(HEX_A),
+        chrono::Utc::now(),
     );
+    assert_eq!(decision.decision, Decision::Allow, "{}", decision.reason);
 }
 
 #[test]
 fn registration_rejects_malformed_measurement() {
     let key_pair = PqcKeyPair::generate();
     let mut engine = TrustEngine::new();
+    engine.grant(ACTOR, CAPABILITY);
     let err = engine
         .register_pqc_identity_key(
             ACTOR,
             key_pair.public_key.key_bytes.clone(),
-            Some("sha256:deadbeef".into()),
+            Some("nope".into()),
         )
-        .expect_err("short digest must be rejected at registration");
+        .expect_err("malformed measurement must be rejected at registration");
     assert!(err.contains("SHA-256"), "unexpected error: {err}");
 }
 
 #[test]
 fn workload_binding_applies_without_a_pqc_signature() {
-    // The check must not be reachable only through the PQC path. A request with
-    // no signature at all from a workload-bound actor must still be denied for
-    // the missing measurement rather than falling through to another branch.
-    let mut engine = TrustEngine::new();
-    engine.grant(ACTOR, CAPABILITY);
-    engine
-        .register_workload_measurement(ACTOR, oci(HEX_A))
-        .expect("registration");
+    let key_pair = PqcKeyPair::generate();
+    let engine = bound_engine(&key_pair, Some(oci(HEX_A)));
 
     let request = ActionRequest {
         id: "req-unsigned".into(),
@@ -167,12 +227,12 @@ fn workload_binding_applies_without_a_pqc_signature() {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
-        workload_measurement_hash: None,
+        workload_measurement_hash: Some(oci(HEX_A)),
     };
     let decision = engine.evaluate(&request);
     assert_eq!(decision.decision, Decision::Deny);
     assert!(
-        decision.reason.contains("workload measurement"),
+        decision.reason.contains("not observed"),
         "unexpected reason: {}",
         decision.reason
     );
@@ -207,9 +267,35 @@ fn workload_binding_survives_save_and_reload() {
     let reloaded = TrustEngine::load_from_file(&path).expect("reload");
     std::fs::remove_dir_all(&dir).ok();
 
-    let allowed = reloaded.evaluate(&signed_request(&key_pair, Some(oci(HEX_A))));
+    let allowed = reloaded.evaluate_with_measurement(
+        &signed_request(&key_pair, None),
+        Some(&oci(HEX_A)),
+        chrono::Utc::now(),
+    );
     assert_eq!(allowed.decision, Decision::Allow, "{}", allowed.reason);
 
-    let denied = reloaded.evaluate(&signed_request(&key_pair, Some(oci(HEX_B))));
+    let denied = reloaded.evaluate_with_measurement(
+        &signed_request(&key_pair, None),
+        Some(&oci(HEX_B)),
+        chrono::Utc::now(),
+    );
     assert_eq!(denied.decision, Decision::Deny);
+}
+
+#[test]
+fn record_with_measurement_audits_the_observation() {
+    let key_pair = PqcKeyPair::generate();
+    let mut engine = bound_engine(&key_pair, Some(oci(HEX_A)));
+
+    let allowed =
+        engine.record_with_measurement(signed_request(&key_pair, None), Some(&oci(HEX_A)));
+    assert_eq!(allowed.decision, Decision::Allow, "{}", allowed.reason);
+
+    let denied = engine.record(signed_request(&key_pair, None));
+    assert_eq!(
+        denied.decision,
+        Decision::Deny,
+        "record() observes nothing, so a bound actor must not be authorized"
+    );
+    assert!(engine.verify_history());
 }
