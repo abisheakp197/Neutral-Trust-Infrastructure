@@ -3,7 +3,12 @@ name: Publish nti-otel
 # Trusted publishing (OIDC): no API token is stored in this repository. Before
 # the first tag, add a pending publisher on PyPI for project `nti-otel`,
 # owner `abisheakp197`, repo `Neutral-Trust-Infrastructure`, workflow
-# `otel-publish.yml`, environment `pypi`. Then push a tag `nti-otel-v0.1.0`.
+# `otel-publish.yml`, and leave the Environment name blank. Then push a tag
+# `nti-otel-v0.1.0`.
+#
+# The Environment name on PyPI is optional but binding: blank means the OIDC
+# token must carry no environment claim, so the publish job below must not
+# declare `environment:`. Add one on both sides or on neither.
 
 on:
   push:
@@ -36,7 +41,6 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
-    environment: pypi
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:

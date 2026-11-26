@@ -70,4 +70,4 @@ Not on PyPI yet. From this directory:
 python -m pip install -e ".[test,signing]"
 ```
 
-To publish: add a pending trusted publisher on PyPI for `nti-otel` (workflow `otel-publish.yml`, environment `pypi`), then push a tag `nti-otel-v0.1.0`. No token is stored in the repository.
+To publish: add a pending trusted publisher on PyPI for `nti-otel` (workflow `otel-publish.yml`, Environment name left blank), then push a tag `nti-otel-v0.1.0`. No token is stored in the repository.
