@@ -29,6 +29,11 @@ What this does NOT check
   This script verifies Layer 1 (the NTI proofs) only.
 * Whether the action actually took effect. The receipt is evidence of signing,
   not of downstream completion. That gap is the point of the recovery test.
+* Whether the receipt belongs to *your* operation. A receipt for a different
+  attempt, or for a different operation, is validly signed and passes every
+  check above; only an out-of-band expectation can bind it. Pass
+  --expect-attempt-id / --expect-operation / --expect-payload-sha256 to bind
+  it, or --strict to refuse an unbound receipt.
 
 Usage
 -----
@@ -210,6 +215,13 @@ def main():
                                         "embedded key, which is self-asserted.")
     ap.add_argument("--expect-payload-sha256", help="the action_payload_sha256 this receipt MUST "
                                                     "commit to, to bind it to the original attempt")
+    ap.add_argument("--expect-attempt-id", help="the recovery.attempt_id this receipt MUST carry, "
+                                               "from your own record of the attempt")
+    ap.add_argument("--expect-operation", help="the action_payload.type this receipt MUST carry, "
+                                              "for example demo.create_file_set")
+    ap.add_argument("--strict", action="store_true",
+                    help="fail (exit 1) when no --expect-* was supplied, i.e. when the receipt is "
+                         "internally consistent but not bound to an operation")
     args = ap.parse_args()
 
     rp = pathlib.Path(args.receipt)
@@ -262,6 +274,24 @@ def main():
             rep.fail("payload digest matches the expected attempt",
                      f"expected {args.expect_payload_sha256[:16]} != receipt "
                      f"{str(r.get('action_payload_sha256'))[:16]}")
+
+    def _expected(label, actual, expected):
+        if actual is None:
+            rep.fail(label, "field absent from the receipt")
+        elif actual == expected:
+            rep.ok(label, str(expected))
+        else:
+            rep.fail(label, f"expected {expected!r} != receipt {actual!r}")
+
+    if args.expect_attempt_id:
+        try:
+            attempt = resolve_path(r, ("recovery", "attempt_id"))
+        except KeyError:
+            attempt = None
+        _expected("attempt_id matches the expected attempt", attempt, args.expect_attempt_id)
+    if args.expect_operation:
+        _expected("operation matches the expected operation",
+                  (r.get("action_payload") or {}).get("type"), args.expect_operation)
 
     print("== 3. Merkle root over the delegation chain ==")
     chain = r.get("delegation_chain")
@@ -349,13 +379,24 @@ def main():
                              "signature does not verify with this key over the reconstructed "
                              "payload (a bound field was altered, or the key is wrong)")
 
+    bound = any([args.expect_payload_sha256, args.expect_attempt_id, args.expect_operation])
+
     print()
-    if rep.failed == 0:
-        print("RESULT: receipt verified (Layer 1: payload binding + Merkle proof + ML-DSA-87 signature).")
+    if rep.failed:
+        print(f"RESULT: VERIFICATION FAILED ({rep.failed} check(s)).")
+        return 1
+    if not bound:
+        print("RESULT: receipt is internally consistent and signed, but NOT bound to any operation.")
+        print("        No --expect-* was supplied, so a validly signed receipt for a different")
+        print("        attempt or a different operation passes exactly the same way.")
+        print("        Pass --expect-attempt-id / --expect-operation / --expect-payload-sha256")
+        print("        to bind it to the attempt you performed, or --strict to refuse this state.")
         print("NOTE:   this proves NTI signed the action. It does NOT prove the action took effect.")
-        return 0
-    print(f"RESULT: VERIFICATION FAILED ({rep.failed} check(s)).")
-    return 1
+        return 1 if args.strict else 0
+    print("RESULT: receipt verified and bound to the expected operation "
+          "(Layer 1: payload binding + Merkle proof + ML-DSA-87 signature).")
+    print("NOTE:   this proves NTI signed the action. It does NOT prove the action took effect.")
+    return 0
 
 
 if __name__ == "__main__":

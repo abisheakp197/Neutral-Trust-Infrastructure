@@ -64,9 +64,34 @@ Two options matter for recovery:
 * `--public-key <pem>` pins the ML-DSA-87 key. Without it the verifier uses the
   key embedded in the receipt, which is self-asserted. In production, pin the
   key resolved from the agent's DID document (see the boundary note below).
+* `--expect-attempt-id <id>` and `--expect-operation <type>` bind the receipt to
+  the attempt you performed. A receipt for a *different* attempt or a different
+  operation is still validly signed and passes every cryptographic check, so
+  without one of these the verifier cannot tell it apart from the right one.
+  The `--tamper` fixtures exist to demonstrate exactly this: re-signed evidence
+  for the wrong context.
+* `--strict` makes an unbound receipt a failure (exit `1`). Use it in CI.
 
-Exit codes: `0` all checks pass, `1` a check failed, `2` the receipt could not be
-read.
+When no `--expect-*` is given, the verifier says so in its result:
+
+```
+RESULT: receipt is internally consistent and signed, but NOT bound to any operation.
+        No --expect-* was supplied, so a validly signed receipt for a different
+        attempt or a different operation passes exactly the same way.
+```
+
+Exit codes: `0` all checks pass, `1` a check failed (or `--strict` and unbound),
+`2` the receipt could not be read.
+
+To see the binding do its job:
+
+```bash
+python3 generate_fixture.py --out-dir ./out --tamper all
+python3 verify_receipt.py ./out/nti_receipt.tampered.wrong-attempt.json \
+    --expect-attempt-id act-20261108-0064-0001   # exit 1
+python3 verify_receipt.py ./out/nti_receipt.json \
+    --expect-attempt-id act-20261108-0064-0001   # exit 0
+```
 
 ## Reproducing the Fixture
 
