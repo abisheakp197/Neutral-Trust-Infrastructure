@@ -61,3 +61,13 @@ Until the engine supports key persistence and verification from a public key, si
 `nti_otel` treats the agent as the thing being observed. A deployment that needs the stronger claim has to wait for RFC 0001 work items, or produce its own evidence path.
 
 Apache-2.0.
+
+## Install
+
+Not on PyPI yet. From this directory:
+
+```bash
+python -m pip install -e ".[test,signing]"
+```
+
+To publish: add a pending trusted publisher on PyPI for `nti-otel` (workflow `otel-publish.yml`, environment `pypi`), then push a tag `nti-otel-v0.1.0`. No token is stored in the repository.
