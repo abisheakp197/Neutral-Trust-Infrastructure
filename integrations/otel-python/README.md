@@ -64,10 +64,10 @@ Apache-2.0.
 
 ## Install
 
-Not on PyPI yet. From this directory:
-
 ```bash
-python -m pip install -e ".[test,signing]"
+pip install nti-otel
 ```
 
-To publish: add a pending trusted publisher on PyPI for `nti-otel` (workflow `otel-publish.yml`, Environment name left blank), then push a tag `nti-otel-v0.1.0`. No token is stored in the repository.
+Signing support is optional: `pip install "nti-otel[signing]"`. Working on the package: `pip install -e ".[test,signing]"` from this directory.
+
+Releasing: bump `version` in `pyproject.toml`, then push a matching tag (`nti-otel-vX.Y.Z`). The publish workflow uses trusted publishing, so no token is stored in the repository. A version number is permanent once uploaded — bump, never re-tag.
