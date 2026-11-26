@@ -57,6 +57,7 @@ mod tests {
             pqc_public_key: None,
             token: Some(valid_token),
             identity_claim: None,
+            workload_measurement_hash: None,
         };
 
         let req_expired = ActionRequest {
@@ -71,6 +72,7 @@ mod tests {
             pqc_public_key: None,
             token: Some(expired_token),
             identity_claim: None,
+            workload_measurement_hash: None,
         };
 
         assert_eq!(engine.evaluate(&req_valid).decision, Decision::Allow);
@@ -107,6 +109,7 @@ mod tests {
             pqc_public_key: None,
             token: Some(token),
             identity_claim: None,
+            workload_measurement_hash: None,
         };
 
         assert_eq!(engine.evaluate(&req).decision, Decision::Allow);
@@ -153,6 +156,7 @@ mod tests {
             pqc_public_key: None,
             token: None,
             identity_claim: None,
+            workload_measurement_hash: None,
         };
 
         orchestrator.engine.grant("admin", "compute");
@@ -183,6 +187,7 @@ mod tests {
             pqc_public_key: None,
             token: None,
             identity_claim: None,
+            workload_measurement_hash: None,
         };
 
         engine.record(req);

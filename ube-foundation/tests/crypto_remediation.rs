@@ -36,6 +36,7 @@ fn signed_pqc_request(
         pqc_public_key: Some(presented_key),
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     }
 }
 
@@ -47,7 +48,7 @@ fn pqc_signature_from_pinned_key_is_allowed() {
     let mut engine = TrustEngine::new();
     engine.grant(ACTOR, CAPABILITY);
     engine
-        .register_pqc_identity_key(ACTOR, key_pair.public_key.key_bytes.clone())
+        .register_pqc_identity_key(ACTOR, key_pair.public_key.key_bytes.clone(), None)
         .unwrap();
 
     let mut request = signed_pqc_request(
@@ -96,7 +97,7 @@ fn valid_signature_from_a_different_key_is_denied() {
     let mut engine = TrustEngine::new();
     engine.grant(ACTOR, CAPABILITY);
     engine
-        .register_pqc_identity_key(ACTOR, pinned.public_key.key_bytes.clone())
+        .register_pqc_identity_key(ACTOR, pinned.public_key.key_bytes.clone(), None)
         .unwrap();
 
     let mut request = signed_pqc_request(
@@ -120,7 +121,7 @@ fn tampered_payload_with_pinned_key_is_denied() {
     let mut engine = TrustEngine::new();
     engine.grant(ACTOR, CAPABILITY);
     engine
-        .register_pqc_identity_key(ACTOR, key_pair.public_key.key_bytes.clone())
+        .register_pqc_identity_key(ACTOR, key_pair.public_key.key_bytes.clone(), None)
         .unwrap();
 
     let mut request = signed_pqc_request(
@@ -143,7 +144,7 @@ fn bare_public_key_without_signature_is_denied() {
     let mut engine = TrustEngine::new();
     engine.grant(ACTOR, CAPABILITY);
     engine
-        .register_pqc_identity_key(ACTOR, key_pair.public_key.key_bytes.clone())
+        .register_pqc_identity_key(ACTOR, key_pair.public_key.key_bytes.clone(), None)
         .unwrap();
 
     let request = ActionRequest {
@@ -158,6 +159,7 @@ fn bare_public_key_without_signature_is_denied() {
         pqc_public_key: Some(key_pair.public_key.key_bytes.clone()),
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
 
     let decision = engine.evaluate(&request);
@@ -172,7 +174,7 @@ fn bare_public_key_without_signature_is_denied() {
 fn malformed_identity_key_is_rejected_at_registration() {
     let mut engine = TrustEngine::new();
     assert!(engine
-        .register_pqc_identity_key(ACTOR, vec![0u8; 8])
+        .register_pqc_identity_key(ACTOR, vec![0u8; 8], None)
         .is_err());
     assert!(engine.pqc_identity_keys.is_empty());
 }
@@ -183,7 +185,7 @@ fn identity_key_survives_state_round_trip() {
     let mut engine = TrustEngine::new();
     engine.grant(ACTOR, CAPABILITY);
     engine
-        .register_pqc_identity_key(ACTOR, key_pair.public_key.key_bytes.clone())
+        .register_pqc_identity_key(ACTOR, key_pair.public_key.key_bytes.clone(), None)
         .unwrap();
 
     let dir = std::env::temp_dir().join(format!("nti-pqc-{}", std::process::id()));
@@ -262,6 +264,7 @@ fn committed_batch_exposes_a_verifiable_inclusion_proof() {
             pqc_public_key: None,
             token: None,
             identity_claim: None,
+            workload_measurement_hash: None,
         });
     }
     engine.commit_batch().expect("batch committed");
@@ -328,6 +331,7 @@ fn tampered_audit_batch_fails_history_verification() {
             pqc_public_key: None,
             token: None,
             identity_claim: None,
+            workload_measurement_hash: None,
         });
     }
     engine.commit_batch();
@@ -363,6 +367,7 @@ fn token_request(token: CapabilityToken) -> ActionRequest {
         pqc_public_key: None,
         token: Some(token),
         identity_claim: None,
+        workload_measurement_hash: None,
     }
 }
 
@@ -485,6 +490,7 @@ fn execution_limit_without_a_token_fails_closed() {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
     let caveat = Caveat {
         location: None,

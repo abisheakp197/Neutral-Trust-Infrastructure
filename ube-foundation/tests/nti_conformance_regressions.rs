@@ -17,6 +17,7 @@ fn request(token: Option<CapabilityToken>) -> ActionRequest {
         pqc_public_key: None,
         token,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
     request.signature = Some(key.sign(&request.message_to_sign()).to_bytes().to_vec());
     request

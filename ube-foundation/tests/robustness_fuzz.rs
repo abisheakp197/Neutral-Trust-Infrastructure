@@ -47,6 +47,7 @@ fn test_caveat_interpreter_edge_cases() {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
 
     // Test with invalid timestamp

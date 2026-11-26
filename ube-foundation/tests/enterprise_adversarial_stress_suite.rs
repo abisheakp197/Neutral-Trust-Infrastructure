@@ -39,6 +39,7 @@ fn test_concurrent_multi_threaded_stress_load() {
                     pqc_public_key: None,
                     token: None,
                     identity_claim: None,
+                    workload_measurement_hash: None,
                 };
 
                 let mut guard = engine_clone.lock().unwrap();
@@ -210,6 +211,7 @@ fn test_persisted_state_tampering_detection() {
             pqc_public_key: None,
             token: None,
             identity_claim: None,
+            workload_measurement_hash: None,
         };
         engine.record(req);
     }

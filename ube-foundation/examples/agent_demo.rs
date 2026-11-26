@@ -36,6 +36,7 @@ async fn main() -> Result<(), String> {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
 
     let res1 = agent.execute_step(req1).await?;
@@ -57,6 +58,7 @@ async fn main() -> Result<(), String> {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
 
     let res2 = agent.execute_step(req2).await;
@@ -82,6 +84,7 @@ async fn main() -> Result<(), String> {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
 
     let res3 = agent.execute_task(req3).await?;

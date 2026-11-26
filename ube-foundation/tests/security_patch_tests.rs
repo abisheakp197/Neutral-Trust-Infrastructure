@@ -39,6 +39,7 @@ fn request(token: Option<CapabilityToken>) -> ActionRequest {
         pqc_public_key: None,
         identity_claim: None,
         token,
+        workload_measurement_hash: None,
     }
 }
 #[test]

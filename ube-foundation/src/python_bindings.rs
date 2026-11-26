@@ -42,14 +42,32 @@ impl PyTrustEngine {
     /// Required before a PQC-signed request from `actor` can be allowed: the
     /// engine only authorizes a signature made by the key pinned here, so a
     /// caller cannot self-sign with a key of its own choosing.
+    #[pyo3(signature = (actor, public_key_bytes, workload_measurement_hash=None))]
     pub fn register_pqc_identity_key(
         &mut self,
         actor: String,
         public_key_bytes: Vec<u8>,
+        workload_measurement_hash: Option<String>,
     ) -> PyResult<()> {
         self.inner
-            .register_pqc_identity_key(actor, public_key_bytes)
+            .register_pqc_identity_key(actor, public_key_bytes, workload_measurement_hash)
             .map_err(pyo3::exceptions::PyValueError::new_err)
+    }
+
+    /// Binds an expected workload measurement to `actor` without changing its key.
+    pub fn register_workload_measurement(
+        &mut self,
+        actor: String,
+        measurement_hash: String,
+    ) -> PyResult<()> {
+        self.inner
+            .register_workload_measurement(actor, measurement_hash)
+            .map_err(pyo3::exceptions::PyValueError::new_err)
+    }
+
+    /// Removes the expected workload measurement for `actor`, if any.
+    pub fn remove_workload_measurement(&mut self, actor: String) -> Option<String> {
+        self.inner.remove_workload_measurement(&actor)
     }
 
     /// Removes the pinned ML-DSA-87 identity key for `actor`, returning the

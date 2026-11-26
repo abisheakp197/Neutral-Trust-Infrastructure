@@ -220,6 +220,7 @@ impl Module for NetworkModule {
             pqc_public_key: None,
             token: None,
             identity_claim: None,
+            workload_measurement_hash: None,
         };
 
         let resp = client

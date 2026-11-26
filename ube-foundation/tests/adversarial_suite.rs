@@ -25,6 +25,7 @@ async fn test_adversarial_replay_attack() {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
 
     let decision = engine.evaluate(&req);
@@ -168,6 +169,7 @@ async fn test_adversarial_identity_spoofing() {
         pqc_public_key: None,
         token: None,
         identity_claim: Some(claim),
+        workload_measurement_hash: None,
     };
 
     // The engine should deny the request because of code hash mismatch

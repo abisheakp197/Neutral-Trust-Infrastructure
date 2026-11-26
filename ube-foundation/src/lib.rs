@@ -30,6 +30,31 @@ use std::collections::{BTreeMap, BTreeSet};
 use subtle::ConstantTimeEq;
 use zeroize::Zeroize;
 
+/// Normalizes a workload measurement to a bare lowercase SHA-256 hex digest.
+///
+/// Accepts both the OCI image-digest form (`sha256:<hex>`) and bare hex, so that
+/// a value taken from a registry and a value reported by a running workload
+/// compare equal. Anything that is not a SHA-256 digest is rejected rather than
+/// compared as an opaque string, which would silently never match.
+pub fn normalize_workload_measurement(raw: &str) -> Result<String, String> {
+    let trimmed = raw.trim();
+    let hex = trimmed
+        .strip_prefix("sha256:")
+        .or_else(|| trimmed.strip_prefix("sha256-"))
+        .unwrap_or(trimmed);
+    if hex.len() != 64 || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err(
+            "workload measurement must be a SHA-256 digest: 64 hex characters, optional `sha256:` prefix"
+                .into(),
+        );
+    }
+    Ok(hex.to_ascii_lowercase())
+}
+
+fn validate_workload_measurement(raw: &str) -> Result<String, String> {
+    normalize_workload_measurement(raw)
+}
+
 /// Deterministically serializes any serializable value into compact, canonical JSON bytes.
 pub fn canonical_json_bytes<T: Serialize>(val: &T) -> Result<Vec<u8>, String> {
     let value = serde_json::to_value(val)
@@ -240,6 +265,14 @@ pub struct ActionRequest {
     pub token: Option<CapabilityToken>,
     /// Optional code identity claim.
     pub identity_claim: Option<IdentityClaim>,
+    /// Optional measurement of the workload that produced this request.
+    ///
+    /// When an actor has a workload measurement registered, this field is
+    /// mandatory and must match it exactly. It is deliberately **not** covered
+    /// by [`ActionRequest::message_to_sign`], so a compromised workload cannot
+    /// launder a stolen signature over a measurement it does not have.
+    #[serde(default)]
+    pub workload_measurement_hash: Option<String>,
 }
 
 impl ActionRequest {
@@ -350,6 +383,12 @@ pub struct TrustEngineState {
     /// Pinned ML-DSA-87 identity keys per actor, configured locally rather than supplied by requests.
     #[serde(default)]
     pub pqc_identity_keys: BTreeMap<String, Vec<u8>>,
+    /// Expected workload measurement (e.g. SHA-256 of the container image) per actor.
+    ///
+    /// When an actor has an entry here, every request from that actor must carry
+    /// a matching [`ActionRequest::workload_measurement_hash`].
+    #[serde(default)]
+    pub workload_measurements: BTreeMap<String, String>,
     /// Registered validator voter Ed25519 public keys.
     pub voter_keys: BTreeMap<String, Vec<u8>>,
     /// Revocation list of invalidated capability token IDs.
@@ -379,6 +418,12 @@ pub struct TrustEngine {
     /// and self-sign, so "signature verifies" would only prove key possession,
     /// not authorization.
     pub pqc_identity_keys: BTreeMap<String, Vec<u8>>,
+    /// Expected workload measurement per actor.
+    ///
+    /// Key possession alone is not enough to act: if a stolen key is replayed
+    /// from a workload whose measurement was never registered, the request is
+    /// denied. This is what stops a stolen key from being usable anywhere.
+    pub workload_measurements: BTreeMap<String, String>,
     /// Registered validator public keys.
     pub voter_keys: BTreeMap<String, Vec<u8>>,
     /// Token revocation set.
@@ -498,6 +543,7 @@ impl TrustEngine {
             expected_code_hashes: BTreeMap::new(),
             issuer_keys: BTreeMap::new(),
             pqc_identity_keys: BTreeMap::new(),
+            workload_measurements: BTreeMap::new(),
             voter_keys: BTreeMap::new(),
             revocation_list: BTreeSet::new(),
             events: Vec::new(),
@@ -520,6 +566,7 @@ impl TrustEngine {
             expected_code_hashes: self.expected_code_hashes.clone(),
             issuer_keys: self.issuer_keys.clone(),
             pqc_identity_keys: self.pqc_identity_keys.clone(),
+            workload_measurements: self.workload_measurements.clone(),
             voter_keys: self.voter_keys.clone(),
             revocation_list: self.revocation_list.clone(),
             events: self.events.clone(),
@@ -546,6 +593,7 @@ impl TrustEngine {
             expected_code_hashes: state.expected_code_hashes,
             issuer_keys: state.issuer_keys,
             pqc_identity_keys: state.pqc_identity_keys,
+            workload_measurements: state.workload_measurements,
             voter_keys: state.voter_keys,
             revocation_list: state.revocation_list,
             events: state.events,
@@ -612,19 +660,59 @@ impl TrustEngine {
     /// from `actor` when the presented `pqc_public_key` is byte-identical to this
     /// key. Pinning is what turns a valid signature into an *authorized* one.
     ///
-    /// The key must be a well-formed ML-DSA-87 (Dilithium5) public key. Returns
-    /// an error for a malformed key so a caller cannot silently pin garbage and
-    /// then be denied later with no explanation.
+    /// `workload_measurement_hash` optionally binds the identity to a *workload*
+    /// in addition to a key. Pass the SHA-256 of the container image (or other
+    /// build artefact) the agent is expected to run as; every subsequent request
+    /// from `actor` must then carry that measurement or be denied. This closes
+    /// the gap where a stolen private key is replayable from any host: the key
+    /// proves *who* is calling, the measurement proves *what* is calling. Pass
+    /// `None` to authorize on key possession alone, which is the pre-0.2.0
+    /// behaviour and is not recommended for agents holding real authority.
+    ///
+    /// The key must be a well-formed ML-DSA-87 (Dilithium5) public key and the
+    /// measurement must be a SHA-256 digest. Returns an error for either so a
+    /// caller cannot silently pin garbage and then be denied later with no
+    /// explanation.
     pub fn register_pqc_identity_key(
         &mut self,
         actor: impl Into<String>,
         public_key_bytes: Vec<u8>,
+        workload_measurement_hash: Option<String>,
     ) -> Result<(), String> {
         dilithium5::PublicKey::from_bytes(&public_key_bytes)
             .map_err(|_| "Invalid ML-DSA-87 identity public key".to_string())?;
-        self.pqc_identity_keys
-            .insert(actor.into(), public_key_bytes);
+        let normalized = match &workload_measurement_hash {
+            Some(raw) => Some(validate_workload_measurement(raw)?),
+            None => None,
+        };
+        let actor = actor.into();
+        if let Some(expected) = normalized {
+            self.workload_measurements.insert(actor.clone(), expected);
+        }
+        self.pqc_identity_keys.insert(actor, public_key_bytes);
         Ok(())
+    }
+
+    /// Binds an expected workload measurement to `actor` without touching its key.
+    ///
+    /// Intended for updating a measurement on redeploy. Prefer passing the
+    /// measurement to [`TrustEngine::register_pqc_identity_key`] so that key and
+    /// measurement are provisioned in one step and cannot be forgotten.
+    pub fn register_workload_measurement(
+        &mut self,
+        actor: impl Into<String>,
+        measurement_hash: impl Into<String>,
+    ) -> Result<(), String> {
+        let normalized = validate_workload_measurement(&measurement_hash.into())?;
+        self.workload_measurements.insert(actor.into(), normalized);
+        Ok(())
+    }
+
+    /// Removes the expected workload measurement for `actor`, if any.
+    ///
+    /// Clearing the measurement re-opens key-only authorization for that actor.
+    pub fn remove_workload_measurement(&mut self, actor: &str) -> Option<String> {
+        self.workload_measurements.remove(actor)
     }
 
     /// Removes the pinned ML-DSA-87 identity key for `actor`, if any.
@@ -742,6 +830,35 @@ impl TrustEngine {
                 decision: Decision::Deny,
                 reason: "pqc public key presented without signature".into(),
             };
+        }
+
+        // Workload binding. Deliberately evaluated outside the PQC block above so
+        // that a registered measurement constrains *every* request path, including
+        // Ed25519-only and unsigned ones. A key proves who is calling; the
+        // measurement proves what is calling. Without this, a stolen key is
+        // replayable from any host.
+        if let Some(expected) = self.workload_measurements.get(&request.actor) {
+            let Some(presented_raw) = &request.workload_measurement_hash else {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "workload measurement required but not presented".into(),
+                };
+            };
+            let presented = match normalize_workload_measurement(presented_raw) {
+                Ok(v) => v,
+                Err(_) => {
+                    return PolicyDecision {
+                        decision: Decision::Deny,
+                        reason: "malformed workload measurement".into(),
+                    }
+                }
+            };
+            if !bool::from(presented.as_bytes().ct_eq(expected.as_bytes())) {
+                return PolicyDecision {
+                    decision: Decision::Deny,
+                    reason: "workload measurement does not match registered identity".into(),
+                };
+            }
         }
 
         if let Some(claim) = &request.identity_claim {

@@ -21,6 +21,7 @@ fn test_adversarial_malformed_pqc_signatures() {
         pqc_public_key: Some(vec![1u8; 32]),
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
 
     // Should be Denied due to unsupported algorithm
@@ -44,6 +45,7 @@ fn test_adversarial_empty_identities() {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
 
     // Should Deny because no permission is granted and no identity/token is present
@@ -70,6 +72,7 @@ fn test_adversarial_merkle_tampering() {
         pqc_public_key: None,
         token: None,
         identity_claim: None,
+        workload_measurement_hash: None,
     };
     engine.grant("actor-1", "cap-1");
     engine.record(req);
@@ -125,6 +128,7 @@ fn test_adversarial_identity_spoofing() {
             public_key: vec![],
             signature: vec![],
         }),
+        workload_measurement_hash: None,
     };
 
     // Should deny because there's no policy allowing "999.9.9" for "system" capability
