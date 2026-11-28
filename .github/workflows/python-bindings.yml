@@ -1,0 +1,68 @@
+name: Python bindings
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-tests:
+    name: Build the extension and run the Python tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.90.0 --profile minimal
+
+      - name: Install pinned build and test tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --require-hashes -r ube-foundation/requirements-ci.txt
+          python -m pip install --require-hashes -r ube-foundation/requirements-test.txt
+          maturin --version
+          pytest --version
+
+      - name: Build the extension and install it
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUSTUP_TOOLCHAIN=1.90.0 maturin build \
+            --locked \
+            --manifest-path ube-foundation/Cargo.toml \
+            --features python \
+            --interpreter python \
+            --out dist
+          python -m pip install dist/*.whl
+
+      # A wheel that imports but has lost a class would still let the suite
+      # pass if the tests were skipped, so assert the API is present first.
+      - name: Verify the installed wheel exposes the documented API
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import ube_foundation
+
+          for name in ("TrustEngine", "PqcKeyPair", "Ed25519KeyPair", "TokenBuilder"):
+              assert hasattr(ube_foundation, name), f"missing {name} in the built wheel"
+          print("bindings present:", ", ".join(sorted(n for n in dir(ube_foundation) if n[0].isupper())))
+          PY
+
+      # pytest exits non-zero when it collects nothing, so an empty or
+      # mislocated suite fails the job instead of passing silently.
+      - name: Run the Python tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pytest ube-foundation/python_tests -q --durations=5
