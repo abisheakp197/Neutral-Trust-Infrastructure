@@ -63,7 +63,7 @@ pub fn canonical_json_bytes<T: Serialize>(val: &T) -> Result<Vec<u8>, String> {
 }
 
 /// Represents dynamic constraints attached to capability tokens.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CaveatType {
     /// Token expires at the specified ISO 8601 timestamp.
     Expires(String),
@@ -73,7 +73,31 @@ pub enum CaveatType {
     ValueLimit(u64, String),
     /// Prefix restriction on file path or resource URI.
     PathRestricted(String),
+    /// Deny when the caller-supplied risk score is at or above this value.
+    ///
+    /// The score is read from `request.input["risk_score"]` and must be a JSON
+    /// number. A missing, non-numeric or non-finite value is a violation, never
+    /// a pass.
+    RiskBelow(f32),
 }
+
+impl PartialEq for CaveatType {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (CaveatType::Expires(a), CaveatType::Expires(b)) => a == b,
+            (CaveatType::MaxExecutions(a), CaveatType::MaxExecutions(b)) => a == b,
+            (CaveatType::ValueLimit(av, ac), CaveatType::ValueLimit(bv, bc)) => av == bv && ac == bc,
+            (CaveatType::PathRestricted(a), CaveatType::PathRestricted(b)) => a == b,
+            // f32 has no Eq, so it cannot be derived. Comparing bit patterns
+            // keeps reflexivity (NaN equals itself), which a derived PartialEq
+            // would break and with it the Eq contract on every containing type.
+            (CaveatType::RiskBelow(a), CaveatType::RiskBelow(b)) => a.to_bits() == b.to_bits(),
+            _ => false,
+        }
+    }
+}
+
+impl Eq for CaveatType {}
 
 /// A policy caveat scoping the validity of an agent capability token.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -508,6 +532,24 @@ impl CaveatInterpreter {
                         return OutcomeVerdict::Invalid(format!(
                             "Path restricted: {} must start with {}",
                             path, prefix
+                        ));
+                    }
+                }
+                CaveatType::RiskBelow(threshold) => {
+                    if !threshold.is_finite() {
+                        return OutcomeVerdict::Invalid(
+                            "Risk threshold must be a finite number".into(),
+                        );
+                    }
+                    let Some(score) = request.input.get("risk_score").and_then(|v| v.as_f64()) else {
+                        return OutcomeVerdict::Invalid(
+                            "Risk caveat requires a numeric 'risk_score'".into(),
+                        );
+                    };
+                    if score >= f64::from(*threshold) {
+                        return OutcomeVerdict::Invalid(format!(
+                            "Risk score {} at or above threshold {}",
+                            score, threshold
                         ));
                     }
                 }

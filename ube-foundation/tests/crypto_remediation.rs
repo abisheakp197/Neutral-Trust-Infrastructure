@@ -502,3 +502,98 @@ fn execution_limit_without_a_token_fails_closed() {
         OutcomeVerdict::Invalid(_)
     ));
 }
+
+// -- 4. Risk caveat (ingress risk score, e.g. CanaryGuard) -----------------
+//
+// The threshold is an upper bound on the caller-supplied risk score. Every
+// case has a positive control below, so a passing suite cannot be explained
+// by an engine that denies everything.
+
+fn risk_token(threshold: f32) -> CapabilityToken {
+    signed_token(vec![Caveat {
+        location: None,
+        condition: CaveatType::RiskBelow(threshold),
+    }])
+}
+
+#[test]
+fn risk_below_allows_a_score_under_the_threshold() {
+    let engine = engine_with_issuer();
+    let mut request = token_request(risk_token(0.65));
+    request.input = json!({"risk_score": 0.12});
+    assert_eq!(engine.evaluate(&request).decision, Decision::Allow);
+}
+
+#[test]
+fn risk_below_denies_at_the_threshold() {
+    // The contract is "at or above", so equality must deny, not allow.
+    let engine = engine_with_issuer();
+    let mut request = token_request(risk_token(0.65));
+    request.input = json!({"risk_score": 0.65});
+    let decision = engine.evaluate(&request);
+    assert_eq!(decision.decision, Decision::Deny);
+    assert!(decision.reason.contains("at or above"), "{}", decision.reason);
+}
+
+#[test]
+fn risk_below_denies_above_the_threshold() {
+    let engine = engine_with_issuer();
+    let mut request = token_request(risk_token(0.65));
+    request.input = json!({"risk_score": 0.91});
+    let decision = engine.evaluate(&request);
+    assert_eq!(decision.decision, Decision::Deny);
+    assert!(decision.reason.contains("at or above"), "{}", decision.reason);
+}
+
+#[test]
+fn risk_caveat_fails_closed_without_a_score() {
+    // A missing score must not be read as zero, which would always pass.
+    let engine = engine_with_issuer();
+    let mut request = token_request(risk_token(0.65));
+    request.input = json!({"note": "no score here"});
+    let decision = engine.evaluate(&request);
+    assert_eq!(decision.decision, Decision::Deny);
+    assert!(decision.reason.contains("numeric 'risk_score'"), "{}", decision.reason);
+}
+
+#[test]
+fn risk_caveat_fails_closed_on_a_non_numeric_score() {
+    // A string must not be coerced into a number.
+    let engine = engine_with_issuer();
+    let mut request = token_request(risk_token(0.65));
+    request.input = json!({"risk_score": "0.1"});
+    let decision = engine.evaluate(&request);
+    assert_eq!(decision.decision, Decision::Deny);
+    assert!(decision.reason.contains("numeric 'risk_score'"), "{}", decision.reason);
+}
+
+#[test]
+fn risk_caveat_fails_closed_on_a_non_finite_threshold() {
+    // NaN cannot arrive over JSON, so this is defence in depth for in-process
+    // callers: `score >= NaN` is false, which would otherwise allow.
+    let engine = engine_with_issuer();
+    let mut request = token_request(risk_token(0.65));
+    request.input = json!({"risk_score": 0.0});
+    let verdict = CaveatInterpreter::verify_all_at(
+        &[Caveat {
+            location: None,
+            condition: CaveatType::RiskBelow(f32::NAN),
+        }],
+        &request,
+        &engine,
+        Utc::now(),
+    );
+    match verdict {
+        OutcomeVerdict::Invalid(reason) => assert!(reason.contains("finite"), "{}", reason),
+        other => panic!("expected Invalid for a non-finite threshold, got {:?}", other),
+    }
+}
+
+#[test]
+fn risk_caveat_uses_the_externally_tagged_wire_format() {
+    // Integrators hand-write this in token JSON, so pin the shape.
+    let encoded = serde_json::to_string(&CaveatType::RiskBelow(0.65)).unwrap();
+    assert_eq!(encoded, r#"{"RiskBelow":0.65}"#);
+    let decoded: CaveatType = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(decoded, CaveatType::RiskBelow(0.65));
+}
