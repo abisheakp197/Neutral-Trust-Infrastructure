@@ -505,51 +505,60 @@ fn execution_limit_without_a_token_fails_closed() {
 
 // -- 4. Risk caveat (ingress risk score, e.g. CanaryGuard) -----------------
 //
-// The threshold is an upper bound on the caller-supplied risk score. Every
-// case has a positive control below, so a passing suite cannot be explained
-// by an engine that denies everything.
+// The threshold is in basis points and an upper bound on the caller-supplied
+// score. Cases below include positive controls, so a passing suite cannot be
+// explained by an engine that denies everything.
 
-fn risk_token(threshold: f32) -> CapabilityToken {
+fn risk_token(threshold_bps: u32) -> CapabilityToken {
     signed_token(vec![Caveat {
         location: None,
-        condition: CaveatType::RiskBelow(threshold),
+        condition: CaveatType::RiskBelow(threshold_bps),
     }])
 }
 
 #[test]
 fn risk_below_allows_a_score_under_the_threshold() {
     let engine = engine_with_issuer();
-    let mut request = token_request(risk_token(0.65));
+    let mut request = token_request(risk_token(6500));
     request.input = json!({"risk_score": 0.12});
     assert_eq!(engine.evaluate(&request).decision, Decision::Allow);
 }
 
 #[test]
 fn risk_below_denies_at_the_threshold() {
-    // The contract is "at or above", so equality must deny, not allow.
+    // The contract is "at or above", so 0.65 against 6500 bps must deny.
     let engine = engine_with_issuer();
-    let mut request = token_request(risk_token(0.65));
+    let mut request = token_request(risk_token(6500));
     request.input = json!({"risk_score": 0.65});
     let decision = engine.evaluate(&request);
     assert_eq!(decision.decision, Decision::Deny);
-    assert!(decision.reason.contains("at or above"), "{}", decision.reason);
+    assert!(decision.reason.contains("6500 bps"), "{}", decision.reason);
 }
 
 #[test]
 fn risk_below_denies_above_the_threshold() {
     let engine = engine_with_issuer();
-    let mut request = token_request(risk_token(0.65));
+    let mut request = token_request(risk_token(6500));
     request.input = json!({"risk_score": 0.91});
     let decision = engine.evaluate(&request);
     assert_eq!(decision.decision, Decision::Deny);
-    assert!(decision.reason.contains("at or above"), "{}", decision.reason);
+    assert!(decision.reason.contains("9100 bps"), "{}", decision.reason);
+}
+
+#[test]
+fn risk_below_denies_at_the_upper_bound() {
+    // 10000 bps is the maximum meaningful threshold; a 1.0 score must deny.
+    let engine = engine_with_issuer();
+    let mut request = token_request(risk_token(10_000));
+    request.input = json!({"risk_score": 1.0});
+    assert_eq!(engine.evaluate(&request).decision, Decision::Deny);
 }
 
 #[test]
 fn risk_caveat_fails_closed_without_a_score() {
     // A missing score must not be read as zero, which would always pass.
     let engine = engine_with_issuer();
-    let mut request = token_request(risk_token(0.65));
+    let mut request = token_request(risk_token(6500));
     request.input = json!({"note": "no score here"});
     let decision = engine.evaluate(&request);
     assert_eq!(decision.decision, Decision::Deny);
@@ -558,9 +567,8 @@ fn risk_caveat_fails_closed_without_a_score() {
 
 #[test]
 fn risk_caveat_fails_closed_on_a_non_numeric_score() {
-    // A string must not be coerced into a number.
     let engine = engine_with_issuer();
-    let mut request = token_request(risk_token(0.65));
+    let mut request = token_request(risk_token(6500));
     request.input = json!({"risk_score": "0.1"});
     let decision = engine.evaluate(&request);
     assert_eq!(decision.decision, Decision::Deny);
@@ -568,32 +576,38 @@ fn risk_caveat_fails_closed_on_a_non_numeric_score() {
 }
 
 #[test]
-fn risk_caveat_fails_closed_on_a_non_finite_threshold() {
-    // NaN cannot arrive over JSON, so this is defence in depth for in-process
-    // callers: `score >= NaN` is false, which would otherwise allow.
+fn risk_caveat_fails_closed_on_a_score_off_the_0_to_1_scale() {
+    // 65 means 65 percent to a human. Reading it as a 0..1 score would allow,
+    // so an out-of-scale value must be a violation instead.
     let engine = engine_with_issuer();
-    let mut request = token_request(risk_token(0.65));
-    request.input = json!({"risk_score": 0.0});
-    let verdict = CaveatInterpreter::verify_all_at(
-        &[Caveat {
-            location: None,
-            condition: CaveatType::RiskBelow(f32::NAN),
-        }],
-        &request,
-        &engine,
-        Utc::now(),
-    );
-    match verdict {
-        OutcomeVerdict::Invalid(reason) => assert!(reason.contains("finite"), "{}", reason),
-        other => panic!("expected Invalid for a non-finite threshold, got {:?}", other),
-    }
+    let mut request = token_request(risk_token(6500));
+    request.input = json!({"risk_score": 65.0});
+    let decision = engine.evaluate(&request);
+    assert_eq!(decision.decision, Decision::Deny);
+    assert!(decision.reason.contains("0.0..=1.0"), "{}", decision.reason);
+
+    let mut request = token_request(risk_token(6500));
+    request.input = json!({"risk_score": -0.1});
+    assert_eq!(engine.evaluate(&request).decision, Decision::Deny);
+}
+
+#[test]
+fn risk_caveat_fails_closed_on_a_threshold_off_the_scale() {
+    // A threshold above 10000 bps can never be satisfied sensibly; treat a
+    // mis-scaled threshold as a violation rather than an unconditional allow.
+    let engine = engine_with_issuer();
+    let mut request = token_request(risk_token(20_000));
+    request.input = json!({"risk_score": 0.12});
+    let decision = engine.evaluate(&request);
+    assert_eq!(decision.decision, Decision::Deny);
+    assert!(decision.reason.contains("out of range"), "{}", decision.reason);
 }
 
 #[test]
 fn risk_caveat_uses_the_externally_tagged_wire_format() {
     // Integrators hand-write this in token JSON, so pin the shape.
-    let encoded = serde_json::to_string(&CaveatType::RiskBelow(0.65)).unwrap();
-    assert_eq!(encoded, r#"{"RiskBelow":0.65}"#);
+    let encoded = serde_json::to_string(&CaveatType::RiskBelow(6500)).unwrap();
+    assert_eq!(encoded, r#"{"RiskBelow":6500}"#);
     let decoded: CaveatType = serde_json::from_str(&encoded).unwrap();
-    assert_eq!(decoded, CaveatType::RiskBelow(0.65));
+    assert_eq!(decoded, CaveatType::RiskBelow(6500));
 }

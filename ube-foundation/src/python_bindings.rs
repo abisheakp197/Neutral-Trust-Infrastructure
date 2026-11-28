@@ -1,6 +1,8 @@
 #![allow(unsafe_op_in_unsafe_fn)]
 
-use crate::{ActionRequest, PqcKeyPair, TrustEngine};
+use crate::{ActionRequest, CapabilityToken, Caveat, CaveatType, PqcKeyPair, TrustEngine};
+use ed25519_dalek::Signer;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 #[pyclass(name = "TrustEngine")]
@@ -285,9 +287,159 @@ impl PyPqcKeyPair {
     }
 }
 
+
+/// Ed25519 key pair used to issue and sign capability tokens.
+///
+/// The engine pins this public key with `register_issuer_key`, so a token is
+/// only honoured when it is signed by the key the engine already trusts.
+#[pyclass(name = "Ed25519KeyPair")]
+pub struct PyEd25519KeyPair {
+    signing_key: ed25519_dalek::SigningKey,
+}
+
+#[pymethods]
+impl PyEd25519KeyPair {
+    #[new]
+    pub fn generate() -> Self {
+        use rand::RngCore;
+        let mut seed = [0u8; 32];
+        rand::rngs::OsRng.fill_bytes(&mut seed);
+        PyEd25519KeyPair {
+            signing_key: ed25519_dalek::SigningKey::from_bytes(&seed),
+        }
+    }
+
+    /// Rebuilds a key pair from the 32 raw bytes of an Ed25519 private key.
+    #[staticmethod]
+    pub fn from_private_key_bytes(private_key_bytes: Vec<u8>) -> PyResult<Self> {
+        let bytes: [u8; 32] = private_key_bytes.as_slice().try_into().map_err(|_| {
+            PyValueError::new_err("Ed25519 private key must be exactly 32 bytes")
+        })?;
+        Ok(PyEd25519KeyPair {
+            signing_key: ed25519_dalek::SigningKey::from_bytes(&bytes),
+        })
+    }
+
+    pub fn private_key_bytes(&self) -> Vec<u8> {
+        self.signing_key.to_bytes().to_vec()
+    }
+
+    pub fn public_key_bytes(&self) -> Vec<u8> {
+        self.signing_key.verifying_key().to_bytes().to_vec()
+    }
+
+    pub fn sign(&self, message: Vec<u8>) -> Vec<u8> {
+        self.signing_key.sign(&message).to_bytes().to_vec()
+    }
+}
+
+/// Builds and signs a capability token that carries caveats.
+///
+/// The caveat set is what turns a grant into a bounded grant: a token without
+/// caveats authorises everything the actor could do otherwise.
+#[pyclass(name = "TokenBuilder")]
+pub struct PyTokenBuilder {
+    id: String,
+    root_actor: String,
+    capability: String,
+    caveats: Vec<Caveat>,
+}
+
+impl PyTokenBuilder {
+    fn token(&self) -> CapabilityToken {
+        CapabilityToken {
+            id: self.id.clone(),
+            root_actor: self.root_actor.clone(),
+            capability: self.capability.clone(),
+            caveats: self.caveats.clone(),
+            signature: Vec::new(),
+        }
+    }
+}
+
+#[pymethods]
+impl PyTokenBuilder {
+    #[new]
+    pub fn new(id: String, root_actor: String, capability: String) -> Self {
+        PyTokenBuilder {
+            id,
+            root_actor,
+            capability,
+            caveats: Vec::new(),
+        }
+    }
+
+    /// Denies when the request's `risk_score` is at or above `threshold_bps`
+    /// (basis points: 6500 is 0.65).
+    pub fn risk_below(&mut self, threshold_bps: u32) -> PyResult<()> {
+        if threshold_bps > 10_000 {
+            return Err(PyValueError::new_err(
+                "threshold_bps must be 0..=10000 (basis points, 6500 is 0.65)",
+            ));
+        }
+        self.caveats.push(Caveat {
+            location: None,
+            condition: CaveatType::RiskBelow(threshold_bps),
+        });
+        Ok(())
+    }
+
+    pub fn expires(&mut self, timestamp_rfc3339: String) -> PyResult<()> {
+        if chrono::DateTime::parse_from_rfc3339(&timestamp_rfc3339).is_err() {
+            return Err(PyValueError::new_err(
+                "timestamp must be RFC 3339, e.g. 2027-01-01T00:00:00Z",
+            ));
+        }
+        self.caveats.push(Caveat {
+            location: None,
+            condition: CaveatType::Expires(timestamp_rfc3339),
+        });
+        Ok(())
+    }
+
+    pub fn max_executions(&mut self, max: u64) {
+        self.caveats.push(Caveat {
+            location: None,
+            condition: CaveatType::MaxExecutions(max),
+        });
+    }
+
+    pub fn value_limit(&mut self, max: u64, currency: String) {
+        self.caveats.push(Caveat {
+            location: None,
+            condition: CaveatType::ValueLimit(max, currency),
+        });
+    }
+
+    pub fn path_restricted(&mut self, prefix: String) {
+        self.caveats.push(Caveat {
+            location: None,
+            condition: CaveatType::PathRestricted(prefix),
+        });
+    }
+
+    /// The unsigned token as JSON, useful for inspection before signing.
+    pub fn build_json(&self) -> PyResult<String> {
+        serde_json::to_string(&self.token())
+            .map_err(|e| PyValueError::new_err(format!("token serialization failed: {}", e)))
+    }
+
+    /// Signs the token with the issuer's 32-byte Ed25519 private key and
+    /// returns it as JSON, ready to place in a request's `token` field.
+    pub fn sign(&self, private_key_bytes: Vec<u8>) -> PyResult<String> {
+        let key = PyEd25519KeyPair::from_private_key_bytes(private_key_bytes)?;
+        let mut token = self.token();
+        token.signature = key.sign(token.message_to_sign());
+        serde_json::to_string(&token)
+            .map_err(|e| PyValueError::new_err(format!("token serialization failed: {}", e)))
+    }
+}
+
 #[pymodule]
 fn ube_foundation(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyTrustEngine>()?;
     m.add_class::<PyPqcKeyPair>()?;
+    m.add_class::<PyEd25519KeyPair>()?;
+    m.add_class::<PyTokenBuilder>()?;
     Ok(())
 }
